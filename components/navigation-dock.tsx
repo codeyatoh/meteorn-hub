@@ -39,7 +39,7 @@ export function NavigationDock() {
               pathname === "/dashboard" ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
             )}
           >
-            <Tooltip delay={0}>
+            <Tooltip>
               <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
                 <Home className="size-4 sm:size-5" />
               </TooltipTrigger>
@@ -58,7 +58,7 @@ export function NavigationDock() {
               pathname?.startsWith("/dashboard/analytics") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
             )}
           >
-            <Tooltip delay={0}>
+            <Tooltip>
               <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
                 <BarChart2 className="size-4 sm:size-5" />
               </TooltipTrigger>
@@ -77,7 +77,7 @@ export function NavigationDock() {
               pathname?.startsWith("/dashboard/settings") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
             )}
           >
-            <Tooltip delay={0}>
+            <Tooltip>
               <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
                 <Settings className="size-4 sm:size-5" />
               </TooltipTrigger>
@@ -99,7 +99,7 @@ export function NavigationDock() {
               isLoggingOut && "opacity-50 cursor-not-allowed"
             )}
           >
-            <Tooltip delay={0}>
+            <Tooltip>
               <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
                 {isLoggingOut ? <Loader2 className="size-4 sm:size-5 animate-spin" /> : <LogOut className="size-4 sm:size-5" />}
               </TooltipTrigger>

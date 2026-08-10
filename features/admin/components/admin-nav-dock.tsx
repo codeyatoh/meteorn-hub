@@ -55,7 +55,7 @@ export function AdminNavDock() {
                     : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
                 )}
               >
-                <Tooltip delay={0}>
+                <Tooltip>
                   <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
                     <Icon className="size-4 sm:size-5" />
                   </TooltipTrigger>
@@ -79,7 +79,7 @@ export function AdminNavDock() {
               isLoggingOut && "opacity-50 cursor-not-allowed"
             )}
           >
-            <Tooltip delay={0}>
+            <Tooltip>
               <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
                 {isLoggingOut ? (
                   <Loader2 className="size-4 sm:size-5 animate-spin" />
