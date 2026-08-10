@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LogOut, ShieldAlertIcon, UsersIcon, GamepadIcon, SlidersIcon, Loader2 } from "lucide-react";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
 
 export function AdminNavDock() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const supabase = createClient();
 
@@ -25,7 +26,8 @@ export function AdminNavDock() {
     try {
       setIsLoggingOut(true);
       await supabase.auth.signOut();
-      window.location.href = "/login";
+      router.push("/login");
+      router.refresh();
     } catch (error) {
       console.error("Logout failed:", error);
       setIsLoggingOut(false);

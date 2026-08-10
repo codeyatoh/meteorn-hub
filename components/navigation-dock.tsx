@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, PlusCircle, ListTodo, BarChart2, Settings, LogOut, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dock, DockIcon } from "@/components/ui/dock";
@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export function NavigationDock() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const supabase = createClient();
 
@@ -18,7 +19,8 @@ export function NavigationDock() {
     try {
       setIsLoggingOut(true);
       await supabase.auth.signOut();
-      window.location.href = "/login";
+      router.push("/login");
+      router.refresh();
     } catch (error) {
       console.error("Logout failed:", error);
       setIsLoggingOut(false);
