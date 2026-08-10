@@ -1,117 +1,112 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Home, Settings, BarChart2 } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
-import { Dock, DockIcon } from "@/components/ui/dock";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator";
+import { Home, PlusCircle, ListTodo, BarChart2, Settings, LogOut, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Dock, DockIcon } from "@/components/ui/dock";
+import { Separator } from "@/components/ui/separator";
+import { createClient } from "@/lib/supabase/client";
 
 export function NavigationDock() {
   const pathname = usePathname();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const supabase = createClient();
+
+  const handleSignOut = async () => {
+    try {
+      setIsLoggingOut(true);
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout failed:", error);
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
       <Dock direction="middle" className="bg-background/90 backdrop-blur-md border border-border/60 shadow-lg px-2">
         <DockIcon>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Link
-                  href="/dashboard"
-                  aria-label="Home"
-                  className={cn(
-                    buttonVariants({ variant: "ghost", size: "icon" }),
-                    "size-10 rounded-full sm:size-12",
-                    pathname === "/dashboard" ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-                  )}
-                >
-                  <Home className="size-4 sm:size-5" />
-                </Link>
-              }
-            />
-            <TooltipContent sideOffset={12}>
-              <p>Home</p>
-            </TooltipContent>
-          </Tooltip>
+          <Link
+            href="/dashboard"
+            title="Dashboard"
+            className={cn(
+              "flex size-full items-center justify-center rounded-full transition-colors",
+              pathname === "/dashboard" ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+            )}
+          >
+            <Home className="size-4 sm:size-5" />
+          </Link>
+        </DockIcon>
+
+        <DockIcon>
+          <Link
+            href="/dashboard?action=log"
+            title="Log GMTO"
+            className={cn(
+              "flex size-full items-center justify-center rounded-full transition-colors",
+              pathname === "/dashboard?action=log" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+            )}
+          >
+            <PlusCircle className="size-4 sm:size-5" />
+          </Link>
+        </DockIcon>
+
+        <DockIcon>
+          <Link
+            href="/dashboard/logs"
+            title="History"
+            className={cn(
+              "flex size-full items-center justify-center rounded-full transition-colors",
+              pathname?.startsWith("/dashboard/logs") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+            )}
+          >
+            <ListTodo className="size-4 sm:size-5" />
+          </Link>
+        </DockIcon>
+
+        <DockIcon>
+          <Link
+            href="/dashboard/analytics"
+            title="Analytics"
+            className={cn(
+              "flex size-full items-center justify-center rounded-full transition-colors",
+              pathname?.startsWith("/dashboard/analytics") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+            )}
+          >
+            <BarChart2 className="size-4 sm:size-5" />
+          </Link>
         </DockIcon>
         
         <DockIcon>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Link
-                  href="/dashboard/analytics"
-                  aria-label="Analytics"
-                  className={cn(
-                    buttonVariants({ variant: "ghost", size: "icon" }),
-                    "size-10 rounded-full sm:size-12",
-                    pathname?.startsWith("/dashboard/analytics") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-                  )}
-                >
-                  <BarChart2 className="size-4 sm:size-5" />
-                </Link>
-              }
-            />
-            <TooltipContent sideOffset={12}>
-              <p>Analytics</p>
-            </TooltipContent>
-          </Tooltip>
-        </DockIcon>
-        
-        <DockIcon>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Link
-                  href="/dashboard/settings"
-                  aria-label="Settings"
-                  className={cn(
-                    buttonVariants({ variant: "ghost", size: "icon" }),
-                    "size-10 rounded-full sm:size-12",
-                    pathname?.startsWith("/dashboard/settings") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-                  )}
-                >
-                  <Settings className="size-4 sm:size-5" />
-                </Link>
-              }
-            />
-            <TooltipContent sideOffset={12}>
-              <p>Settings</p>
-            </TooltipContent>
-          </Tooltip>
+          <Link
+            href="/dashboard/settings"
+            title="Settings"
+            className={cn(
+              "flex size-full items-center justify-center rounded-full transition-colors",
+              pathname?.startsWith("/dashboard/settings") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+            )}
+          >
+            <Settings className="size-4 sm:size-5" />
+          </Link>
         </DockIcon>
 
         <Separator orientation="vertical" className="h-full py-2 mx-1" />
         
         <DockIcon>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <form action="/auth/signout" method="post" className="m-0 p-0 flex">
-                  <button
-                    type="submit"
-                    aria-label="Sign out"
-                    className={cn(
-                      buttonVariants({ variant: "ghost", size: "icon" }),
-                      "size-10 rounded-full sm:size-12 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    )}
-                  >
-                    <LogOut className="size-4 sm:size-5" />
-                  </button>
-                </form>
-              }
-            />
-            <TooltipContent sideOffset={12}>
-              <p>Sign out</p>
-            </TooltipContent>
-          </Tooltip>
+          <button
+            onClick={handleSignOut}
+            disabled={isLoggingOut}
+            title="Sign out"
+            className={cn(
+              "flex size-full items-center justify-center rounded-full transition-colors text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+              isLoggingOut && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {isLoggingOut ? <Loader2 className="size-4 sm:size-5 animate-spin" /> : <LogOut className="size-4 sm:size-5" />}
+          </button>
         </DockIcon>
       </Dock>
     </div>

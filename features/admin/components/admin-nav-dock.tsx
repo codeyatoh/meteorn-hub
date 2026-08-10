@@ -1,84 +1,82 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, ShieldAlertIcon, UsersIcon, GamepadIcon, SlidersIcon } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { LogOut, ShieldAlertIcon, UsersIcon, GamepadIcon, SlidersIcon, Loader2 } from "lucide-react";
 import { Dock, DockIcon } from "@/components/ui/dock";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "Overview", icon: ShieldAlertIcon, exact: true },
-  { href: "/admin/members", label: "Members", icon: UsersIcon, exact: false },
-  { href: "/admin/accounts", label: "Accounts", icon: GamepadIcon, exact: false },
-  { href: "/admin/settings", label: "Settings", icon: SlidersIcon, exact: false },
+  { href: "/admin", label: "Overview", icon: ShieldAlertIcon, matchExact: true },
+  { href: "/admin/members", label: "Members", icon: UsersIcon, matchExact: false },
+  { href: "/admin/accounts", label: "Accounts", icon: GamepadIcon, matchExact: false },
+  { href: "/admin/settings", label: "Settings", icon: SlidersIcon, matchExact: false },
 ];
 
 export function AdminNavDock() {
   const pathname = usePathname();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const supabase = createClient();
 
-  const isActive = (href: string, exact: boolean) =>
-    exact ? pathname === href : pathname?.startsWith(href);
+  const handleSignOut = async () => {
+    try {
+      setIsLoggingOut(true);
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout failed:", error);
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
       <Dock
         direction="middle"
-        className="bg-background/90 backdrop-blur-md border border-border/60 shadow-lg px-2"
+        className="bg-background/90 backdrop-blur-md border border-border/60 shadow-lg px-2 h-14 sm:h-16"
       >
-        {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => (
-          <DockIcon key={href}>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Link
-                    href={href}
-                    aria-label={label}
-                    className={cn(
-                      buttonVariants({ variant: "ghost", size: "icon" }),
-                      "size-10 rounded-full sm:size-12",
-                      isActive(href, exact)
-                        ? "bg-foreground/10 text-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-                    )}
-                  >
-                    <Icon className="size-4 sm:size-5" />
-                  </Link>
-                }
-              />
-              <TooltipContent sideOffset={12}>
-                <p>{label}</p>
-              </TooltipContent>
-            </Tooltip>
-          </DockIcon>
-        ))}
+        {NAV_ITEMS.map(({ href, label, icon: Icon, matchExact }) => {
+          const isActive = matchExact ? pathname === href : pathname?.startsWith(href);
+          
+          return (
+            <DockIcon key={href}>
+              <Link
+                href={href}
+                title={label}
+                className={cn(
+                  "flex size-full items-center justify-center rounded-full transition-colors",
+                  isActive
+                    ? "bg-foreground/10 text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+                )}
+              >
+                <Icon className="size-4 sm:size-5" />
+              </Link>
+            </DockIcon>
+          );
+        })}
 
         <Separator orientation="vertical" className="h-full py-2 mx-1" />
 
         <DockIcon>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <form action="/auth/signout" method="post" className="m-0 p-0 flex">
-                  <button
-                    type="submit"
-                    aria-label="Sign out"
-                    className={cn(
-                      buttonVariants({ variant: "ghost", size: "icon" }),
-                      "size-10 rounded-full sm:size-12 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    )}
-                  >
-                    <LogOut className="size-4 sm:size-5" />
-                  </button>
-                </form>
-              }
-            />
-            <TooltipContent sideOffset={12}>
-              <p>Sign out</p>
-            </TooltipContent>
-          </Tooltip>
+          <button
+            onClick={handleSignOut}
+            disabled={isLoggingOut}
+            title="Sign out"
+            className={cn(
+              "flex size-full items-center justify-center rounded-full transition-colors text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+              isLoggingOut && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {isLoggingOut ? (
+              <Loader2 className="size-4 sm:size-5 animate-spin" />
+            ) : (
+              <LogOut className="size-4 sm:size-5" />
+            )}
+          </button>
         </DockIcon>
       </Dock>
     </div>
