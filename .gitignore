@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI Agent & Local Dev Tools
+.agents/
+.skills/
+skills-lock.json
+create_skills.js
+proxy.ts
+
+# Local Database Backups/Settings (if you want these kept private)
+supabase_cron.sql
+supabase_platform_settings.sql
+
+# Editor config
+.vscode/
