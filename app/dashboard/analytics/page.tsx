@@ -120,7 +120,10 @@ export default function AnalyticsPage() {
       }
       
     }
-    fetchData().finally(() => setLoading(false));
+    Promise.all([
+      fetchData(),
+      new Promise(resolve => setTimeout(resolve, 1000))
+    ]).finally(() => setLoading(false));
   }, [supabase, filter]);
 
   const currencySymbol = currency === "php" ? "₱" : currency === "eur" ? "€" : "$";

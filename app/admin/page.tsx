@@ -9,6 +9,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { AdminCurrencySelector } from "@/features/admin/components/admin-currency-selector";
 
 export default async function AdminOverviewPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  await new Promise(resolve => setTimeout(resolve, 1000));
   // Server-side admin check
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

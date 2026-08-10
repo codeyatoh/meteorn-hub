@@ -30,7 +30,10 @@ export default function SettingsPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    Promise.all([
+      supabase.auth.getUser(),
+      new Promise(resolve => setTimeout(resolve, 1000))
+    ]).then(([{ data: { user } }]) => {
       if (user) {
         setNickname(user.user_metadata?.nickname || "User");
         setCurrency(user.user_metadata?.currency || "usd");

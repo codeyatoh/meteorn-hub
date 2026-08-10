@@ -132,7 +132,10 @@ export default function UserDashboardPage() {
       }
     };
     
-    fetchDashboardData().finally(() => setLoading(false));
+    Promise.all([
+      fetchDashboardData(),
+      new Promise(resolve => setTimeout(resolve, 1000))
+    ]).finally(() => setLoading(false));
 
     // Re-fetch data when the window regains focus (e.g. switching back from another tab)
     window.addEventListener("focus", fetchDashboardData);

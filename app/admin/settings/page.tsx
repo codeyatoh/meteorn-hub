@@ -30,8 +30,11 @@ export default function AdminSettingsPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    fetch("/api/admin/settings").then(res => res.json())
-      .then((data) => {
+    Promise.all([
+      fetch("/api/admin/settings").then(res => res.json()),
+      new Promise(resolve => setTimeout(resolve, 1000))
+    ])
+      .then(([data]) => {
         if (data && typeof data.daily_ticket_limit === "number") {
           setSettings(data);
           setTicketLimit(String(data.daily_ticket_limit));
