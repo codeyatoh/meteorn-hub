@@ -25,11 +25,9 @@ export default function MembersPage() {
   const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/admin/users").then(res => res.json()),
-      new Promise(resolve => setTimeout(resolve, 3000))
-    ])
-      .then(([data]) => {
+    fetch("/api/admin/users")
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) setUsers(data);
         else toast.error("Failed to load users.", { classNames: { icon: "text-destructive" } });
       })

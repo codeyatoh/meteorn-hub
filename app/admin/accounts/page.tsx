@@ -33,11 +33,8 @@ export default function AdminAccountsPage() {
   const [resettingId, setResettingId] = useState<number | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/admin/accounts").then(res => res.json()),
-      new Promise(resolve => setTimeout(resolve, 3000))
-    ])
-      .then(([data]) => {
+    fetch("/api/admin/accounts").then(res => res.json())
+      .then((data) => {
         if (Array.isArray(data)) setAccounts(data);
         else toast.error("Failed to load accounts.", { classNames: { icon: "text-destructive" } });
       })
