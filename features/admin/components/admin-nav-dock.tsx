@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, ShieldAlertIcon, UsersIcon, GamepadIcon, SlidersIcon, Loader2 } from "lucide-react";
 import { Dock, DockIcon } from "@/components/ui/dock";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -47,7 +48,6 @@ export function AdminNavDock() {
             <DockIcon key={href}>
               <Link
                 href={href}
-                title={label}
                 className={cn(
                   "flex size-full items-center justify-center rounded-full transition-colors",
                   isActive
@@ -55,7 +55,14 @@ export function AdminNavDock() {
                     : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
                 )}
               >
-                <Icon className="size-4 sm:size-5" />
+                <Tooltip delay={0}>
+                  <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
+                    <Icon className="size-4 sm:size-5" />
+                  </TooltipTrigger>
+                  <TooltipContent sideOffset={12}>
+                    <p>{label}</p>
+                  </TooltipContent>
+                </Tooltip>
               </Link>
             </DockIcon>
           );
@@ -67,17 +74,23 @@ export function AdminNavDock() {
           <button
             onClick={handleSignOut}
             disabled={isLoggingOut}
-            title="Sign out"
             className={cn(
               "flex size-full items-center justify-center rounded-full transition-colors text-muted-foreground hover:text-destructive hover:bg-destructive/10",
               isLoggingOut && "opacity-50 cursor-not-allowed"
             )}
           >
-            {isLoggingOut ? (
-              <Loader2 className="size-4 sm:size-5 animate-spin" />
-            ) : (
-              <LogOut className="size-4 sm:size-5" />
-            )}
+            <Tooltip delay={0}>
+              <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
+                {isLoggingOut ? (
+                  <Loader2 className="size-4 sm:size-5 animate-spin" />
+                ) : (
+                  <LogOut className="size-4 sm:size-5" />
+                )}
+              </TooltipTrigger>
+              <TooltipContent sideOffset={12}>
+                <p>Sign out</p>
+              </TooltipContent>
+            </Tooltip>
           </button>
         </DockIcon>
       </Dock>
