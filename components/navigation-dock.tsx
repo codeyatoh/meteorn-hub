@@ -45,32 +45,6 @@ export function NavigationDock() {
 
         <DockIcon>
           <Link
-            href="/dashboard?action=log"
-            title="Log GMTO"
-            className={cn(
-              "flex size-full items-center justify-center rounded-full transition-colors",
-              pathname === "/dashboard?action=log" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-primary hover:bg-primary/10"
-            )}
-          >
-            <PlusCircle className="size-4 sm:size-5" />
-          </Link>
-        </DockIcon>
-
-        <DockIcon>
-          <Link
-            href="/dashboard/logs"
-            title="History"
-            className={cn(
-              "flex size-full items-center justify-center rounded-full transition-colors",
-              pathname?.startsWith("/dashboard/logs") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-            )}
-          >
-            <ListTodo className="size-4 sm:size-5" />
-          </Link>
-        </DockIcon>
-
-        <DockIcon>
-          <Link
             href="/dashboard/analytics"
             title="Analytics"
             className={cn(
