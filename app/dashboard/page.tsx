@@ -1012,7 +1012,7 @@ export default function UserDashboardPage() {
               type="text" 
               readOnly 
               value={viewWalletAddress} 
-              className="w-full rounded-md border border-input bg-background pl-3 pr-16 py-2 text-sm text-center text-muted-foreground focus:outline-none"
+              className="w-full rounded-md border border-input bg-background pl-3 pr-24 py-2 text-sm text-muted-foreground focus:outline-none truncate"
             />
             <Button 
               size="sm" 
