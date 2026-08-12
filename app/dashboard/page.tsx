@@ -62,6 +62,7 @@ export default function UserDashboardPage() {
   // View Wallet State
   const [isViewWalletModalOpen, setIsViewWalletModalOpen] = useState(false);
   const [viewWalletAddress, setViewWalletAddress] = useState("");
+  const [isWalletCopied, setIsWalletCopied] = useState(false);
 
   // Edit Log State
   const [isEditLogModalOpen, setIsEditLogModalOpen] = useState(false);
@@ -1016,12 +1017,20 @@ export default function UserDashboardPage() {
             <Button 
               size="sm" 
               variant="secondary" 
-              className="absolute right-1 top-1 bottom-1 h-auto text-xs"
+              className={`absolute right-1 top-1 bottom-1 h-auto text-xs transition-all duration-200 ${isWalletCopied ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/30" : ""}`}
               onClick={() => {
                 navigator.clipboard.writeText(viewWalletAddress);
+                setIsWalletCopied(true);
+                setTimeout(() => setIsWalletCopied(false), 2000);
               }}
             >
-              Copy
+              {isWalletCopied ? (
+                <span className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                  <CheckIcon className="size-3" /> Copied
+                </span>
+              ) : (
+                <span className="animate-in fade-in zoom-in duration-200">Copy</span>
+              )}
             </Button>
           </div>
         </div>
