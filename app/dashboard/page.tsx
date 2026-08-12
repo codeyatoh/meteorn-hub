@@ -998,8 +998,10 @@ export default function UserDashboardPage() {
         <div className="space-y-4 mt-2 flex flex-col items-center">
           <div className="size-48 bg-white p-2 rounded-md border flex items-center justify-center">
             {viewWalletAddress ? (
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${viewWalletAddress}`} alt="QR Code" className="size-full object-contain" />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${viewWalletAddress}`} alt="QR Code" className="size-full object-contain" />
+              </>
             ) : (
               <span className="text-muted-foreground text-sm">No wallet address</span>
             )}
