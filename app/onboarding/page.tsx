@@ -38,11 +38,14 @@ export default function OnboardingPage() {
 
       if (error) throw error;
 
+      const { data: { user } } = await supabase.auth.getUser();
+      const role = user?.user_metadata?.role;
+
       toast.success("Profile completed successfully!", {
         classNames: { icon: "text-green-500" },
       });
 
-      router.push("/dashboard");
+      router.push(role === 'admin' ? "/admin" : "/dashboard");
       router.refresh();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to update profile.", {
