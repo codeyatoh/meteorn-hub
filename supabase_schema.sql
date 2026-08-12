@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.user_accounts (
   total_tickets INTEGER DEFAULT 10 NOT NULL,
   avatar TEXT DEFAULT 'Avatar1' NOT NULL,
   referral_link TEXT,
+  wallet_address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

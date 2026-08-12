@@ -22,7 +22,7 @@ const AVATAR_MAP: Record<string, ReactNode> = {
 const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 
 // Types
-type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null };
+type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null };
 type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
@@ -48,6 +48,7 @@ export default function UserDashboardPage() {
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [newAccountName, setNewAccountName] = useState("");
   const [newAccountReferralLink, setNewAccountReferralLink] = useState("");
+  const [newAccountWalletAddress, setNewAccountWalletAddress] = useState("");
   const [newAccountAvatar, setNewAccountAvatar] = useState("Avatar1");
 
   // Edit Account State
@@ -55,7 +56,12 @@ export default function UserDashboardPage() {
   const [editAccountId, setEditAccountId] = useState<number | null>(null);
   const [editAccountName, setEditAccountName] = useState("");
   const [editAccountReferralLink, setEditAccountReferralLink] = useState("");
+  const [editAccountWalletAddress, setEditAccountWalletAddress] = useState("");
   const [editAccountAvatar, setEditAccountAvatar] = useState("Avatar1");
+
+  // View Wallet State
+  const [isViewWalletModalOpen, setIsViewWalletModalOpen] = useState(false);
+  const [viewWalletAddress, setViewWalletAddress] = useState("");
 
   // Edit Log State
   const [isEditLogModalOpen, setIsEditLogModalOpen] = useState(false);
@@ -106,7 +112,8 @@ export default function UserDashboardPage() {
           ticketsDone: acc.tickets_done,
           totalTickets: acc.total_tickets,
           avatar: acc.avatar,
-          referralLink: acc.referral_link
+          referralLink: acc.referral_link,
+          walletAddress: acc.wallet_address
         })));
         if (accountsData.length > 0) setSelectedAccountId(accountsData[0].id);
       }
@@ -252,8 +259,14 @@ export default function UserDashboardPage() {
     setEditAccountId(acc.id);
     setEditAccountName(acc.name);
     setEditAccountReferralLink(acc.referralLink || "");
+    setEditAccountWalletAddress(acc.walletAddress || "");
     setEditAccountAvatar(acc.avatar || "Avatar1");
     setIsEditAccountModalOpen(true);
+  };
+
+  const openViewWalletModal = (walletAddress: string) => {
+    setViewWalletAddress(walletAddress);
+    setIsViewWalletModalOpen(true);
   };
 
   const handleUpdateAccount = async () => {
@@ -264,7 +277,8 @@ export default function UserDashboardPage() {
       .update({
         name: editAccountName.trim(),
         avatar: editAccountAvatar,
-        referral_link: editAccountReferralLink.trim() || null
+        referral_link: editAccountReferralLink.trim() || null,
+        wallet_address: editAccountWalletAddress.trim() || null
       })
       .eq('id', editAccountId);
 
@@ -273,7 +287,8 @@ export default function UserDashboardPage() {
         ...acc,
         name: editAccountName.trim(),
         avatar: editAccountAvatar,
-        referralLink: editAccountReferralLink.trim() || null
+        referralLink: editAccountReferralLink.trim() || null,
+        walletAddress: editAccountWalletAddress.trim() || null
       } : acc));
     }
     
@@ -332,7 +347,8 @@ export default function UserDashboardPage() {
       tickets_done: 0,
       total_tickets: 10,
       avatar: newAccountAvatar,
-      referral_link: newAccountReferralLink.trim() || null
+      referral_link: newAccountReferralLink.trim() || null,
+      wallet_address: newAccountWalletAddress.trim() || null
     };
 
     const { data, error } = await supabase
@@ -348,13 +364,15 @@ export default function UserDashboardPage() {
         ticketsDone: data.tickets_done,
         totalTickets: data.total_tickets,
         avatar: data.avatar,
-        referralLink: data.referral_link
+        referralLink: data.referral_link,
+        walletAddress: data.wallet_address
       }]);
       if (selectedAccountId === null) setSelectedAccountId(data.id);
     }
     
     setNewAccountName("");
     setNewAccountReferralLink("");
+    setNewAccountWalletAddress("");
     setNewAccountAvatar("Avatar1");
     setIsAddAccountModalOpen(false);
   };
@@ -531,6 +549,11 @@ export default function UserDashboardPage() {
                         <a href={account.referralLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
                           <LinkIcon className="size-3" />
                         </a>
+                      )}
+                      {account.walletAddress && (
+                        <button onClick={() => openViewWalletModal(account.walletAddress!)} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="View Wallet Address">
+                          <WalletIcon className="size-3" />
+                        </button>
                       )}
                     </span>
                     
@@ -786,6 +809,22 @@ export default function UserDashboardPage() {
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <WalletIcon className="size-4 text-muted-foreground" />
+              </div>
+              <input 
+                type="text"
+                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                placeholder="0x..."
+                value={newAccountWalletAddress}
+                onChange={(e) => setNewAccountWalletAddress(e.target.value)}
+              />
+            </div>
+          </div>
+
           <Button 
             onClick={handleAddAccount}
             className="w-full mt-2"
@@ -850,6 +889,21 @@ export default function UserDashboardPage() {
                 className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 value={editAccountReferralLink}
                 onChange={(e) => setEditAccountReferralLink(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <WalletIcon className="size-4 text-muted-foreground" />
+              </div>
+              <input 
+                type="text"
+                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                value={editAccountWalletAddress}
+                onChange={(e) => setEditAccountWalletAddress(e.target.value)}
               />
             </div>
           </div>
@@ -929,6 +983,44 @@ export default function UserDashboardPage() {
           <div className="flex gap-2 justify-end mt-4">
             <Button variant="outline" onClick={() => setIsDeleteLogModalOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDeleteLog}>Delete Log</Button>
+          </div>
+        </div>
+      </AnimatedModal>
+
+      {/* View Wallet Modal */}
+      <AnimatedModal
+        isOpen={isViewWalletModalOpen}
+        onClose={() => setIsViewWalletModalOpen(false)}
+        title="Wallet Address"
+        icon={<WalletIcon size={18} strokeWidth={1.5} />}
+        maxWidth="sm"
+      >
+        <div className="space-y-4 mt-2 flex flex-col items-center">
+          <div className="size-48 bg-white p-2 rounded-md border flex items-center justify-center">
+            {viewWalletAddress ? (
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${viewWalletAddress}`} alt="QR Code" className="size-full object-contain" />
+            ) : (
+              <span className="text-muted-foreground text-sm">No wallet address</span>
+            )}
+          </div>
+          <div className="w-full relative">
+            <input 
+              type="text" 
+              readOnly 
+              value={viewWalletAddress} 
+              className="w-full rounded-md border border-input bg-background pl-3 pr-16 py-2 text-sm text-center text-muted-foreground focus:outline-none"
+            />
+            <Button 
+              size="sm" 
+              variant="secondary" 
+              className="absolute right-1 top-1 bottom-1 h-auto text-xs"
+              onClick={() => {
+                navigator.clipboard.writeText(viewWalletAddress);
+              }}
+            >
+              Copy
+            </Button>
           </div>
         </div>
       </AnimatedModal>
