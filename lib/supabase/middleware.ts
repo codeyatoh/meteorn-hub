@@ -40,22 +40,39 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Admin route protection
-  if (user && request.nextUrl.pathname.startsWith('/admin')) {
+  if (user) {
+    const nickname = user.user_metadata?.nickname
     const role = user.user_metadata?.role
-    if (role !== 'admin') {
+    const isOnboarding = request.nextUrl.pathname.startsWith('/onboarding')
+
+    // Force onboarding if no nickname
+    if (!nickname && !isOnboarding && request.nextUrl.pathname !== '/login') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+
+    // Redirect away from onboarding if already has a nickname
+    if (nickname && isOnboarding) {
+      const url = request.nextUrl.clone()
+      url.pathname = role === 'admin' ? '/admin' : '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // Admin route protection
+    if (request.nextUrl.pathname.startsWith('/admin') && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
     }
-  }
 
-  // Optional: Redirect authenticated users away from /login
-  if (user && request.nextUrl.pathname === '/login') {
-    const role = user.user_metadata?.role
-    const url = request.nextUrl.clone()
-    url.pathname = role === 'admin' ? '/admin' : '/dashboard'
-    return NextResponse.redirect(url)
+    // Redirect authenticated users away from /login
+    if (request.nextUrl.pathname === '/login') {
+      const url = request.nextUrl.clone()
+      // If they don't have a nickname, redirect to onboarding instead of dashboard
+      url.pathname = !nickname ? '/onboarding' : (role === 'admin' ? '/admin' : '/dashboard')
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse
