@@ -83,7 +83,7 @@ export default function UserDashboardPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [gmtoEarned, setGmtoEarned] = useState("");
   
-  const [cashoutAccountId, setCashoutAccountId] = useState<string | null>(null);
+  const [cashoutAccountIds, setCashoutAccountIds] = useState<string[]>([]);
   const [cashoutFiat, setCashoutFiat] = useState("");
   const [isCashoutDropdownOpen, setIsCashoutDropdownOpen] = useState(false);
   
@@ -252,25 +252,36 @@ export default function UserDashboardPage() {
   };
 
   const handleCashout = async () => {
-    if (!cashoutAccountId) return;
-    const targetLog = incomeLogs.find(log => log.id === cashoutAccountId);
-    if (!targetLog) return;
+    if (cashoutAccountIds.length === 0) return;
+    const targetLogs = incomeLogs.filter(log => cashoutAccountIds.includes(log.id));
+    if (targetLogs.length === 0) return;
     
-    const gmto = targetLog.gmto;
+    const totalGmto = targetLogs.reduce((sum, log) => sum + log.gmto, 0);
     const fiat = parseFloat(cashoutFiat);
-    if (isNaN(gmto) || gmto <= 0 || isNaN(fiat) || fiat <= 0 || !userId) return;
+    if (totalGmto <= 0 || isNaN(fiat) || fiat <= 0 || !userId) return;
 
-    const { error } = await supabase
-      .from('income_logs')
-      .update({
-        is_sold: true,
-        fiat_received: fiat
-      })
-      .eq('id', targetLog.id);
+    let success = true;
 
-    if (!error) {
-      setIncomeLogs(prev => prev.map(log => log.id === targetLog.id ? { ...log, is_sold: true, fiat_received: fiat } : log));
-      
+    // We loop through and update sequentially for exact proportional calculation
+    for (const targetLog of targetLogs) {
+      const proportionalFiat = fiat * (targetLog.gmto / totalGmto);
+      const { error } = await supabase
+        .from('income_logs')
+        .update({
+          is_sold: true,
+          fiat_received: proportionalFiat
+        })
+        .eq('id', targetLog.id);
+
+      if (error) {
+        success = false;
+        console.error("Failed to update log", targetLog.id, error);
+      } else {
+        setIncomeLogs(prev => prev.map(log => log.id === targetLog.id ? { ...log, is_sold: true, fiat_received: proportionalFiat } : log));
+      }
+    }
+
+    if (success) {
       try {
         const audio = new Audio('/cash.mp3');
         audio.play().catch(e => console.warn("Audio play failed:", e));
@@ -280,10 +291,10 @@ export default function UserDashboardPage() {
       
       toast.success("Cashout logged successfully!");
       setIsCashoutModalOpen(false);
-      setCashoutAccountId(null);
+      setCashoutAccountIds([]);
       setCashoutFiat("");
     } else {
-      toast.error("Failed to log cashout.");
+      toast.error("Some cashouts failed to log.");
     }
   };
 
@@ -511,42 +522,50 @@ export default function UserDashboardPage() {
           
           <div className="flex flex-col items-start sm:items-end space-y-1.5 relative">
             <label className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Currency</label>
-            <button 
-              type="button"
-              onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
-              className="w-28 flex items-center justify-between rounded-md border border-input bg-background/50 px-3 py-1.5 text-xs font-medium ring-offset-background hover:bg-background/80 transition-colors focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <span>{currency.toUpperCase()} ({currencySymbol})</span>
-              <ChevronDownIcon className="size-3 text-muted-foreground" />
-            </button>
-            {isCurrencyDropdownOpen && (
-              <div className="absolute top-[100%] right-0 z-50 mt-1 w-28 rounded-md border border-border bg-card text-card-foreground shadow-md outline-none">
-                <div className="flex flex-col py-1">
-                  {Object.keys(CURRENCY_SYMBOLS).map(key => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={async () => { 
-                        setCurrency(key); 
-                        setIsCurrencyDropdownOpen(false); 
-                        const { error } = await supabase.auth.updateUser({ data: { currency: key } });
-                        if (error) {
-                          toast.error("Failed to update currency.");
-                        } else {
-                          toast.success("Currency updated successfully.");
-                        }
-                      }}
-                      className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-xs font-medium outline-none hover:bg-foreground/5 transition-colors ${currency === key ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                        {currency === key && <CheckIcon className="size-3 text-foreground" />}
-                      </span>
-                      {key.toUpperCase()} ({CURRENCY_SYMBOLS[key]})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="relative">
+              <button 
+                type="button"
+                onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
+                className={`w-28 flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-xs font-medium cursor-pointer transition-colors ${isCurrencyDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
+              >
+                <span className={currency ? "text-foreground" : "text-muted-foreground"}>
+                  {currency.toUpperCase()} ({currencySymbol})
+                </span>
+                <ChevronDownIcon className={`size-3 text-muted-foreground transition-transform ${isCurrencyDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isCurrencyDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsCurrencyDropdownOpen(false)} />
+                  <div className="absolute z-50 top-full right-0 mt-1.5 w-28 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                    {Object.keys(CURRENCY_SYMBOLS).map(key => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={async () => { 
+                          setCurrency(key); 
+                          setIsCurrencyDropdownOpen(false); 
+                          const { error } = await supabase.auth.updateUser({ data: { currency: key } });
+                          if (error) {
+                            toast.error("Failed to update currency.");
+                          } else {
+                            toast.success("Currency updated successfully.");
+                          }
+                        }}
+                        className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors outline-none ${
+                          currency === key 
+                            ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+                            : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
+                        }`}
+                      >
+                        <span className="font-medium">{key.toUpperCase()}</span>
+                        <span className="opacity-80">{CURRENCY_SYMBOLS[key]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -781,34 +800,43 @@ export default function UserDashboardPage() {
         </p>
         <div className="space-y-4">
           <div className="space-y-1.5 relative">
-            <label className="text-sm font-medium text-foreground">Account</label>
-            <button 
-              type="button"
-              onClick={() => setIsComboboxOpen(!isComboboxOpen)}
-              className="w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <span className="truncate">{accounts.find(a => a.id === selectedAccountId)?.name || "Select account"}</span>
-              <ChevronDownIcon className="size-4 opacity-50" />
-            </button>
-            {isComboboxOpen && (
-              <div className="absolute top-[100%] left-0 z-[60] mt-1 w-full rounded-md border border-border bg-card text-card-foreground shadow-md outline-none">
-                <div className="flex flex-col py-1">
-                  {accounts.map(acc => (
-                    <button
-                      key={acc.id}
-                      type="button"
-                      onClick={() => { setSelectedAccountId(acc.id); setIsComboboxOpen(false); }}
-                      className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-foreground/5 transition-colors ${selectedAccountId === acc.id ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                    >
-                      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                        {selectedAccountId === acc.id && <CheckIcon className="size-3 text-foreground" />}
-                      </span>
-                      {acc.name}
-                    </button>
-                  ))}
-                </div>
+            <div className="relative">
+              <div 
+                onClick={() => setIsComboboxOpen(!isComboboxOpen)}
+                className={`w-full rounded-md border border-input bg-background pl-3 pr-10 py-2.5 text-sm cursor-pointer transition-colors flex items-center justify-between ${isComboboxOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
+              >
+                <span className={selectedAccountId ? "text-foreground font-medium" : "text-muted-foreground"}>
+                  {accounts.find(a => a.id === selectedAccountId)?.name || "Select account"}
+                </span>
+                <ChevronDownIcon className={`absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground transition-transform ${isComboboxOpen ? 'rotate-180' : ''}`} />
               </div>
-            )}
+
+              {isComboboxOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsComboboxOpen(false)} />
+                  <div className="absolute z-50 top-full mt-1.5 w-full bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col max-h-[200px] overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                    {accounts.map(acc => (
+                      <div
+                        key={acc.id}
+                        onClick={() => { setSelectedAccountId(acc.id); setIsComboboxOpen(false); }}
+                        className={`px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors ${
+                          selectedAccountId === acc.id 
+                            ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+                            : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
+                        }`}
+                      >
+                        <span className="font-medium">{acc.name}</span>
+                      </div>
+                    ))}
+                    {accounts.length === 0 && (
+                      <div className="px-4 py-6 text-sm text-center text-muted-foreground">
+                        No accounts found.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -1104,10 +1132,10 @@ export default function UserDashboardPage() {
                 onClick={() => setIsCashoutDropdownOpen(!isCashoutDropdownOpen)}
                 className={`w-full rounded-md border border-input bg-background pl-3 pr-10 py-2.5 text-sm cursor-pointer transition-colors flex items-center justify-between ${isCashoutDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
               >
-                <span className={cashoutAccountId ? "text-foreground" : "text-muted-foreground"}>
-                  {cashoutAccountId 
-                    ? `${incomeLogs.find(l => l.id === cashoutAccountId)?.title} (${incomeLogs.find(l => l.id === cashoutAccountId)?.gmto} GMTO)` 
-                    : "Choose an income log"}
+                <span className={cashoutAccountIds.length > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
+                  {cashoutAccountIds.length > 0 
+                    ? `${cashoutAccountIds.length} account${cashoutAccountIds.length > 1 ? 's' : ''} selected (${incomeLogs.filter(l => cashoutAccountIds.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0)} GMTO)` 
+                    : "Choose income logs"}
                 </span>
                 <ChevronDownIcon className={`absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground transition-transform ${isCashoutDropdownOpen ? 'rotate-180' : ''}`} />
               </div>
@@ -1120,11 +1148,14 @@ export default function UserDashboardPage() {
                       <div
                         key={log.id}
                         onClick={() => {
-                          setCashoutAccountId(log.id);
-                          setIsCashoutDropdownOpen(false);
+                          setCashoutAccountIds(prev => 
+                            prev.includes(log.id) 
+                              ? prev.filter(id => id !== log.id)
+                              : [...prev, log.id]
+                          );
                         }}
                         className={`px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors ${
-                          cashoutAccountId === log.id 
+                          cashoutAccountIds.includes(log.id) 
                             ? 'bg-primary/10 text-primary border-l-2 border-primary' 
                             : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
                         }`}
@@ -1154,9 +1185,9 @@ export default function UserDashboardPage() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2"><Image src="/gmto.png" alt="GMTO" width={16} height={16} /></span>
               <input 
                 type="number"
-                value={cashoutAccountId ? incomeLogs.find(l => l.id === cashoutAccountId)?.gmto : ""}
+                value={cashoutAccountIds.length > 0 ? incomeLogs.filter(l => cashoutAccountIds.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0) : ""}
                 readOnly
-                placeholder="Select an income log first"
+                placeholder="Select income logs first"
                 className="w-full rounded-md border border-input bg-foreground/[0.02] pl-9 pr-3 py-2 text-sm text-muted-foreground cursor-not-allowed focus:outline-none"
               />
             </div>
@@ -1175,17 +1206,17 @@ export default function UserDashboardPage() {
               />
             </div>
           </div>
-          {cashoutAccountId && parseFloat(cashoutFiat) > 0 && (
+          {cashoutAccountIds.length > 0 && parseFloat(cashoutFiat) > 0 && (
             <div className="p-3 bg-primary/10 rounded-md border border-primary/20">
               <p className="text-xs text-primary font-medium text-center">
-                Realized Price: {currencySymbol}{(parseFloat(cashoutFiat) / (incomeLogs.find(l => l.id === cashoutAccountId)?.gmto || 1)).toFixed(6)} / GMTO
+                Realized Price: {currencySymbol}{(parseFloat(cashoutFiat) / (incomeLogs.filter(l => cashoutAccountIds.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0) || 1)).toFixed(6)} / GMTO
               </p>
             </div>
           )}
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="ghost" onClick={() => setIsCashoutModalOpen(false)}>Cancel</Button>
-          <Button onClick={handleCashout} disabled={!cashoutAccountId || !cashoutFiat || isNaN(parseFloat(cashoutFiat))}>
+          <Button onClick={handleCashout} disabled={cashoutAccountIds.length === 0 || !cashoutFiat || isNaN(parseFloat(cashoutFiat))}>
             <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="mr-1.5 opacity-80" />
             Record Sale
           </Button>

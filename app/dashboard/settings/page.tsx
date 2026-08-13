@@ -144,35 +144,38 @@ export default function SettingsPage() {
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-foreground">Default Currency</label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                         <DollarSign className="size-4 text-muted-foreground" />
                       </div>
                       <button 
                         type="button"
                         onClick={() => setCurrencyOpen(!currencyOpen)}
-                        className="w-full flex items-center justify-between rounded-md border border-input bg-background/50 pl-9 pr-3 py-2 text-sm ring-offset-background hover:border-border focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
+                        className={`w-full flex items-center justify-between rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm cursor-pointer transition-colors ${currencyOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
                       >
-                        <span>{currencies.find(c => c.value === currency)?.label}</span>
-                        <ChevronDown className="size-4 opacity-50" />
+                        <span className={currency ? "text-foreground" : "text-muted-foreground"}>
+                          {currencies.find(c => c.value === currency)?.label}
+                        </span>
+                        <ChevronDown className={`size-4 text-muted-foreground transition-transform ${currencyOpen ? 'rotate-180' : ''}`} />
                       </button>
                       
                       {currencyOpen && (
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setCurrencyOpen(false)}></div>
-                          <div className="absolute z-50 w-full mt-1 rounded-md border border-border/80 bg-background/95 backdrop-blur-sm text-foreground shadow-xl outline-none overflow-hidden">
-                            <div className="p-1">
-                              {currencies.map(c => (
-                                <button
-                                  key={c.value}
-                                  type="button"
-                                  onClick={() => { setCurrency(c.value); setCurrencyOpen(false); }}
-                                  className={`w-full flex items-center justify-between rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-foreground/10 ${currency === c.value ? 'bg-foreground/5' : ''}`}
-                                >
-                                  {c.label}
-                                  {currency === c.value && <Check className="size-3 text-primary" />}
-                                </button>
-                              ))}
-                            </div>
+                          <div className="absolute z-50 w-full mt-1.5 rounded-md border border-input bg-background shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                            {currencies.map(c => (
+                              <button
+                                key={c.value}
+                                type="button"
+                                onClick={() => { setCurrency(c.value); setCurrencyOpen(false); }}
+                                className={`px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors outline-none ${
+                                  currency === c.value 
+                                    ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+                                    : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
+                                }`}
+                              >
+                                <span className="font-medium">{c.label}</span>
+                              </button>
+                            ))}
                           </div>
                         </>
                       )}
