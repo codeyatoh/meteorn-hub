@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Settings, Save, Mail, Lock, User, DollarSign, Loader2, ChevronDown, Check } from "lucide-react";
+import { Settings, Save, Mail, Lock, User, DollarSign, Loader2, ChevronDown } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 
 export default function SettingsPage() {

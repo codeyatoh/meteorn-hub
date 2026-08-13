@@ -1122,7 +1122,7 @@ export default function UserDashboardPage() {
         maxWidth="sm"
       >
         <p className="text-sm text-muted-foreground mb-4">
-          Record a cashout or P2P sale of a specific account's logged income.
+          Record a cashout or P2P sale of a specific account&apos;s logged income.
         </p>
         <div className="space-y-4">
           <div className="space-y-1.5">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDownIcon, CheckIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
