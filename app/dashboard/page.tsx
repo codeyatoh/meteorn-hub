@@ -650,20 +650,20 @@ export default function UserDashboardPage() {
                       >
                         {account.name}
                       </span>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {account.referralLink && (
-                          <a href={account.referralLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
-                            <LinkIcon className="size-3" />
+                          <a href={account.referralLink} target="_blank" rel="noopener noreferrer" className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
+                            <LinkIcon className="size-3.5" />
                           </a>
                         )}
                         {account.walletAddress && (
-                          <button onClick={() => openViewWalletModal(account.walletAddress!)} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="View Wallet Address">
-                            <WalletIcon className="size-3" />
+                          <button onClick={() => openViewWalletModal(account.walletAddress!)} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="View Wallet Address">
+                            <WalletIcon className="size-3.5" />
                           </button>
                         )}
                         {account.email && (
-                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
-                            <MailIcon className="size-3" />
+                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
+                            <MailIcon className="size-3.5" />
                           </button>
                         )}
                       </div>
