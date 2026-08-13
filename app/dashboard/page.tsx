@@ -24,7 +24,7 @@ const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 
 // Types
 type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null; email: string | null };
-type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string };
+type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string; is_sold: boolean; fiat_received: number };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
 
@@ -83,7 +83,7 @@ export default function UserDashboardPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [gmtoEarned, setGmtoEarned] = useState("");
   
-  const [cashoutGmto, setCashoutGmto] = useState("");
+  const [cashoutAccountId, setCashoutAccountId] = useState<string | null>(null);
   const [cashoutFiat, setCashoutFiat] = useState("");
   
   const [currency, setCurrency] = useState("usd");
@@ -143,7 +143,9 @@ export default function UserDashboardPage() {
           time: new Date(log.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
           title: log.account_name,
           gmto: parseFloat(log.gmto_amount),
-          color: log.color
+          color: log.color,
+          is_sold: log.is_sold,
+          fiat_received: parseFloat(log.fiat_received)
         })));
       }
     };
@@ -203,6 +205,7 @@ export default function UserDashboardPage() {
           account_name: account.name,
           increment: actualDelta
         });
+      toast.success("Tickets updated!");
     }
   };
 
@@ -233,7 +236,9 @@ export default function UserDashboardPage() {
         time: new Date(data.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         title: data.account_name,
         gmto: parseFloat(data.gmto_amount),
-        color: data.color
+        color: data.color,
+        is_sold: data.is_sold,
+        fiat_received: parseFloat(data.fiat_received)
       };
       setIncomeLogs(prev => [formattedLog, ...prev]);
       toast.success("Income logged successfully!");
@@ -246,23 +251,35 @@ export default function UserDashboardPage() {
   };
 
   const handleCashout = async () => {
-    const gmto = parseFloat(cashoutGmto);
+    if (!cashoutAccountId) return;
+    const targetLog = incomeLogs.find(log => log.id === cashoutAccountId);
+    if (!targetLog) return;
+    
+    const gmto = targetLog.gmto;
     const fiat = parseFloat(cashoutFiat);
     if (isNaN(gmto) || gmto <= 0 || isNaN(fiat) || fiat <= 0 || !userId) return;
 
     const { error } = await supabase
-      .from('cashout_logs')
-      .insert({
-        user_id: userId,
-        gmto_sold: gmto,
-        fiat_received: fiat,
-        currency: currency
-      });
+      .from('income_logs')
+      .update({
+        is_sold: true,
+        fiat_received: fiat
+      })
+      .eq('id', targetLog.id);
 
     if (!error) {
+      setIncomeLogs(prev => prev.map(log => log.id === targetLog.id ? { ...log, is_sold: true, fiat_received: fiat } : log));
+      
+      try {
+        const audio = new Audio('/cash.mp3');
+        audio.play().catch(e => console.warn("Audio play failed:", e));
+      } catch (e) {
+        console.warn("Audio playback not supported.", e);
+      }
+      
       toast.success("Cashout logged successfully!");
       setIsCashoutModalOpen(false);
-      setCashoutGmto("");
+      setCashoutAccountId(null);
       setCashoutFiat("");
     } else {
       toast.error("Failed to log cashout.");
@@ -439,12 +456,6 @@ export default function UserDashboardPage() {
 
   const currencySymbol = CURRENCY_SYMBOLS[currency] || "$";
   
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
-  };
 
   const getModeText = () => {
     const day = new Date().getDay(); // 0 is Sunday, 3 is Wednesday
@@ -484,15 +495,11 @@ export default function UserDashboardPage() {
               Welcome back, <span className="text-primary">{nickname}</span>
             </h1>
             <p className="mt-2 text-muted-foreground text-sm">
-              Here's an overview of your game accounts today.
+              Here&apos;s an overview of your game accounts today.
             </p>
           </div>
           
           <div className="flex items-center gap-3 self-end sm:self-auto">
-            <Button onClick={() => setIsCashoutModalOpen(true)} variant="outline" size="sm" className="h-9">
-              <MinusIcon className="size-4 mr-1.5" />
-              Sell GMTO
-            </Button>
             {/* Currency Selector */}
           </div>
         </div>
@@ -681,14 +688,19 @@ export default function UserDashboardPage() {
             />
           </DashboardCard>
 
-          {/* Today's Income Log */}
           <DashboardCard 
             title="Today's Income" 
             trailing={
-              <Button onClick={() => setIsModalOpen(true)} variant="ghost" size="sm" className="h-8">
-                <WalletIcon className="size-4 mr-1" />
-                Log
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={() => setIsCashoutModalOpen(true)} variant="outline" size="sm" className="h-8">
+                  <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="mr-1.5 opacity-80" />
+                  Sell
+                </Button>
+                <Button onClick={() => setIsModalOpen(true)} variant="ghost" size="sm" className="h-8">
+                  <WalletIcon className="size-4 mr-1" />
+                  Log
+                </Button>
+              </div>
             }
           >
             <ul className="mt-2 flex flex-col gap-2 min-h-[220px] pr-1">
@@ -715,14 +727,22 @@ export default function UserDashboardPage() {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
-                      <button onClick={() => openEditLogModal(log)} className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit Log">
-                        <PencilIcon className="size-3.5" />
-                      </button>
-                      <button onClick={() => openDeleteLogModal(log.id)} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors" title="Delete Log">
-                        <TrashIcon className="size-3.5" />
-                      </button>
-                    </div>
+                    {!log.is_sold ? (
+                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
+                        <button onClick={() => openEditLogModal(log)} className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit Log">
+                          <PencilIcon className="size-3.5" />
+                        </button>
+                        <button onClick={() => openDeleteLogModal(log.id)} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors" title="Delete Log">
+                          <TrashIcon className="size-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="shrink-0 flex items-center">
+                        <span className="text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full tracking-wider border border-emerald-500/20">
+                          Sold
+                        </span>
+                      </div>
+                    )}
 
                     <div className="text-right ml-2 shrink-0">
                       <div className="text-sm font-medium text-emerald-500/90">+{currencySymbol}{logGross.toFixed(2)}</div>
@@ -1068,24 +1088,47 @@ export default function UserDashboardPage() {
       <AnimatedModal
         isOpen={isCashoutModalOpen}
         onClose={() => setIsCashoutModalOpen(false)}
-        title="Sell GMTO"
-        icon={<MinusIcon size={18} strokeWidth={1.5} />}
+        title="Sell Account Income"
+        icon={<Image src="/gmto.png" alt="GMTO" width={18} height={18} />}
         maxWidth="sm"
       >
         <p className="text-sm text-muted-foreground mb-4">
-          Record a cashout or P2P sale of your accumulated GMTO.
+          Record a cashout or P2P sale of a specific account's logged income.
         </p>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">GMTO Sold</label>
-            <input 
-              type="number"
-              value={cashoutGmto}
-              onChange={(e) => setCashoutGmto(e.target.value)}
-              placeholder="e.g. 1000000"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+            <label className="text-sm font-medium text-foreground">Select Unsold Income</label>
+            <div className="relative">
+              <select
+                value={cashoutAccountId || ""}
+                onChange={(e) => setCashoutAccountId(e.target.value)}
+                className="w-full appearance-none rounded-md border border-input bg-background pl-3 pr-10 py-2 text-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="" disabled>Choose an income log</option>
+                {incomeLogs.filter(log => !log.is_sold).map(log => (
+                  <option key={log.id} value={log.id}>
+                    {log.title} ({log.gmto} GMTO)
+                  </option>
+                ))}
+              </select>
+              <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+            </div>
           </div>
+          
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">GMTO to Sell (Auto-filled)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2"><Image src="/gmto.png" alt="GMTO" width={16} height={16} /></span>
+              <input 
+                type="number"
+                value={cashoutAccountId ? incomeLogs.find(l => l.id === cashoutAccountId)?.gmto : ""}
+                readOnly
+                placeholder="Select an income log first"
+                className="w-full rounded-md border border-input bg-foreground/[0.02] pl-9 pr-3 py-2 text-sm text-muted-foreground cursor-not-allowed focus:outline-none"
+              />
+            </div>
+          </div>
+          
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Total {currency.toUpperCase()} Received</label>
             <div className="relative">
@@ -1099,17 +1142,18 @@ export default function UserDashboardPage() {
               />
             </div>
           </div>
-          {parseFloat(cashoutGmto) > 0 && parseFloat(cashoutFiat) > 0 && (
+          {cashoutAccountId && parseFloat(cashoutFiat) > 0 && (
             <div className="p-3 bg-primary/10 rounded-md border border-primary/20">
               <p className="text-xs text-primary font-medium text-center">
-                Realized Price: {currencySymbol}{(parseFloat(cashoutFiat) / parseFloat(cashoutGmto)).toFixed(6)} / GMTO
+                Realized Price: {currencySymbol}{(parseFloat(cashoutFiat) / (incomeLogs.find(l => l.id === cashoutAccountId)?.gmto || 1)).toFixed(6)} / GMTO
               </p>
             </div>
           )}
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="ghost" onClick={() => setIsCashoutModalOpen(false)}>Cancel</Button>
-          <Button onClick={handleCashout} disabled={!cashoutGmto || !cashoutFiat || isNaN(parseFloat(cashoutGmto)) || isNaN(parseFloat(cashoutFiat))}>
+          <Button onClick={handleCashout} disabled={!cashoutAccountId || !cashoutFiat || isNaN(parseFloat(cashoutFiat))}>
+            <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="mr-1.5 opacity-80" />
             Record Sale
           </Button>
         </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, ReactNode, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BarChart2, Calendar as CalendarIcon } from "lucide-react";
+import { BarChart2 } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import Image from "next/image";
 import { AnalyticsIncomeChart } from "@/features/dashboard/components/analytics-income-chart";
@@ -20,14 +20,8 @@ type IncomeLog = {
   account_name: string;
   gmto_amount: number;
   created_at: string;
-};
-
-type CashoutLog = {
-  id: string;
-  gmto_sold: number;
+  is_sold: boolean;
   fiat_received: number;
-  currency: string;
-  created_at: string;
 };
 
 type FilterType = 'today' | 'weekly' | 'monthly' | 'all';
@@ -38,7 +32,6 @@ export default function AnalyticsPage() {
   
   const [ticketLogs, setTicketLogs] = useState<TicketLog[]>([]);
   const [incomeLogs, setIncomeLogs] = useState<IncomeLog[]>([]);
-  const [cashoutLogs, setCashoutLogs] = useState<CashoutLog[]>([]);
   const [todayTicketsCount, setTodayTicketsCount] = useState(0);
   const [todayAccountsCount, setTodayAccountsCount] = useState(0);
   const [todayActiveAccounts, setTodayActiveAccounts] = useState<string[]>([]);
@@ -123,19 +116,12 @@ export default function AnalyticsPage() {
         .order('created_at', { ascending: false });
 
       if (iLogs) {
-        setIncomeLogs(iLogs.map((l: { id: string, account_name: string, gmto_amount: string | number, created_at: string }) => ({
+        setIncomeLogs(iLogs.map(l => ({
           ...l,
-          gmto_amount: typeof l.gmto_amount === 'string' ? parseFloat(l.gmto_amount) : l.gmto_amount
+          gmto_amount: typeof l.gmto_amount === 'string' ? parseFloat(l.gmto_amount) : l.gmto_amount,
+          fiat_received: typeof l.fiat_received === 'string' ? parseFloat(l.fiat_received) : l.fiat_received
         })));
       }
-
-      // Fetch Cashout Logs
-      const { data: cLogs } = await supabase
-        .from('cashout_logs')
-        .select('*')
-        .gte('created_at', isoDate)
-        .order('created_at', { ascending: false });
-      if (cLogs) setCashoutLogs(cLogs);
       
     }
     Promise.all([
@@ -160,14 +146,14 @@ export default function AnalyticsPage() {
     : new Set([...todayActiveAccounts, ...oldLogs.map(log => log.account_name)]).size;
 
   const totalGMTOEarned = incomeLogs.reduce((sum, log) => sum + log.gmto_amount, 0);
-  const totalGMTOSold = cashoutLogs.reduce((sum, log) => sum + log.gmto_sold, 0);
+  const totalGMTOSold = incomeLogs.filter(l => l.is_sold).reduce((sum, log) => sum + log.gmto_amount, 0);
   const totalUnsoldGMTO = Math.max(0, totalGMTOEarned - totalGMTOSold);
 
-  const totalFiatRealized = cashoutLogs.reduce((sum, log) => sum + log.fiat_received, 0);
+  const totalFiatRealized = incomeLogs.filter(l => l.is_sold).reduce((sum, log) => sum + log.fiat_received, 0);
   const grossFiat = (totalUnsoldGMTO * gmtoPrice) + totalFiatRealized;
 
   const chartData = useMemo(() => {
-    // Combine income logs and cashout logs into a daily grouping
+    // Combine income logs and cashouts into a daily grouping
     const grouped = incomeLogs.reduce((acc, log) => {
       const date = new Date(log.created_at);
       const key = filter === 'today' 
@@ -176,26 +162,18 @@ export default function AnalyticsPage() {
       
       if (!acc[key]) acc[key] = { gmto: 0, fiat: 0 };
       acc[key].gmto += log.gmto_amount;
+      if (log.is_sold) {
+        acc[key].fiat += log.fiat_received;
+      }
       return acc;
     }, {} as Record<string, { gmto: number; fiat: number }>);
-
-    // Apply cashouts to the timeline
-    cashoutLogs.forEach(log => {
-      const date = new Date(log.created_at);
-      const key = filter === 'today' 
-        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      
-      if (!grouped[key]) grouped[key] = { gmto: 0, fiat: 0 };
-      grouped[key].fiat += log.fiat_received; // Add realized fiat to that day
-    });
 
     return Object.entries(grouped).map(([time, data]) => ({
       time,
       amount: data.gmto,
-      fiat: (data.gmto * gmtoPrice) + data.fiat // rough estimation for timeline: (earned gmto * current price) + realized cashouts that day
+      fiat: ((data.gmto - (data.fiat > 0 ? data.gmto : 0)) * gmtoPrice) + data.fiat // rough estimation for timeline
     }));
-  }, [incomeLogs, cashoutLogs, filter, gmtoPrice]);
+  }, [incomeLogs, filter, gmtoPrice]);
 
   const paginatedTickets = ticketLogs.slice((ticketPage - 1) * ITEMS_PER_PAGE, ticketPage * ITEMS_PER_PAGE);
   const totalTicketPages = Math.max(1, Math.ceil(ticketLogs.length / ITEMS_PER_PAGE));
@@ -203,8 +181,9 @@ export default function AnalyticsPage() {
   const paginatedIncome = incomeLogs.slice((incomePage - 1) * ITEMS_PER_PAGE, incomePage * ITEMS_PER_PAGE);
   const totalIncomePages = Math.max(1, Math.ceil(incomeLogs.length / ITEMS_PER_PAGE));
 
-  const paginatedCashouts = cashoutLogs.slice((cashoutPage - 1) * ITEMS_PER_PAGE, cashoutPage * ITEMS_PER_PAGE);
-  const totalCashoutPages = Math.max(1, Math.ceil(cashoutLogs.length / ITEMS_PER_PAGE));
+  const cashouts = incomeLogs.filter(l => l.is_sold);
+  const paginatedCashouts = cashouts.slice((cashoutPage - 1) * ITEMS_PER_PAGE, cashoutPage * ITEMS_PER_PAGE);
+  const totalCashoutPages = Math.max(1, Math.ceil(cashouts.length / ITEMS_PER_PAGE));
 
   return (
     <div className="px-6 py-10 relative min-h-screen">
@@ -370,21 +349,21 @@ export default function AnalyticsPage() {
                   Cashout Logs
                 </div>
                 <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-                  {cashoutLogs.length === 0 ? (
+                  {cashouts.length === 0 ? (
                     <div className="text-sm text-muted-foreground flex h-full items-center justify-center">No cashouts found.</div>
                   ) : (
                     paginatedCashouts.map(log => (
                       <div key={log.id} className="flex items-center justify-between p-2 rounded-md hover:bg-foreground/[0.02]">
                         <div>
                           <p className="text-sm font-medium text-foreground">{currencySymbol}{log.fiat_received}</p>
-                          <p className="text-[10px] text-muted-foreground">{new Date(log.created_at).toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">{log.account_name}</p>
                         </div>
                         <div className="text-right">
                           <div className="flex items-center justify-end space-x-1.5 text-sm font-medium text-destructive">
-                            <span>-{log.gmto_sold}</span>
+                            <span>-{log.gmto_amount}</span>
                             <Image src="/gmto.png" alt="GMTO" width={18} height={18} className="opacity-90" />
                           </div>
-                          <div className="text-[10px] text-muted-foreground">Sold @ {currencySymbol}{(log.fiat_received / log.gmto_sold).toFixed(6)}</div>
+                          <div className="text-[10px] text-muted-foreground">Sold @ {currencySymbol}{(log.fiat_received / log.gmto_amount).toFixed(6)}</div>
                         </div>
                       </div>
                     ))

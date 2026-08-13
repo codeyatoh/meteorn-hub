@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SlidersIcon, Loader2, SaveIcon, TicketIcon, PercentIcon, ClockIcon, Mail, Lock } from "lucide-react";
+import { SlidersIcon, Loader2, SaveIcon, TicketIcon, ClockIcon, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
