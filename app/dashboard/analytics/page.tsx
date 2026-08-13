@@ -277,7 +277,7 @@ export default function AnalyticsPage() {
                     ))
                   )}
                 </div>
-                {totalTicketPages > 1 && (
+                {ticketLogs.length > 0 && (
                   <div className="flex justify-between items-center mt-4 pt-2 border-t border-border/40 text-xs text-muted-foreground">
                     <button 
                       disabled={ticketPage === 1} 
@@ -323,7 +323,7 @@ export default function AnalyticsPage() {
                     ))
                   )}
                 </div>
-                {totalIncomePages > 1 && (
+                {incomeLogs.length > 0 && (
                   <div className="flex justify-between items-center mt-4 pt-2 border-t border-border/40 text-xs text-muted-foreground">
                     <button 
                       disabled={incomePage === 1} 
@@ -369,7 +369,7 @@ export default function AnalyticsPage() {
                     ))
                   )}
                 </div>
-                {totalCashoutPages > 1 && (
+                {cashouts.length > 0 && (
                   <div className="flex justify-between items-center mt-4 pt-2 border-t border-border/40 text-xs text-muted-foreground">
                     <button 
                       disabled={cashoutPage === 1} 
