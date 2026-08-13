@@ -85,6 +85,7 @@ export default function UserDashboardPage() {
   
   const [cashoutAccountId, setCashoutAccountId] = useState<string | null>(null);
   const [cashoutFiat, setCashoutFiat] = useState("");
+  const [isCashoutDropdownOpen, setIsCashoutDropdownOpen] = useState(false);
   
   const [currency, setCurrency] = useState("usd");
   const [gmtoPrice, setGmtoPrice] = useState(0.30); // Default fallback price
@@ -1099,19 +1100,51 @@ export default function UserDashboardPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Select Unsold Income</label>
             <div className="relative">
-              <select
-                value={cashoutAccountId || ""}
-                onChange={(e) => setCashoutAccountId(e.target.value)}
-                className="w-full appearance-none rounded-md border border-input bg-background pl-3 pr-10 py-2 text-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+              <div 
+                onClick={() => setIsCashoutDropdownOpen(!isCashoutDropdownOpen)}
+                className={`w-full rounded-md border border-input bg-background pl-3 pr-10 py-2.5 text-sm cursor-pointer transition-colors flex items-center justify-between ${isCashoutDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
               >
-                <option value="" disabled>Choose an income log</option>
-                {incomeLogs.filter(log => !log.is_sold).map(log => (
-                  <option key={log.id} value={log.id}>
-                    {log.title} ({log.gmto} GMTO)
-                  </option>
-                ))}
-              </select>
-              <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                <span className={cashoutAccountId ? "text-foreground" : "text-muted-foreground"}>
+                  {cashoutAccountId 
+                    ? `${incomeLogs.find(l => l.id === cashoutAccountId)?.title} (${incomeLogs.find(l => l.id === cashoutAccountId)?.gmto} GMTO)` 
+                    : "Choose an income log"}
+                </span>
+                <ChevronDownIcon className={`absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground transition-transform ${isCashoutDropdownOpen ? 'rotate-180' : ''}`} />
+              </div>
+
+              {isCashoutDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsCashoutDropdownOpen(false)} />
+                  <div className="absolute z-50 top-full mt-1.5 w-full bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col max-h-[200px] overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                    {incomeLogs.filter(log => !log.is_sold).map(log => (
+                      <div
+                        key={log.id}
+                        onClick={() => {
+                          setCashoutAccountId(log.id);
+                          setIsCashoutDropdownOpen(false);
+                        }}
+                        className={`px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors ${
+                          cashoutAccountId === log.id 
+                            ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+                            : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
+                        }`}
+                      >
+                        <span className="font-medium">{log.title}</span>
+                        <div className="flex items-center gap-1.5 opacity-80">
+                          <span className="text-xs">{log.gmto}</span>
+                          <Image src="/gmto.png" alt="GMTO" width={12} height={12} />
+                        </div>
+                      </div>
+                    ))}
+                    {incomeLogs.filter(log => !log.is_sold).length === 0 && (
+                      <div className="px-4 py-6 text-sm text-center text-muted-foreground flex flex-col items-center gap-2">
+                        <WalletIcon className="size-5 opacity-50" />
+                        No unsold income available today.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
           
