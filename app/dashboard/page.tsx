@@ -41,7 +41,8 @@ export default function UserDashboardPage() {
   // Pagination State
   const [accountsPage, setAccountsPage] = useState(1);
   const [incomePage, setIncomePage] = useState(1);
-  const ITEMS_PER_PAGE = 5;
+  const ACCOUNTS_PER_PAGE = 8;
+  const INCOME_PER_PAGE = 5;
   
   const [searchQuery, setSearchQuery] = useState("");
   const filteredAccounts = accounts.filter(acc => acc.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -87,6 +88,7 @@ export default function UserDashboardPage() {
   const [cashoutFiat, setCashoutFiat] = useState("");
   const [isCashoutDropdownOpen, setIsCashoutDropdownOpen] = useState(false);
   
+
   const [currency, setCurrency] = useState("usd");
   const [gmtoPrice, setGmtoPrice] = useState(0.30); // Default fallback price
   
@@ -616,7 +618,7 @@ export default function UserDashboardPage() {
             }
           >
             <ul className="mt-1 flex flex-col min-h-[220px]">
-              {filteredAccounts.slice((accountsPage - 1) * ITEMS_PER_PAGE, accountsPage * ITEMS_PER_PAGE).map((account) => {
+              {filteredAccounts.slice((accountsPage - 1) * ACCOUNTS_PER_PAGE, accountsPage * ACCOUNTS_PER_PAGE).map((account) => {
                 const isDone = account.ticketsDone === account.totalTickets;
                 return (
                   <li
@@ -703,7 +705,7 @@ export default function UserDashboardPage() {
             </ul>
             <PaginationControls 
               currentPage={accountsPage} 
-              totalPages={Math.ceil(filteredAccounts.length / ITEMS_PER_PAGE)} 
+              totalPages={Math.ceil(filteredAccounts.length / ACCOUNTS_PER_PAGE)}
               onPageChange={setAccountsPage} 
             />
           </DashboardCard>
@@ -724,7 +726,7 @@ export default function UserDashboardPage() {
             }
           >
             <ul className="mt-2 flex flex-col gap-2 min-h-[220px] pr-1">
-              {incomeLogs.slice((incomePage - 1) * ITEMS_PER_PAGE, incomePage * ITEMS_PER_PAGE).map((log) => {
+              {incomeLogs.slice((incomePage - 1) * INCOME_PER_PAGE, incomePage * INCOME_PER_PAGE).map((log) => {
                 const logGross = log.gmto * gmtoPrice;
 
                 return (
@@ -780,7 +782,7 @@ export default function UserDashboardPage() {
             </ul>
             <PaginationControls 
               currentPage={incomePage} 
-              totalPages={Math.ceil(incomeLogs.length / ITEMS_PER_PAGE)} 
+              totalPages={Math.ceil(incomeLogs.length / INCOME_PER_PAGE)} 
               onPageChange={setIncomePage} 
             />
           </DashboardCard>
