@@ -34,6 +34,7 @@ export default function UserDashboardPage() {
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   
@@ -81,6 +82,9 @@ export default function UserDashboardPage() {
 
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [gmtoEarned, setGmtoEarned] = useState("");
+  
+  const [cashoutGmto, setCashoutGmto] = useState("");
+  const [cashoutFiat, setCashoutFiat] = useState("");
   
   const [currency, setCurrency] = useState("usd");
   const [gmtoPrice, setGmtoPrice] = useState(0.30); // Default fallback price
@@ -172,7 +176,6 @@ export default function UserDashboardPage() {
   const totalMaxTickets = accounts.reduce((sum, acc) => sum + acc.totalTickets, 0);
   
   const totalGross = incomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
-  const totalNet = incomeLogs.reduce((sum, log) => sum + ((log.gmto * gmtoPrice) * 0.995), 0);
 
   const updateTicket = async (id: number, delta: number) => {
     const account = accounts.find(a => a.id === id);
@@ -240,6 +243,30 @@ export default function UserDashboardPage() {
 
     setIsModalOpen(false);
     setGmtoEarned("");
+  };
+
+  const handleCashout = async () => {
+    const gmto = parseFloat(cashoutGmto);
+    const fiat = parseFloat(cashoutFiat);
+    if (isNaN(gmto) || gmto <= 0 || isNaN(fiat) || fiat <= 0 || !userId) return;
+
+    const { error } = await supabase
+      .from('cashout_logs')
+      .insert({
+        user_id: userId,
+        gmto_sold: gmto,
+        fiat_received: fiat,
+        currency: currency
+      });
+
+    if (!error) {
+      toast.success("Cashout logged successfully!");
+      setIsCashoutModalOpen(false);
+      setCashoutGmto("");
+      setCashoutFiat("");
+    } else {
+      toast.error("Failed to log cashout.");
+    }
   };
 
   const openDeleteAccountModal = (id: number) => {
@@ -451,9 +478,24 @@ export default function UserDashboardPage() {
               <span>—</span>
               <span className={getModeColor()}>{getModeText()}</span>
             </div>
-            <h1 className="mt-1 font-heading text-4xl tracking-tight text-foreground">
-              {getGreeting()}, {nickname}.
+               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+              Welcome back, <span className="text-primary">{nickname}</span>
             </h1>
+            <p className="mt-2 text-muted-foreground text-sm">
+              Here's an overview of your game accounts today.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            <Button onClick={() => setIsCashoutModalOpen(true)} variant="outline" size="sm" className="h-9">
+              <MinusIcon className="size-4 mr-1.5" />
+              Sell GMTO
+            </Button>
+            {/* Currency Selector */}
+          </div>
+        </div>
             <p className="mt-2 max-w-xl text-muted-foreground text-sm">
               You have {accounts.filter(acc => acc.ticketsDone < acc.totalTickets).length} accounts pending for quota today. Keep up the grind!
             </p>
@@ -501,7 +543,7 @@ export default function UserDashboardPage() {
         </div>
 
         {/* Fact Cards */}
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FactCard 
             label="Tickets Logged" 
             value={`${totalTicketsLogged} / ${totalMaxTickets}`} 
@@ -509,16 +551,10 @@ export default function UserDashboardPage() {
             icon={<Image src="/repair-ticket.png" alt="ticket" width={24} height={24} className="object-contain" />}
           />
           <FactCard 
-            label="Gross Income" 
+            label="Today's Est. Income" 
             value={`${currencySymbol}${totalGross.toFixed(2)}`} 
             sub={`$GMTO Price: ${currencySymbol}${gmtoPrice.toFixed(6)}`} 
-            icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="object-contain" />}
-          />
-          <FactCard 
-            label="Net Income" 
-            value={`${currencySymbol}${totalNet.toFixed(2)}`} 
-            sub="- 0.5% default fee" 
-            icon={<WalletIcon className="size-4 opacity-50" />}
+            icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}
           />
         </div>
 
@@ -658,8 +694,6 @@ export default function UserDashboardPage() {
             <ul className="mt-2 flex flex-col gap-2 min-h-[220px] pr-1">
               {incomeLogs.slice((incomePage - 1) * ITEMS_PER_PAGE, incomePage * ITEMS_PER_PAGE).map((log) => {
                 const logGross = log.gmto * gmtoPrice;
-                const logFee = logGross * 0.005;
-                const logNet = logGross - logFee;
 
                 return (
                   <li
@@ -691,8 +725,7 @@ export default function UserDashboardPage() {
                     </div>
 
                     <div className="text-right ml-2 shrink-0">
-                      <div className="text-sm font-medium text-emerald-500/90">+{currencySymbol}{logNet.toFixed(2)}</div>
-                      <div className="text-[10px] text-muted-foreground">- {currencySymbol}{logFee.toFixed(2)} fee</div>
+                      <div className="text-sm font-medium text-emerald-500/90">+{currencySymbol}{logGross.toFixed(2)}</div>
                     </div>
                   </li>
                 );
@@ -775,7 +808,7 @@ export default function UserDashboardPage() {
             </div>
             <div className="text-[10px] text-muted-foreground flex justify-between mt-1 px-1">
               <span>Rate: {currencySymbol}{gmtoPrice.toFixed(6)} / GMTO</span>
-              <span>Fee: 0.5%</span>
+
             </div>
           </div>
 
@@ -1028,6 +1061,57 @@ export default function UserDashboardPage() {
             <Button variant="outline" onClick={() => setIsDeleteLogModalOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDeleteLog}>Delete Log</Button>
           </div>
+        </div>
+      </AnimatedModal>
+
+      {/* Cashout Modal Overlay */}
+      <AnimatedModal
+        isOpen={isCashoutModalOpen}
+        onClose={() => setIsCashoutModalOpen(false)}
+        title="Sell GMTO"
+        icon={<MinusIcon size={18} strokeWidth={1.5} />}
+        maxWidth="sm"
+      >
+        <p className="text-sm text-muted-foreground mb-4">
+          Record a cashout or P2P sale of your accumulated GMTO.
+        </p>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">GMTO Sold</label>
+            <input 
+              type="number"
+              value={cashoutGmto}
+              onChange={(e) => setCashoutGmto(e.target.value)}
+              placeholder="e.g. 1000000"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Total {currency.toUpperCase()} Received</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span>
+              <input 
+                type="number"
+                value={cashoutFiat}
+                onChange={(e) => setCashoutFiat(e.target.value)}
+                placeholder="e.g. 1200"
+                className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          </div>
+          {parseFloat(cashoutGmto) > 0 && parseFloat(cashoutFiat) > 0 && (
+            <div className="p-3 bg-primary/10 rounded-md border border-primary/20">
+              <p className="text-xs text-primary font-medium text-center">
+                Realized Price: {currencySymbol}{(parseFloat(cashoutFiat) / parseFloat(cashoutGmto)).toFixed(6)} / GMTO
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setIsCashoutModalOpen(false)}>Cancel</Button>
+          <Button onClick={handleCashout} disabled={!cashoutGmto || !cashoutFiat || isNaN(parseFloat(cashoutGmto)) || isNaN(parseFloat(cashoutFiat))}>
+            Record Sale
+          </Button>
         </div>
       </AnimatedModal>
 

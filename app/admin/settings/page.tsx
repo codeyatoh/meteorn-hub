@@ -10,7 +10,6 @@ import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 type PlatformSettings = {
   id: number;
   daily_ticket_limit: number;
-  withdrawal_fee_percent: number;
   updated_at: string;
 };
 
@@ -20,7 +19,6 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const [ticketLimit, setTicketLimit] = useState("");
-  const [feePercent, setFeePercent] = useState("");
 
   const [email, setEmail] = useState("");
   const [originalEmail, setOriginalEmail] = useState("");
@@ -35,10 +33,9 @@ export default function AdminSettingsPage() {
       new Promise(resolve => setTimeout(resolve, 1000))
     ])
       .then(([data]) => {
-        if (data && typeof data.daily_ticket_limit === "number") {
+        if (data) {
           setSettings(data);
           setTicketLimit(String(data.daily_ticket_limit));
-          setFeePercent(String(data.withdrawal_fee_percent));
         }
       })
       .catch(() => toast.error("Failed to load settings.", { classNames: { icon: "text-destructive" } }))
@@ -57,13 +54,8 @@ export default function AdminSettingsPage() {
     e.preventDefault();
 
     const limit = parseInt(ticketLimit, 10);
-    const fee = parseFloat(feePercent);
     if (isNaN(limit) || limit < 1 || limit > 100) {
       toast.error("Ticket limit must be between 1 and 100.", { classNames: { icon: "text-destructive" } });
-      return;
-    }
-    if (isNaN(fee) || fee < 0 || fee > 100) {
-      toast.error("Fee must be between 0 and 100.", { classNames: { icon: "text-destructive" } });
       return;
     }
 
@@ -76,12 +68,12 @@ export default function AdminSettingsPage() {
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daily_ticket_limit: limit, withdrawal_fee_percent: fee }),
+      body: JSON.stringify({ daily_ticket_limit: limit }),
     });
 
     if (res.ok) {
       setSettings((prev) =>
-        prev ? { ...prev, daily_ticket_limit: limit, withdrawal_fee_percent: fee, updated_at: new Date().toISOString() } : prev
+        prev ? { ...prev, daily_ticket_limit: limit, updated_at: new Date().toISOString() } : prev
       );
       
       // Update Auth if needed
@@ -174,41 +166,6 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* Fee Percent */}
-          <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-4">
-            <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.25em]">
-              Income Fee
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                <PercentIcon className="size-4 text-muted-foreground" />
-                Withdrawal Fee Percentage
-              </label>
-              <div className="relative w-32">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.01}
-                  required
-                  value={feePercent}
-                  onChange={(e) => setFeePercent(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background/50 px-3 pr-8 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors hover:border-border font-mono"
-                />
-                <span className="absolute right-3 inset-y-0 flex items-center text-sm text-muted-foreground font-mono">
-                  %
-                </span>
-              </div>
-              <p className="text-[11px] text-muted-foreground max-w-xl leading-relaxed">
-                Deducted from gross GMTO income when calculating net earnings. Currently{" "}
-                <span className="font-mono text-foreground font-medium">
-                  {settings?.withdrawal_fee_percent ?? "0.50"}%
-                </span>
-                .
-              </p>
-            </div>
-          </div>
 
           {/* Admin Account */}
           <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-4">

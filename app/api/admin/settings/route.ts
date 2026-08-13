@@ -28,7 +28,6 @@ export async function GET() {
  * PATCH /api/admin/settings
  * Body options (any combination):
  *   { daily_ticket_limit: number }
- *   { withdrawal_fee_percent: number }
  */
 export async function PATCH(request: NextRequest) {
   const { error: authError } = await verifyAdmin();
@@ -36,7 +35,6 @@ export async function PATCH(request: NextRequest) {
 
   const body = await request.json() as {
     daily_ticket_limit?: number;
-    withdrawal_fee_percent?: number;
   };
 
   const updates: Record<string, unknown> = {
@@ -48,13 +46,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'daily_ticket_limit must be 1–100.' }, { status: 400 });
     }
     updates.daily_ticket_limit = body.daily_ticket_limit;
-  }
-
-  if (typeof body.withdrawal_fee_percent === 'number') {
-    if (body.withdrawal_fee_percent < 0 || body.withdrawal_fee_percent > 100) {
-      return NextResponse.json({ error: 'withdrawal_fee_percent must be 0–100.' }, { status: 400 });
-    }
-    updates.withdrawal_fee_percent = body.withdrawal_fee_percent;
   }
 
   if (Object.keys(updates).length <= 1) {

@@ -22,6 +22,14 @@ type IncomeLog = {
   created_at: string;
 };
 
+type CashoutLog = {
+  id: string;
+  gmto_sold: number;
+  fiat_received: number;
+  currency: string;
+  created_at: string;
+};
+
 type FilterType = 'today' | 'weekly' | 'monthly' | 'all';
 
 export default function AnalyticsPage() {
@@ -30,12 +38,14 @@ export default function AnalyticsPage() {
   
   const [ticketLogs, setTicketLogs] = useState<TicketLog[]>([]);
   const [incomeLogs, setIncomeLogs] = useState<IncomeLog[]>([]);
+  const [cashoutLogs, setCashoutLogs] = useState<CashoutLog[]>([]);
   const [todayTicketsCount, setTodayTicketsCount] = useState(0);
   const [todayAccountsCount, setTodayAccountsCount] = useState(0);
   const [todayActiveAccounts, setTodayActiveAccounts] = useState<string[]>([]);
   
   const [ticketPage, setTicketPage] = useState(1);
   const [incomePage, setIncomePage] = useState(1);
+  const [cashoutPage, setCashoutPage] = useState(1);
   const ITEMS_PER_PAGE = 8;
   
   const [currency, setCurrency] = useState("usd");
@@ -118,6 +128,14 @@ export default function AnalyticsPage() {
           gmto_amount: typeof l.gmto_amount === 'string' ? parseFloat(l.gmto_amount) : l.gmto_amount
         })));
       }
+
+      // Fetch Cashout Logs
+      const { data: cLogs } = await supabase
+        .from('cashout_logs')
+        .select('*')
+        .gte('created_at', isoDate)
+        .order('created_at', { ascending: false });
+      if (cLogs) setCashoutLogs(cLogs);
       
     }
     Promise.all([
@@ -141,35 +159,52 @@ export default function AnalyticsPage() {
     ? todayAccountsCount 
     : new Set([...todayActiveAccounts, ...oldLogs.map(log => log.account_name)]).size;
 
-  const totalGMTO = incomeLogs.reduce((sum, log) => sum + log.gmto_amount, 0);
-  const grossFiat = totalGMTO * gmtoPrice;
-  const netFiat = grossFiat * 0.995;
+  const totalGMTOEarned = incomeLogs.reduce((sum, log) => sum + log.gmto_amount, 0);
+  const totalGMTOSold = cashoutLogs.reduce((sum, log) => sum + log.gmto_sold, 0);
+  const totalUnsoldGMTO = Math.max(0, totalGMTOEarned - totalGMTOSold);
+
+  const totalFiatRealized = cashoutLogs.reduce((sum, log) => sum + log.fiat_received, 0);
+  const grossFiat = (totalUnsoldGMTO * gmtoPrice) + totalFiatRealized;
 
   const chartData = useMemo(() => {
-    const sortedLogs = [...incomeLogs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    const grouped = sortedLogs.reduce((acc, log) => {
+    // Combine income logs and cashout logs into a daily grouping
+    const grouped = incomeLogs.reduce((acc, log) => {
       const date = new Date(log.created_at);
       const key = filter === 'today' 
         ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
       
-      if (!acc[key]) acc[key] = 0;
-      acc[key] += log.gmto_amount;
+      if (!acc[key]) acc[key] = { gmto: 0, fiat: 0 };
+      acc[key].gmto += log.gmto_amount;
       return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, { gmto: number; fiat: number }>);
 
-    return Object.entries(grouped).map(([time, amount]) => ({
+    // Apply cashouts to the timeline
+    cashoutLogs.forEach(log => {
+      const date = new Date(log.created_at);
+      const key = filter === 'today' 
+        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      
+      if (!grouped[key]) grouped[key] = { gmto: 0, fiat: 0 };
+      grouped[key].fiat += log.fiat_received; // Add realized fiat to that day
+    });
+
+    return Object.entries(grouped).map(([time, data]) => ({
       time,
-      amount,
-      fiat: amount * gmtoPrice * 0.995
+      amount: data.gmto,
+      fiat: (data.gmto * gmtoPrice) + data.fiat // rough estimation for timeline: (earned gmto * current price) + realized cashouts that day
     }));
-  }, [incomeLogs, filter, gmtoPrice]);
+  }, [incomeLogs, cashoutLogs, filter, gmtoPrice]);
 
   const paginatedTickets = ticketLogs.slice((ticketPage - 1) * ITEMS_PER_PAGE, ticketPage * ITEMS_PER_PAGE);
   const totalTicketPages = Math.max(1, Math.ceil(ticketLogs.length / ITEMS_PER_PAGE));
 
   const paginatedIncome = incomeLogs.slice((incomePage - 1) * ITEMS_PER_PAGE, incomePage * ITEMS_PER_PAGE);
   const totalIncomePages = Math.max(1, Math.ceil(incomeLogs.length / ITEMS_PER_PAGE));
+
+  const paginatedCashouts = cashoutLogs.slice((cashoutPage - 1) * ITEMS_PER_PAGE, cashoutPage * ITEMS_PER_PAGE);
+  const totalCashoutPages = Math.max(1, Math.ceil(cashoutLogs.length / ITEMS_PER_PAGE));
 
   return (
     <div className="px-6 py-10 relative min-h-screen">
@@ -215,7 +250,7 @@ export default function AnalyticsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <StatCard 
                 label={`Tickets (${filter})`}
                 value={`${totalTickets} Tix`}
@@ -223,16 +258,10 @@ export default function AnalyticsPage() {
                 icon={<Image src="/repair-ticket.png" alt="ticket" width={24} height={24} className="opacity-70" />}
               />
               <StatCard 
-                label={`Gross Income (${filter})`}
+                label={`Total Income (${filter})`}
                 value={`${currencySymbol}${grossFiat.toFixed(2)}`}
-                sub={`${totalGMTO.toFixed(2)} GMTO logged`}
+                sub={`${totalGMTOEarned.toFixed(2)} GMTO earned (${totalGMTOSold > 0 ? `${totalGMTOSold.toFixed(2)} sold` : '0 sold'})`}
                 icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}
-              />
-              <StatCard 
-                label={`Net Income (${filter})`}
-                value={`${currencySymbol}${netFiat.toFixed(2)}`}
-                sub={`- 0.5% default fee`}
-                icon={<CalendarIcon className="size-4 opacity-40" />}
               />
             </div>
 
@@ -246,7 +275,7 @@ export default function AnalyticsPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="rounded-xl border border-border/60 bg-background/40 p-4 flex flex-col h-[400px]">
                 <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.25em] mb-4">
                   Ticket Logs
@@ -309,7 +338,7 @@ export default function AnalyticsPage() {
                             <span>+{log.gmto_amount}</span>
                             <Image src="/gmto.png" alt="GMTO" width={18} height={18} className="opacity-90" />
                           </div>
-                          <div className="text-[10px] text-muted-foreground">≈ {currencySymbol}{(log.gmto_amount * gmtoPrice * 0.995).toFixed(2)}</div>
+                          <div className="text-[10px] text-muted-foreground">≈ {currencySymbol}{(log.gmto_amount * gmtoPrice).toFixed(2)}</div>
                         </div>
                       </div>
                     ))
@@ -328,6 +357,52 @@ export default function AnalyticsPage() {
                     <button 
                       disabled={incomePage === totalIncomePages} 
                       onClick={() => setIncomePage(p => Math.min(totalIncomePages, p + 1))}
+                      className="hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground"
+                    >
+                      Next &rarr;
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-background/40 p-4 flex flex-col h-[400px]">
+                <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.25em] mb-4">
+                  Cashout Logs
+                </div>
+                <div className="flex-1 overflow-y-auto pr-2 space-y-2">
+                  {cashoutLogs.length === 0 ? (
+                    <div className="text-sm text-muted-foreground flex h-full items-center justify-center">No cashouts found.</div>
+                  ) : (
+                    paginatedCashouts.map(log => (
+                      <div key={log.id} className="flex items-center justify-between p-2 rounded-md hover:bg-foreground/[0.02]">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{currencySymbol}{log.fiat_received}</p>
+                          <p className="text-[10px] text-muted-foreground">{new Date(log.created_at).toLocaleString()}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center justify-end space-x-1.5 text-sm font-medium text-destructive">
+                            <span>-{log.gmto_sold}</span>
+                            <Image src="/gmto.png" alt="GMTO" width={18} height={18} className="opacity-90" />
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">Sold @ {currencySymbol}{(log.fiat_received / log.gmto_sold).toFixed(6)}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {totalCashoutPages > 1 && (
+                  <div className="flex justify-between items-center mt-4 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                    <button 
+                      disabled={cashoutPage === 1} 
+                      onClick={() => setCashoutPage(p => Math.max(1, p - 1))}
+                      className="hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground"
+                    >
+                      &larr; Prev
+                    </button>
+                    <span>Page {cashoutPage} of {totalCashoutPages}</span>
+                    <button 
+                      disabled={cashoutPage === totalCashoutPages} 
+                      onClick={() => setCashoutPage(p => Math.min(totalCashoutPages, p + 1))}
                       className="hover:text-foreground disabled:opacity-30 disabled:hover:text-muted-foreground"
                     >
                       Next &rarr;
