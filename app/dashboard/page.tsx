@@ -644,26 +644,30 @@ export default function UserDashboardPage() {
                       {AVATAR_MAP[account.avatar || "Avatar1"]}
                     </div>
 
-                    <span
-                      className={`flex-1 truncate text-sm transition-all flex items-center gap-2 ${isDone ? "text-emerald-500" : "text-foreground"}`}
-                    >
-                      {account.name}
-                      {account.referralLink && (
-                        <a href={account.referralLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
-                          <LinkIcon className="size-3" />
-                        </a>
-                      )}
-                      {account.walletAddress && (
-                        <button onClick={() => openViewWalletModal(account.walletAddress!)} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="View Wallet Address">
-                          <WalletIcon className="size-3" />
-                        </button>
-                      )}
-                      {account.email && (
-                        <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
-                          <MailIcon className="size-3" />
-                        </button>
-                      )}
-                    </span>
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <span
+                        className={`truncate text-sm transition-all ${isDone ? "text-emerald-500" : "text-foreground"}`}
+                      >
+                        {account.name}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {account.referralLink && (
+                          <a href={account.referralLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
+                            <LinkIcon className="size-3" />
+                          </a>
+                        )}
+                        {account.walletAddress && (
+                          <button onClick={() => openViewWalletModal(account.walletAddress!)} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="View Wallet Address">
+                            <WalletIcon className="size-3" />
+                          </button>
+                        )}
+                        {account.email && (
+                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
+                            <MailIcon className="size-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     
                     {/* Action Buttons */}
                     <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 mr-2 transition-opacity shrink-0">
