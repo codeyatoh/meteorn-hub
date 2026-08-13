@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS public.user_accounts (
   avatar TEXT DEFAULT 'Avatar1' NOT NULL,
   referral_link TEXT,
   wallet_address TEXT,
+  email TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

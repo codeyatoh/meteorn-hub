@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
@@ -22,7 +22,7 @@ const AVATAR_MAP: Record<string, ReactNode> = {
 const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 
 // Types
-type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null };
+type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null; email: string | null };
 type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
@@ -47,6 +47,7 @@ export default function UserDashboardPage() {
   // Add Account State
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
   const [newAccountName, setNewAccountName] = useState("");
+  const [newAccountEmail, setNewAccountEmail] = useState("");
   const [newAccountReferralLink, setNewAccountReferralLink] = useState("");
   const [newAccountWalletAddress, setNewAccountWalletAddress] = useState("");
   const [newAccountAvatar, setNewAccountAvatar] = useState("Avatar1");
@@ -55,6 +56,7 @@ export default function UserDashboardPage() {
   const [isEditAccountModalOpen, setIsEditAccountModalOpen] = useState(false);
   const [editAccountId, setEditAccountId] = useState<number | null>(null);
   const [editAccountName, setEditAccountName] = useState("");
+  const [editAccountEmail, setEditAccountEmail] = useState("");
   const [editAccountReferralLink, setEditAccountReferralLink] = useState("");
   const [editAccountWalletAddress, setEditAccountWalletAddress] = useState("");
   const [editAccountAvatar, setEditAccountAvatar] = useState("Avatar1");
@@ -114,7 +116,8 @@ export default function UserDashboardPage() {
           totalTickets: acc.total_tickets,
           avatar: acc.avatar,
           referralLink: acc.referral_link,
-          walletAddress: acc.wallet_address
+          walletAddress: acc.wallet_address,
+          email: acc.email
         })));
         if (accountsData.length > 0) setSelectedAccountId(accountsData[0].id);
       }
@@ -259,6 +262,7 @@ export default function UserDashboardPage() {
   const openEditAccountModal = (acc: Account) => {
     setEditAccountId(acc.id);
     setEditAccountName(acc.name);
+    setEditAccountEmail(acc.email || "");
     setEditAccountReferralLink(acc.referralLink || "");
     setEditAccountWalletAddress(acc.walletAddress || "");
     setEditAccountAvatar(acc.avatar || "Avatar1");
@@ -278,6 +282,7 @@ export default function UserDashboardPage() {
       .update({
         name: editAccountName.trim(),
         avatar: editAccountAvatar,
+        email: editAccountEmail.trim() || null,
         referral_link: editAccountReferralLink.trim() || null,
         wallet_address: editAccountWalletAddress.trim() || null
       })
@@ -288,6 +293,7 @@ export default function UserDashboardPage() {
         ...acc,
         name: editAccountName.trim(),
         avatar: editAccountAvatar,
+        email: editAccountEmail.trim() || null,
         referralLink: editAccountReferralLink.trim() || null,
         walletAddress: editAccountWalletAddress.trim() || null
       } : acc));
@@ -348,6 +354,7 @@ export default function UserDashboardPage() {
       tickets_done: 0,
       total_tickets: 10,
       avatar: newAccountAvatar,
+      email: newAccountEmail.trim() || null,
       referral_link: newAccountReferralLink.trim() || null,
       wallet_address: newAccountWalletAddress.trim() || null
     };
@@ -365,6 +372,7 @@ export default function UserDashboardPage() {
         ticketsDone: data.tickets_done,
         totalTickets: data.total_tickets,
         avatar: data.avatar,
+        email: data.email,
         referralLink: data.referral_link,
         walletAddress: data.wallet_address
       }]);
@@ -372,6 +380,7 @@ export default function UserDashboardPage() {
     }
     
     setNewAccountName("");
+    setNewAccountEmail("");
     setNewAccountReferralLink("");
     setNewAccountWalletAddress("");
     setNewAccountAvatar("Avatar1");
@@ -554,6 +563,11 @@ export default function UserDashboardPage() {
                       {account.walletAddress && (
                         <button onClick={() => openViewWalletModal(account.walletAddress!)} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="View Wallet Address">
                           <WalletIcon className="size-3" />
+                        </button>
+                      )}
+                      {account.email && (
+                        <button onClick={() => { navigator.clipboard.writeText(account.email!); alert("Email copied to clipboard!"); }} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
+                          <MailIcon className="size-3" />
                         </button>
                       )}
                     </span>
@@ -795,14 +809,28 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Email</label>
+            <div className="relative">
+              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
+                <MailIcon className="size-4 text-muted-foreground" />
+              </div>
+              <textarea 
+                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+                placeholder="account@example.com"
+                value={newAccountEmail}
+                onChange={(e) => setNewAccountEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Referral Link (Optional)</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
                 <LinkIcon className="size-4 text-muted-foreground" />
               </div>
-              <input 
-                type="url"
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              <textarea 
+                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
                 placeholder="https://..."
                 value={newAccountReferralLink}
                 onChange={(e) => setNewAccountReferralLink(e.target.value)}
@@ -813,12 +841,11 @@ export default function UserDashboardPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
                 <WalletIcon className="size-4 text-muted-foreground" />
               </div>
-              <input 
-                type="text"
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              <textarea 
+                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
                 placeholder="0x..."
                 value={newAccountWalletAddress}
                 onChange={(e) => setNewAccountWalletAddress(e.target.value)}
@@ -880,14 +907,27 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Email</label>
+            <div className="relative">
+              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
+                <MailIcon className="size-4 text-muted-foreground" />
+              </div>
+              <textarea 
+                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+                value={editAccountEmail}
+                onChange={(e) => setEditAccountEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Referral Link (Optional)</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
                 <LinkIcon className="size-4 text-muted-foreground" />
               </div>
-              <input 
-                type="url"
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              <textarea 
+                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
                 value={editAccountReferralLink}
                 onChange={(e) => setEditAccountReferralLink(e.target.value)}
               />
@@ -897,12 +937,11 @@ export default function UserDashboardPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
                 <WalletIcon className="size-4 text-muted-foreground" />
               </div>
-              <input 
-                type="text"
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              <textarea 
+                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
                 value={editAccountWalletAddress}
                 onChange={(e) => setEditAccountWalletAddress(e.target.value)}
               />
