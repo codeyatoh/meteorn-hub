@@ -623,34 +623,34 @@ export default function UserDashboardPage() {
                 return (
                   <li
                     key={account.id}
-                    className="group flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-foreground/[0.03]"
+                    className="group flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 rounded-md px-2 py-2 transition-colors hover:bg-foreground/[0.03]"
                   >
                     <div
-                      className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                      className={`flex size-4 sm:size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                         isDone
                           ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500"
                           : "border-foreground/30 text-transparent"
                       }`}
                     >
                       {isDone ? (
-                        <CheckIcon className="size-3" />
+                        <CheckIcon className="size-2.5 sm:size-3" />
                       ) : (
-                        <CircleIcon className="size-3" />
+                        <CircleIcon className="size-2.5 sm:size-3" />
                       )}
                     </div>
                     
                     {/* Account Avatar */}
-                    <div className="flex items-center justify-center size-9 bg-accent rounded-full text-accent-foreground ml-1 overflow-hidden shrink-0">
+                    <div className="flex items-center justify-center size-7 sm:size-9 bg-accent rounded-full text-accent-foreground ml-0.5 sm:ml-1 overflow-hidden shrink-0">
                       {AVATAR_MAP[account.avatar || "Avatar1"]}
                     </div>
 
-                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
                       <span
-                        className={`truncate text-sm transition-all ${isDone ? "text-emerald-500" : "text-foreground"}`}
+                        className={`block truncate flex-1 min-w-0 text-xs sm:text-sm transition-all ${isDone ? "text-emerald-500" : "text-foreground"}`}
                       >
                         {account.name}
                       </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         {account.referralLink && (
                           <a href={account.referralLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
                             <LinkIcon className="size-3" />
@@ -669,39 +669,41 @@ export default function UserDashboardPage() {
                       </div>
                     </div>
                     
-                    {/* Action Buttons */}
-                    <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 mr-2 transition-opacity shrink-0">
-                      <button onClick={() => openEditAccountModal(account)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
-                        <PencilIcon className="size-3.5" />
-                      </button>
-                      <button onClick={() => openDeleteAccountModal(account.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors" title="Delete Account">
-                        <TrashIcon className="size-3.5" />
-                      </button>
-                    </div>
+                    <div className="flex items-center w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end gap-2">
+                      {/* Action Buttons */}
+                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0 ml-7 sm:ml-0">
+                        <button onClick={() => openEditAccountModal(account)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
+                          <PencilIcon className="size-3.5" />
+                        </button>
+                        <button onClick={() => openDeleteAccountModal(account.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors" title="Delete Account">
+                          <TrashIcon className="size-3.5" />
+                        </button>
+                      </div>
 
-                    {/* Interactive Ticket Logger */}
-                    <div className="flex items-center justify-end gap-1 font-mono text-[10px] uppercase tracking-[0.2em]">
-                      <button 
-                        onClick={() => updateTicket(account.id, -1)}
-                        disabled={account.ticketsDone === 0}
-                        className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                      >
-                        <MinusIcon className="size-3" />
-                      </button>
-                      
-                      <span className={`w-10 text-center ${isDone ? "text-emerald-500" : "text-muted-foreground/70"}`}>
-                        {account.ticketsDone}/{account.totalTickets}
-                      </span>
-                      
-                      <button 
-                        onClick={() => updateTicket(account.id, 1)}
-                        disabled={isDone}
-                        className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                      >
-                        <PlusIcon className="size-3" />
-                      </button>
+                      {/* Interactive Ticket Logger */}
+                      <div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.2em] shrink-0">
+                        <button 
+                          onClick={() => updateTicket(account.id, -1)}
+                          disabled={account.ticketsDone === 0}
+                          className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <MinusIcon className="size-3" />
+                        </button>
+                        
+                        <span className={`w-9 text-center ${isDone ? "text-emerald-500" : "text-muted-foreground/70"}`}>
+                          {account.ticketsDone}/{account.totalTickets}
+                        </span>
+                        
+                        <button 
+                          onClick={() => updateTicket(account.id, 1)}
+                          disabled={isDone}
+                          className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <PlusIcon className="size-3" />
+                        </button>
 
-                      <Image src="/repair-ticket.png" alt="tix" width={24} height={24} className={`object-contain ml-1 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"}`} />
+                        <Image src="/repair-ticket.png" alt="tix" width={20} height={20} className={`object-contain ml-0.5 sm:ml-1 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} sm:w-6 sm:h-6`} />
+                      </div>
                     </div>
                   </li>
                 );
