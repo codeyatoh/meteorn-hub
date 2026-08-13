@@ -809,12 +809,10 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <MailIcon className="size-4 text-muted-foreground" />
-              Email
-            </label>
-            <textarea 
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+            <label className="text-sm font-medium text-foreground">Email</label>
+            <input 
+              type="email"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="account@example.com"
               value={newAccountEmail}
               onChange={(e) => setNewAccountEmail(e.target.value)}
@@ -822,12 +820,10 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <LinkIcon className="size-4 text-muted-foreground" />
-              Referral Link (Optional)
-            </label>
-            <textarea 
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+            <label className="text-sm font-medium text-foreground">Referral Link (Optional)</label>
+            <input 
+              type="url"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="https://..."
               value={newAccountReferralLink}
               onChange={(e) => setNewAccountReferralLink(e.target.value)}
@@ -835,12 +831,10 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <WalletIcon className="size-4 text-muted-foreground" />
-              Wallet Address (Optional)
-            </label>
-            <textarea 
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+            <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
+            <input 
+              type="text"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="0x..."
               value={newAccountWalletAddress}
               onChange={(e) => setNewAccountWalletAddress(e.target.value)}
@@ -901,36 +895,30 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <MailIcon className="size-4 text-muted-foreground" />
-              Email
-            </label>
-            <textarea 
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+            <label className="text-sm font-medium text-foreground">Email</label>
+            <input 
+              type="email"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               value={editAccountEmail}
               onChange={(e) => setEditAccountEmail(e.target.value)}
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <LinkIcon className="size-4 text-muted-foreground" />
-              Referral Link (Optional)
-            </label>
-            <textarea 
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+            <label className="text-sm font-medium text-foreground">Referral Link (Optional)</label>
+            <input 
+              type="url"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               value={editAccountReferralLink}
               onChange={(e) => setEditAccountReferralLink(e.target.value)}
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <WalletIcon className="size-4 text-muted-foreground" />
-              Wallet Address (Optional)
-            </label>
-            <textarea 
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+            <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
+            <input 
+              type="text"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               value={editAccountWalletAddress}
               onChange={(e) => setEditAccountWalletAddress(e.target.value)}
             />
