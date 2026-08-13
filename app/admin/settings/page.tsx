@@ -188,7 +188,7 @@ export default function AdminSettingsPage() {
                 className="w-full max-w-sm rounded-md border border-input bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors hover:border-border font-mono"
               />
               <p className="text-[11px] text-muted-foreground max-w-xl leading-relaxed">
-                If provided, this wallet address will be displayed to users in their Settings page under a "Buy Me a Coffee" section. Leave blank to hide the section completely.
+                If provided, this wallet address will be displayed to users in their Settings page under a &quot;Buy Me a Coffee&quot; section. Leave blank to hide the section completely.
               </p>
             </div>
           </div>
