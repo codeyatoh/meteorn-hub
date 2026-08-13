@@ -809,48 +809,42 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Email</label>
-            <div className="relative">
-              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
-                <MailIcon className="size-4 text-muted-foreground" />
-              </div>
-              <textarea 
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
-                placeholder="account@example.com"
-                value={newAccountEmail}
-                onChange={(e) => setNewAccountEmail(e.target.value)}
-              />
-            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <MailIcon className="size-4 text-muted-foreground" />
+              Email
+            </label>
+            <textarea 
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+              placeholder="account@example.com"
+              value={newAccountEmail}
+              onChange={(e) => setNewAccountEmail(e.target.value)}
+            />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Referral Link (Optional)</label>
-            <div className="relative">
-              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
-                <LinkIcon className="size-4 text-muted-foreground" />
-              </div>
-              <textarea 
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
-                placeholder="https://..."
-                value={newAccountReferralLink}
-                onChange={(e) => setNewAccountReferralLink(e.target.value)}
-              />
-            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <LinkIcon className="size-4 text-muted-foreground" />
+              Referral Link (Optional)
+            </label>
+            <textarea 
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+              placeholder="https://..."
+              value={newAccountReferralLink}
+              onChange={(e) => setNewAccountReferralLink(e.target.value)}
+            />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
-            <div className="relative">
-              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
-                <WalletIcon className="size-4 text-muted-foreground" />
-              </div>
-              <textarea 
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
-                placeholder="0x..."
-                value={newAccountWalletAddress}
-                onChange={(e) => setNewAccountWalletAddress(e.target.value)}
-              />
-            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <WalletIcon className="size-4 text-muted-foreground" />
+              Wallet Address (Optional)
+            </label>
+            <textarea 
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+              placeholder="0x..."
+              value={newAccountWalletAddress}
+              onChange={(e) => setNewAccountWalletAddress(e.target.value)}
+            />
           </div>
 
           <Button 
@@ -907,45 +901,39 @@ export default function UserDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Email</label>
-            <div className="relative">
-              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
-                <MailIcon className="size-4 text-muted-foreground" />
-              </div>
-              <textarea 
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
-                value={editAccountEmail}
-                onChange={(e) => setEditAccountEmail(e.target.value)}
-              />
-            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <MailIcon className="size-4 text-muted-foreground" />
+              Email
+            </label>
+            <textarea 
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+              value={editAccountEmail}
+              onChange={(e) => setEditAccountEmail(e.target.value)}
+            />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Referral Link (Optional)</label>
-            <div className="relative">
-              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
-                <LinkIcon className="size-4 text-muted-foreground" />
-              </div>
-              <textarea 
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
-                value={editAccountReferralLink}
-                onChange={(e) => setEditAccountReferralLink(e.target.value)}
-              />
-            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <LinkIcon className="size-4 text-muted-foreground" />
+              Referral Link (Optional)
+            </label>
+            <textarea 
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+              value={editAccountReferralLink}
+              onChange={(e) => setEditAccountReferralLink(e.target.value)}
+            />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
-            <div className="relative">
-              <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
-                <WalletIcon className="size-4 text-muted-foreground" />
-              </div>
-              <textarea 
-                className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
-                value={editAccountWalletAddress}
-                onChange={(e) => setEditAccountWalletAddress(e.target.value)}
-              />
-            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <WalletIcon className="size-4 text-muted-foreground" />
+              Wallet Address (Optional)
+            </label>
+            <textarea 
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring min-h-[60px] resize-y"
+              value={editAccountWalletAddress}
+              onChange={(e) => setEditAccountWalletAddress(e.target.value)}
+            />
           </div>
 
           <Button 
