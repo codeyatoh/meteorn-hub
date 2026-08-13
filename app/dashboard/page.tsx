@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
@@ -566,7 +567,7 @@ export default function UserDashboardPage() {
                         </button>
                       )}
                       {account.email && (
-                        <button onClick={() => { navigator.clipboard.writeText(account.email!); alert("Email copied to clipboard!"); }} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
+                        <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
                           <MailIcon className="size-3" />
                         </button>
                       )}
