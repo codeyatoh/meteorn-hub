@@ -765,7 +765,14 @@ export default function UserDashboardPage() {
                     )}
 
                     <div className="text-right ml-2 shrink-0">
-                      <div className="text-sm font-medium text-emerald-500/90">+{currencySymbol}{logGross.toFixed(2)}</div>
+                      <div className="text-sm font-medium text-emerald-500/90">
+                        +{currencySymbol}{log.is_sold ? log.fiat_received.toFixed(2) : logGross.toFixed(2)}
+                      </div>
+                      {log.is_sold && (
+                        <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                          Sold Price
+                        </div>
+                      )}
                     </div>
                   </li>
                 );

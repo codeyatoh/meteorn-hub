@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Settings, Save, Mail, Lock, User, DollarSign, Loader2, ChevronDown } from "lucide-react";
+import { Settings, Save, Mail, Lock, User, DollarSign, Loader2, ChevronDown, Coffee, CheckIcon } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 
 export default function SettingsPage() {
@@ -20,6 +20,7 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const [donationWallet, setDonationWallet] = useState("");
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const currencies = [
     { value: "usd", label: "USD ($)" },
@@ -32,12 +33,16 @@ export default function SettingsPage() {
   useEffect(() => {
     Promise.all([
       supabase.auth.getUser(),
+      supabase.from('platform_settings').select('donation_wallet_address').eq('id', 1).single(),
       new Promise(resolve => setTimeout(resolve, 1000))
-    ]).then(([{ data: { user } }]) => {
+    ]).then(([{ data: { user } }, { data: settings }]) => {
       if (user) {
         setNickname(user.user_metadata?.nickname || "User");
         setCurrency(user.user_metadata?.currency || "usd");
         setEmail(user.email || "");
+      }
+      if (settings && settings.donation_wallet_address) {
+        setDonationWallet(settings.donation_wallet_address);
       }
     })
     .finally(() => setLoading(false));
@@ -260,26 +265,36 @@ export default function SettingsPage() {
           </form>
 
           {/* Buy Me a Coffee */}
-          <div className="mt-6 flex items-center gap-3 p-4 rounded-lg border border-border/40">
-            <span className="text-xl flex-shrink-0">☕</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-foreground mb-1">Buy Me a Coffee</p>
-              <p className="font-mono text-[11px] text-muted-foreground truncate select-all">0xe2E0c514237FB0562437A16d9E2A7ffa1D37ed84</p>
-              <p className="text-[10px] text-muted-foreground/50 mt-0.5">EVM — ETH, BNB, POL, AVAX &amp; more</p>
+          {donationWallet && (
+            <div className="mt-6 flex items-center gap-3 p-4 rounded-lg border border-border/40">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Coffee className="size-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground mb-1">Buy Me a Coffee</p>
+                <p className="font-mono text-[11px] text-muted-foreground truncate select-all">{donationWallet}</p>
+                <p className="text-[10px] text-muted-foreground/50 mt-0.5">EVM — ETH, BNB, POL, AVAX &amp; more</p>
+              </div>
+              <Button 
+                size="sm" 
+                variant="secondary" 
+                className={`relative flex-shrink-0 h-8 px-3 text-xs transition-all duration-200 overflow-hidden ${copied ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/30 border border-green-500/30" : ""}`}
+                onClick={() => {
+                  navigator.clipboard.writeText(donationWallet);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+              >
+                {copied ? (
+                  <span className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                    <CheckIcon className="size-3" /> Copied
+                  </span>
+                ) : (
+                  <span className="animate-in fade-in zoom-in duration-200">Copy</span>
+                )}
+              </Button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText('0xe2E0c514237FB0562437A16d9E2A7ffa1D37ed84');
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              className="flex-shrink-0 px-3 py-1.5 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:border-border text-xs font-mono transition-colors"
-            >
-              {copied ? '✓' : 'Copy'}
-            </button>
-          </div>
-
+          )}
       </div>
     </div>
   );

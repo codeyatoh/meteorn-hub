@@ -27,7 +27,7 @@ export async function GET() {
 /**
  * PATCH /api/admin/settings
  * Body options (any combination):
- *   { daily_ticket_limit: number }
+ *   { daily_ticket_limit: number, donation_wallet_address: string }
  */
 export async function PATCH(request: NextRequest) {
   const { error: authError } = await verifyAdmin();
@@ -35,6 +35,7 @@ export async function PATCH(request: NextRequest) {
 
   const body = await request.json() as {
     daily_ticket_limit?: number;
+    donation_wallet_address?: string;
   };
 
   const updates: Record<string, unknown> = {
@@ -46,6 +47,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'daily_ticket_limit must be 1–100.' }, { status: 400 });
     }
     updates.daily_ticket_limit = body.daily_ticket_limit;
+  }
+
+  if (typeof body.donation_wallet_address === 'string') {
+    updates.donation_wallet_address = body.donation_wallet_address;
   }
 
   if (Object.keys(updates).length <= 1) {

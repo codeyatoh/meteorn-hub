@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SlidersIcon, Loader2, SaveIcon, TicketIcon, ClockIcon, Mail, Lock } from "lucide-react";
+import { SlidersIcon, Loader2, SaveIcon, TicketIcon, ClockIcon, Mail, Lock, CoffeeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 type PlatformSettings = {
   id: number;
   daily_ticket_limit: number;
+  donation_wallet_address: string;
   updated_at: string;
 };
 
@@ -19,6 +20,7 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const [ticketLimit, setTicketLimit] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
 
   const [email, setEmail] = useState("");
   const [originalEmail, setOriginalEmail] = useState("");
@@ -36,6 +38,7 @@ export default function AdminSettingsPage() {
         if (data) {
           setSettings(data);
           setTicketLimit(String(data.daily_ticket_limit));
+          setWalletAddress(data.donation_wallet_address || "");
         }
       })
       .catch(() => toast.error("Failed to load settings.", { classNames: { icon: "text-destructive" } }))
@@ -68,12 +71,12 @@ export default function AdminSettingsPage() {
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daily_ticket_limit: limit }),
+      body: JSON.stringify({ daily_ticket_limit: limit, donation_wallet_address: walletAddress.trim() }),
     });
 
     if (res.ok) {
       setSettings((prev) =>
-        prev ? { ...prev, daily_ticket_limit: limit, updated_at: new Date().toISOString() } : prev
+        prev ? { ...prev, daily_ticket_limit: limit, donation_wallet_address: walletAddress.trim(), updated_at: new Date().toISOString() } : prev
       );
       
       // Update Auth if needed
@@ -166,6 +169,29 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
+          {/* Donation / Support */}
+          <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-4">
+            <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.25em]">
+              Donation Settings
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <CoffeeIcon className="size-4 text-muted-foreground" />
+                Buy Me a Coffee Wallet
+              </label>
+              <input
+                type="text"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder="0x..."
+                className="w-full max-w-sm rounded-md border border-input bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors hover:border-border font-mono"
+              />
+              <p className="text-[11px] text-muted-foreground max-w-xl leading-relaxed">
+                If provided, this wallet address will be displayed to users in their Settings page under a "Buy Me a Coffee" section. Leave blank to hide the section completely.
+              </p>
+            </div>
+          </div>
 
           {/* Admin Account */}
           <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-4">
