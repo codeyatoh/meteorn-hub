@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDownIcon, CheckIcon } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
 
@@ -43,7 +44,12 @@ export function AdminCurrencySelector({ currentCurrency }: { currentCurrency: st
                   router.push(`${pathname}?${params.toString()}`);
                   
                   // Update User Metadata in background
-                  await supabase.auth.updateUser({ data: { currency: key } });
+                  const { error } = await supabase.auth.updateUser({ data: { currency: key } });
+                  if (error) {
+                    toast.error("Failed to update currency.");
+                  } else {
+                    toast.success("Currency updated successfully.");
+                  }
                 }}
                 className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-xs font-medium outline-none hover:bg-foreground/5 transition-colors ${currentCurrency === key ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               >

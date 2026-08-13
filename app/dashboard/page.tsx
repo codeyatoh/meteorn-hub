@@ -233,6 +233,9 @@ export default function UserDashboardPage() {
         color: data.color
       };
       setIncomeLogs(prev => [formattedLog, ...prev]);
+      toast.success("Income logged successfully!");
+    } else {
+      toast.error("Failed to log income.");
     }
 
     setIsModalOpen(false);
@@ -255,7 +258,12 @@ export default function UserDashboardPage() {
       .delete()
       .eq('id', deleteAccountId);
       
-    if (error) console.error("Error deleting account:", error);
+    if (error) {
+      console.error("Error deleting account:", error);
+      toast.error("Failed to delete account.");
+    } else {
+      toast.success("Account deleted successfully.");
+    }
     setIsDeleteAccountModalOpen(false);
     setDeleteAccountId(null);
   };
@@ -298,6 +306,9 @@ export default function UserDashboardPage() {
         referralLink: editAccountReferralLink.trim() || null,
         walletAddress: editAccountWalletAddress.trim() || null
       } : acc));
+      toast.success("Account updated successfully.");
+    } else {
+      toast.error("Failed to update account.");
     }
     
     setIsEditAccountModalOpen(false);
@@ -318,7 +329,12 @@ export default function UserDashboardPage() {
       .delete()
       .eq('id', deleteLogId);
       
-    if (error) console.error("Error deleting log:", error);
+    if (error) {
+      console.error("Error deleting log:", error);
+      toast.error("Failed to delete log.");
+    } else {
+      toast.success("Income log deleted successfully.");
+    }
     setIsDeleteLogModalOpen(false);
     setDeleteLogId(null);
   };
@@ -341,6 +357,9 @@ export default function UserDashboardPage() {
 
     if (!error) {
       setIncomeLogs(prev => prev.map(log => log.id === editLogId ? { ...log, gmto } : log));
+      toast.success("Income log updated successfully.");
+    } else {
+      toast.error("Failed to update income log.");
     }
 
     setIsEditLogModalOpen(false);
@@ -378,6 +397,9 @@ export default function UserDashboardPage() {
         walletAddress: data.wallet_address
       }]);
       if (selectedAccountId === null) setSelectedAccountId(data.id);
+      toast.success("Account added successfully.");
+    } else {
+      toast.error("Failed to add account.");
     }
     
     setNewAccountName("");
@@ -457,7 +479,12 @@ export default function UserDashboardPage() {
                       onClick={async () => { 
                         setCurrency(key); 
                         setIsCurrencyDropdownOpen(false); 
-                        await supabase.auth.updateUser({ data: { currency: key } });
+                        const { error } = await supabase.auth.updateUser({ data: { currency: key } });
+                        if (error) {
+                          toast.error("Failed to update currency.");
+                        } else {
+                          toast.success("Currency updated successfully.");
+                        }
                       }}
                       className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-xs font-medium outline-none hover:bg-foreground/5 transition-colors ${currency === key ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                     >
@@ -1037,6 +1064,7 @@ export default function UserDashboardPage() {
               onClick={() => {
                 navigator.clipboard.writeText(viewWalletAddress);
                 setIsWalletCopied(true);
+                toast.success("Wallet address copied to clipboard!");
                 setTimeout(() => setIsWalletCopied(false), 2000);
               }}
             >
