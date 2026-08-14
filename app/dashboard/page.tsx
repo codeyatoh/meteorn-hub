@@ -28,6 +28,28 @@ type IncomeLog = { id: string; time: string; title: string; gmto: number; color:
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
 
+const handleReferralClick = (e: React.MouseEvent, url: string) => {
+  e.preventDefault();
+  if (typeof window !== "undefined") {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (isAndroid) {
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+          const scheme = parsed.protocol.replace(":", "");
+          const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${scheme};S.browser_fallback_url=${encodeURIComponent(url)};end;`;
+          window.location.href = intentUrl;
+          return;
+        }
+      } catch (err) {
+        // Fallback to default routing on error
+      }
+    }
+    // For iOS and Desktop, standard navigation is best for Universal Links
+    window.location.href = url;
+  }
+};
+
 export default function UserDashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomeLogs, setIncomeLogs] = useState<IncomeLog[]>([]);
@@ -656,9 +678,9 @@ export default function UserDashboardPage() {
                             <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied!"); }} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Referral Link">
                               <CopyIcon className="size-3.5" />
                             </button>
-                            <a href={account.referralLink} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
+                            <button onClick={(e) => handleReferralClick(e, account.referralLink!)} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
                               <LinkIcon className="size-3.5" />
-                            </a>
+                            </button>
                           </>
                         )}
 
