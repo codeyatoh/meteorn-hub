@@ -86,7 +86,7 @@ export function MultiSelectCombobox({
                       value={option.value}
                       keywords={[option.label]}
                       onSelect={() => toggleOption(option.value)}
-                      className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                      className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground"
                     >
                       <CheckIcon
                         className={cn(
