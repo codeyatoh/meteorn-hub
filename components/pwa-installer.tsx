@@ -70,7 +70,7 @@ export function PwaInstaller() {
       <div className="flex flex-col items-center text-center space-y-4">
         <div className="relative size-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 p-4 ring-1 ring-border/50 shadow-inner">
           <Image 
-            src="/meteorn-hub-logo.png" 
+            src="/particle-image.png" 
             alt="Meteorn Hub" 
             fill 
             className="object-contain p-2" 
