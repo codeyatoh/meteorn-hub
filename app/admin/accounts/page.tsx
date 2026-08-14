@@ -100,7 +100,7 @@ export default function AdminAccountsPage() {
                           key={opt.value}
                           type="button"
                           onClick={() => {
-                            setFilterStatus(opt.value as any);
+                            setFilterStatus(opt.value as 'all' | 'active' | 'banned');
                             setPage(1);
                             setIsFilterDropdownOpen(false);
                           }}
