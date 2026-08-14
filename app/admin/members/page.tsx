@@ -107,7 +107,7 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="px-6 py-10">
+    <div className="px-4 sm:px-6 py-8 sm:py-10">
       <div className="mx-auto max-w-5xl">
 
         {/* Header */}

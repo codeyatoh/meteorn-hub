@@ -145,6 +145,17 @@ export default function UserDashboardPage() {
   const [nickname, setNickname] = useState("User");
   const [userId, setUserId] = useState<string | null>(null);
   
+  // Loading states for async actions
+  const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [isUpdatingAccount, setIsUpdatingAccount] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isLoggingIncome, setIsLoggingIncome] = useState(false);
+  const [isUpdatingLog, setIsUpdatingLog] = useState(false);
+  const [isDeletingLog, setIsDeletingLog] = useState(false);
+  const [isCashingOut, setIsCashingOut] = useState(false);
+  const [isUsingRepairTicket, setIsUsingRepairTicket] = useState(false);
+  const [updatingTicketsIds, setUpdatingTicketsIds] = useState<Set<number>>(new Set());
+  
   const supabase = createClient();
 
   // Fetch initial dashboard data
@@ -261,37 +272,48 @@ export default function UserDashboardPage() {
   const totalGross = incomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
 
   const updateTicket = async (id: number, delta: number) => {
-    const account = accounts.find(a => a.id === id);
-    if (!account) return;
+    if (updatingTicketsIds.has(id)) return;
+    setUpdatingTicketsIds(prev => new Set(prev).add(id));
     
-    const newCount = Math.max(0, Math.min(account.totalTickets, account.ticketsDone + delta));
-    const actualDelta = newCount - account.ticketsDone;
-    if (actualDelta === 0) return;
-    
-    let newAccumulated = account.totalAccumulatedTickets;
-    if (actualDelta > 0) {
-      newAccumulated += actualDelta;
-    }
-    
-    setAccounts((prev) =>
-      prev.map((acc) => (acc.id === id ? { ...acc, ticketsDone: newCount, totalAccumulatedTickets: newAccumulated } : acc))
-    );
-    
-    await supabase
-      .from('user_accounts')
-      .update({ tickets_done: newCount, total_accumulated_tickets: newAccumulated })
-      .eq('id', id);
-
-    if (userId) {
+    try {
+      const account = accounts.find(a => a.id === id);
+      if (!account) return;
+      
+      const newCount = Math.max(0, Math.min(account.totalTickets, account.ticketsDone + delta));
+      const actualDelta = newCount - account.ticketsDone;
+      if (actualDelta === 0) return;
+      
+      let newAccumulated = account.totalAccumulatedTickets;
+      if (actualDelta > 0) {
+        newAccumulated += actualDelta;
+      }
+      
+      setAccounts((prev) =>
+        prev.map((acc) => (acc.id === id ? { ...acc, ticketsDone: newCount, totalAccumulatedTickets: newAccumulated } : acc))
+      );
+      
       await supabase
-        .from('ticket_logs')
-        .insert({
-          user_id: userId,
-          account_id: id,
-          account_name: account.name,
-          increment: actualDelta
-        });
-      toast.success("Tickets updated!");
+        .from('user_accounts')
+        .update({ tickets_done: newCount, total_accumulated_tickets: newAccumulated })
+        .eq('id', id);
+
+      if (userId) {
+        await supabase
+          .from('ticket_logs')
+          .insert({
+            user_id: userId,
+            account_id: id,
+            account_name: account.name,
+            increment: actualDelta
+          });
+        toast.success("Tickets updated!");
+      }
+    } finally {
+      setUpdatingTicketsIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -299,87 +321,100 @@ export default function UserDashboardPage() {
     const gmto = parseFloat(gmtoEarned);
     if (isNaN(gmto) || gmto <= 0 || !userId) return;
     
-    const account = accounts.find(a => a.id === selectedAccountId);
-    if (!account) return;
+    setIsLoggingIncome(true);
+    try {
+      const account = accounts.find(a => a.id === selectedAccountId);
+      if (!account) return;
 
-    const newLog = {
-      user_id: userId,
-      account_id: account.id,
-      account_name: account.name,
-      gmto_amount: gmto,
-      color: "bg-emerald-500/80" 
-    };
-
-    const { data, error } = await supabase
-      .from('income_logs')
-      .insert(newLog)
-      .select()
-      .single();
-
-    if (!error && data) {
-      const formattedLog = {
-        id: data.id.toString(),
-        time: new Date(data.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        title: data.account_name,
-        gmto: parseFloat(data.gmto_amount),
-        color: data.color,
-        is_sold: data.is_sold,
-        fiat_received: parseFloat(data.fiat_received)
+      const newLog = {
+        user_id: userId,
+        account_id: account.id,
+        account_name: account.name,
+        gmto_amount: gmto,
+        color: "bg-emerald-500/80" 
       };
-      setIncomeLogs(prev => [formattedLog, ...prev]);
-      toast.success("Income logged successfully!");
-    } else {
-      toast.error("Failed to log income.");
-    }
 
-    setIsModalOpen(false);
-    setGmtoEarned("");
+      const { data, error } = await supabase
+        .from('income_logs')
+        .insert(newLog)
+        .select()
+        .single();
+
+      if (!error && data) {
+        const formattedLog = {
+          id: data.id.toString(),
+          time: new Date(data.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          title: data.account_name,
+          gmto: parseFloat(data.gmto_amount),
+          color: data.color,
+          is_sold: data.is_sold,
+          fiat_received: parseFloat(data.fiat_received)
+        };
+        setIncomeLogs(prev => [formattedLog, ...prev]);
+        toast.success("Income logged successfully!");
+      } else {
+        toast.error("Failed to log income.");
+      }
+
+      setIsModalOpen(false);
+      setGmtoEarned("");
+    } finally {
+      setIsLoggingIncome(false);
+    }
   };
 
   const handleCashout = async () => {
-    if (cashoutAccountIds.length === 0) return;
-    const targetLogs = incomeLogs.filter(log => cashoutAccountIds.includes(log.id));
-    if (targetLogs.length === 0) return;
-    
-    const totalGmto = targetLogs.reduce((sum, log) => sum + log.gmto, 0);
-    const fiat = parseFloat(cashoutFiat);
-    if (totalGmto <= 0 || isNaN(fiat) || fiat <= 0 || !userId) return;
+    if (cashoutAccountIds.length === 0 || !cashoutFiat || isNaN(parseFloat(cashoutFiat))) return;
 
-    let success = true;
+    setIsCashingOut(true);
+    try {
+      const fiat = parseFloat(cashoutFiat);
+      const targetLogs = incomeLogs.filter(log => cashoutAccountIds.includes(log.id) && !log.is_sold);
+      const totalGmto = targetLogs.reduce((sum, log) => sum + log.gmto, 0);
 
-    // We loop through and update sequentially for exact proportional calculation
-    for (const targetLog of targetLogs) {
-      const proportionalFiat = fiat * (targetLog.gmto / totalGmto);
-      const { error } = await supabase
-        .from('income_logs')
-        .update({
-          is_sold: true,
-          fiat_received: proportionalFiat
-        })
-        .eq('id', targetLog.id);
+      if (totalGmto <= 0) {
+        toast.error("No valid logs selected.");
+        return;
+      }
 
-      if (error) {
-        success = false;
-        console.error("Failed to update log", targetLog.id, error);
+      let success = true;
+
+      // We loop through and update sequentially for exact proportional calculation
+      for (const targetLog of targetLogs) {
+        const proportionalFiat = fiat * (targetLog.gmto / totalGmto);
+        const { error } = await supabase
+          .from('income_logs')
+          .update({
+            is_sold: true,
+            fiat_received: proportionalFiat
+          })
+          .eq('id', targetLog.id);
+
+        if (error) {
+          success = false;
+          console.error("Failed to update log", targetLog.id, error);
+        } else {
+          setIncomeLogs(prev => prev.map(log => log.id === targetLog.id ? { ...log, is_sold: true, fiat_received: proportionalFiat } : log));
+        }
+      }
+
+      if (success) {
+        try {
+          const audio = new Audio('/cash.mp3');
+          audio.play().catch(e => console.warn("Audio play failed:", e));
+        } catch (e) {
+          console.warn("Audio playback not supported.", e);
+        }
+        
+        toast.success("Cashout logged successfully!");
+        setIsCashoutModalOpen(false);
+        setCashoutAccountIds([]);
+        setCashoutFiat("");
       } else {
-        setIncomeLogs(prev => prev.map(log => log.id === targetLog.id ? { ...log, is_sold: true, fiat_received: proportionalFiat } : log));
+        toast.error("Some cashouts failed to log.");
       }
-    }
-
-    if (success) {
-      try {
-        const audio = new Audio('/cash.mp3');
-        audio.play().catch(e => console.warn("Audio play failed:", e));
-      } catch (e) {
-        console.warn("Audio playback not supported.", e);
-      }
-      
-      toast.success("Cashout logged successfully!");
-      setIsCashoutModalOpen(false);
-      setCashoutAccountIds([]);
-      setCashoutFiat("");
-    } else {
-      toast.error("Some cashouts failed to log.");
+    } finally {
+      setIsCashingOut(false);
     }
   };
 
@@ -391,22 +426,27 @@ export default function UserDashboardPage() {
   const confirmDeleteAccount = async () => {
     if (deleteAccountId === null) return;
     
-    // Optimistic UI update
-    setAccounts(prev => prev.filter(acc => acc.id !== deleteAccountId));
-    
-    const { error } = await supabase
-      .from('user_accounts')
-      .delete()
-      .eq('id', deleteAccountId);
+    setIsDeletingAccount(true);
+    try {
+      // Optimistic UI update
+      setAccounts(prev => prev.filter(acc => acc.id !== deleteAccountId));
       
-    if (error) {
-      console.error("Error deleting account:", error);
-      toast.error("Failed to delete account.");
-    } else {
-      toast.success("Account deleted successfully.");
+      const { error } = await supabase
+        .from('user_accounts')
+        .delete()
+        .eq('id', deleteAccountId);
+        
+      if (error) {
+        console.error("Error deleting account:", error);
+        toast.error("Failed to delete account.");
+      } else {
+        toast.success("Account deleted successfully.");
+      }
+      setIsDeleteAccountModalOpen(false);
+      setDeleteAccountId(null);
+    } finally {
+      setIsDeletingAccount(false);
     }
-    setIsDeleteAccountModalOpen(false);
-    setDeleteAccountId(null);
   };
 
   const openEditAccountModal = (acc: Account) => {
@@ -442,61 +482,71 @@ export default function UserDashboardPage() {
       return;
     }
 
-    const newUsed = account.repairTicketsUsed + repairTicketAmount;
+    setIsUsingRepairTicket(true);
+    try {
+      const newUsed = account.repairTicketsUsed + repairTicketAmount;
 
-    // Optimistic UI update
-    setAccounts(prev => prev.map(acc => acc.id === repairTicketAccountId ? { ...acc, repairTicketsUsed: newUsed } : acc));
+      // Optimistic UI update
+      setAccounts(prev => prev.map(acc => acc.id === repairTicketAccountId ? { ...acc, repairTicketsUsed: newUsed } : acc));
 
-    const { error } = await supabase
-      .from('user_accounts')
-      .update({ repair_tickets_used: newUsed })
-      .eq('id', repairTicketAccountId);
+      const { error } = await supabase
+        .from('user_accounts')
+        .update({ repair_tickets_used: newUsed })
+        .eq('id', repairTicketAccountId);
 
-    if (error) {
-      console.error(error);
-      toast.error("Failed to use repair tickets.");
-      // Rollback
-      setAccounts(prev => prev.map(acc => acc.id === repairTicketAccountId ? { ...acc, repairTicketsUsed: account.repairTicketsUsed } : acc));
-    } else {
-      toast.success(`Used ${repairTicketAmount} repair ticket(s).`);
+      if (error) {
+        console.error(error);
+        toast.error("Failed to use repair tickets.");
+        // Rollback
+        setAccounts(prev => prev.map(acc => acc.id === repairTicketAccountId ? { ...acc, repairTicketsUsed: account.repairTicketsUsed } : acc));
+      } else {
+        toast.success(`Used ${repairTicketAmount} repair ticket(s).`);
+      }
+
+      setIsRepairTicketModalOpen(false);
+      setRepairTicketAccountId(null);
+      setRepairTicketAmount(1);
+    } finally {
+      setIsUsingRepairTicket(false);
     }
-
-    setIsRepairTicketModalOpen(false);
-    setRepairTicketAccountId(null);
-    setRepairTicketAmount(1);
   };
 
   const handleUpdateAccount = async () => {
     if (!editAccountId || !editAccountName.trim()) return;
 
-    const { error } = await supabase
-      .from('user_accounts')
-      .update({
-        name: editAccountName.trim(),
-        avatar: editAccountAvatar,
-        email: editAccountEmail.trim() || null,
-        referral_link: editAccountReferralLink.trim() || null,
-        wallet_address: editAccountWalletAddress.trim() || null,
-        is_banned: editAccountIsBanned
-      })
-      .eq('id', editAccountId);
+    setIsUpdatingAccount(true);
+    try {
+      const { error } = await supabase
+        .from('user_accounts')
+        .update({
+          name: editAccountName.trim(),
+          avatar: editAccountAvatar,
+          email: editAccountEmail.trim() || null,
+          referral_link: editAccountReferralLink.trim() || null,
+          wallet_address: editAccountWalletAddress.trim() || null,
+          is_banned: editAccountIsBanned
+        })
+        .eq('id', editAccountId);
 
-    if (!error) {
-      setAccounts(prev => prev.map(acc => acc.id === editAccountId ? {
-        ...acc,
-        name: editAccountName.trim(),
-        avatar: editAccountAvatar,
-        email: editAccountEmail.trim() || null,
-        referralLink: editAccountReferralLink.trim() || null,
-        walletAddress: editAccountWalletAddress.trim() || null,
-        isBanned: editAccountIsBanned
-      } : acc));
-      toast.success("Account updated successfully.");
-    } else {
-      toast.error("Failed to update account.");
+      if (!error) {
+        setAccounts(prev => prev.map(acc => acc.id === editAccountId ? {
+          ...acc,
+          name: editAccountName.trim(),
+          avatar: editAccountAvatar,
+          email: editAccountEmail.trim() || null,
+          referralLink: editAccountReferralLink.trim() || null,
+          walletAddress: editAccountWalletAddress.trim() || null,
+          isBanned: editAccountIsBanned
+        } : acc));
+        toast.success("Account updated successfully.");
+      } else {
+        toast.error("Failed to update account.");
+      }
+      
+      setIsEditAccountModalOpen(false);
+    } finally {
+      setIsUpdatingAccount(false);
     }
-    
-    setIsEditAccountModalOpen(false);
   };
 
   const openDeleteLogModal = (id: string) => {
@@ -507,21 +557,26 @@ export default function UserDashboardPage() {
   const confirmDeleteLog = async () => {
     if (!deleteLogId) return;
     
-    setIncomeLogs(prev => prev.filter(log => log.id !== deleteLogId));
-    
-    const { error } = await supabase
-      .from('income_logs')
-      .delete()
-      .eq('id', deleteLogId);
+    setIsDeletingLog(true);
+    try {
+      setIncomeLogs(prev => prev.filter(log => log.id !== deleteLogId));
       
-    if (error) {
-      console.error("Error deleting log:", error);
-      toast.error("Failed to delete log.");
-    } else {
-      toast.success("Income log deleted successfully.");
+      const { error } = await supabase
+        .from('income_logs')
+        .delete()
+        .eq('id', deleteLogId);
+        
+      if (error) {
+        console.error("Error deleting log:", error);
+        toast.error("Failed to delete log.");
+      } else {
+        toast.success("Income log deleted successfully.");
+      }
+      setIsDeleteLogModalOpen(false);
+      setDeleteLogId(null);
+    } finally {
+      setIsDeletingLog(false);
     }
-    setIsDeleteLogModalOpen(false);
-    setDeleteLogId(null);
   };
 
   const openEditLogModal = (log: IncomeLog) => {
@@ -536,75 +591,85 @@ export default function UserDashboardPage() {
     const gmto = parseFloat(editLogGmto);
     if (isNaN(gmto) || gmto <= 0) return;
 
-    const targetLog = incomeLogs.find(l => l.id === editLogId);
-    const fiat = parseFloat(editLogFiat);
+    setIsUpdatingLog(true);
+    try {
+      const targetLog = incomeLogs.find(l => l.id === editLogId);
+      const fiat = parseFloat(editLogFiat);
 
-    const updateData: { gmto_amount: number; fiat_received?: number } = { gmto_amount: gmto };
-    if (targetLog?.is_sold && !isNaN(fiat) && fiat >= 0) {
-      updateData.fiat_received = fiat;
+      const updateData: { gmto_amount: number; fiat_received?: number } = { gmto_amount: gmto };
+      if (targetLog?.is_sold && !isNaN(fiat) && fiat >= 0) {
+        updateData.fiat_received = fiat;
+      }
+
+      const { error } = await supabase
+        .from('income_logs')
+        .update(updateData)
+        .eq('id', editLogId);
+
+      if (!error) {
+        setIncomeLogs(prev => prev.map(log => log.id === editLogId ? { ...log, gmto, ...(targetLog?.is_sold ? { fiat_received: fiat } : {}) } : log));
+        toast.success("Income log updated successfully.");
+      } else {
+        toast.error("Failed to update income log.");
+      }
+
+      setIsEditLogModalOpen(false);
+    } finally {
+      setIsUpdatingLog(false);
     }
-
-    const { error } = await supabase
-      .from('income_logs')
-      .update(updateData)
-      .eq('id', editLogId);
-
-    if (!error) {
-      setIncomeLogs(prev => prev.map(log => log.id === editLogId ? { ...log, gmto, ...(targetLog?.is_sold ? { fiat_received: fiat } : {}) } : log));
-      toast.success("Income log updated successfully.");
-    } else {
-      toast.error("Failed to update income log.");
-    }
-
-    setIsEditLogModalOpen(false);
   };
 
   const handleAddAccount = async () => {
     if (!newAccountName.trim() || !userId) return;
     
-    const newAccountData = {
-      user_id: userId,
-      name: newAccountName.trim(),
-      tickets_done: 0,
-      total_tickets: 10,
-      avatar: newAccountAvatar,
-      email: newAccountEmail.trim() || null,
-      referral_link: newAccountReferralLink.trim() || null,
-      wallet_address: newAccountWalletAddress.trim() || null
-    };
+    setIsAddingAccount(true);
+    try {
+      const newAccountData = {
+        user_id: userId,
+        name: newAccountName.trim(),
+        tickets_done: 0,
+        total_tickets: 10,
+        avatar: newAccountAvatar,
+        email: newAccountEmail.trim() || null,
+        referral_link: newAccountReferralLink.trim() || null,
+        wallet_address: newAccountWalletAddress.trim() || null
+      };
 
-    const { data, error } = await supabase
-      .from('user_accounts')
-      .insert(newAccountData)
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('user_accounts')
+        .insert(newAccountData)
+        .select()
+        .single();
 
-    if (!error && data) {
-      setAccounts(prev => [...prev, {
-        id: data.id,
-        name: data.name,
-        ticketsDone: data.tickets_done,
-        totalTickets: data.total_tickets,
-        avatar: data.avatar,
-        email: data.email,
-        referralLink: data.referral_link,
-        walletAddress: data.wallet_address,
-        isBanned: false,
-        totalAccumulatedTickets: 0,
-        repairTicketsUsed: 0
-      }]);
-      if (selectedAccountId === null) setSelectedAccountId(data.id);
-      toast.success("Account added successfully.");
-    } else {
-      toast.error("Failed to add account.");
+      if (!error && data) {
+        setAccounts(prev => [...prev, {
+          id: data.id,
+          name: data.name,
+          ticketsDone: data.tickets_done,
+          totalTickets: data.total_tickets,
+          avatar: data.avatar,
+          email: data.email,
+          referralLink: data.referral_link,
+          walletAddress: data.wallet_address,
+          isBanned: false,
+          totalAccumulatedTickets: 0,
+          repairTicketsUsed: 0
+        }]);
+        if (selectedAccountId === null) setSelectedAccountId(data.id);
+        toast.success("Account added successfully.");
+      } else {
+        toast.error("Failed to add account.");
+      }
+      
+      setNewAccountName("");
+      setNewAccountEmail("");
+      setNewAccountReferralLink("");
+      setNewAccountWalletAddress("");
+      setNewAccountAvatar("Avatar1");
+      setIsAddAccountModalOpen(false);
+    } finally {
+      setIsAddingAccount(false);
     }
-    
-    setNewAccountName("");
-    setNewAccountEmail("");
-    setNewAccountReferralLink("");
-    setNewAccountWalletAddress("");
-    setNewAccountAvatar("Avatar1");
-    setIsAddAccountModalOpen(false);
   };
 
   const currencySymbol = CURRENCY_SYMBOLS[currency] || "$";
@@ -881,9 +946,9 @@ export default function UserDashboardPage() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end gap-2">
+                    <div className="flex flex-wrap items-center w-full sm:w-auto mt-1.5 sm:mt-0 justify-center sm:justify-end gap-x-3 gap-y-2">
                       {/* Action Buttons */}
-                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0 ml-7 sm:ml-0">
+                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
                         <button onClick={() => openEditAccountModal(account)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
                           <PencilIcon className="size-3.5" />
                         </button>
@@ -908,7 +973,7 @@ export default function UserDashboardPage() {
                         <div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.2em] shrink-0">
                           <button 
                             onClick={() => updateTicket(account.id, -1)}
-                            disabled={account.ticketsDone === 0}
+                            disabled={account.ticketsDone === 0 || updatingTicketsIds.has(account.id)}
                             className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
                           >
                             <MinusIcon className="size-3" />
@@ -920,7 +985,7 @@ export default function UserDashboardPage() {
                           
                           <button 
                             onClick={() => updateTicket(account.id, 1)}
-                            disabled={isDone}
+                            disabled={isDone || updatingTicketsIds.has(account.id)}
                             className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
                           >
                             <PlusIcon className="size-3" />
@@ -1099,10 +1164,10 @@ export default function UserDashboardPage() {
 
           <Button 
             onClick={handleLogIncome}
+            disabled={!gmtoEarned || isNaN(parseFloat(gmtoEarned)) || parseFloat(gmtoEarned) <= 0 || isLoggingIncome}
             className="w-full mt-2"
-            disabled={!gmtoEarned || isNaN(parseFloat(gmtoEarned)) || parseFloat(gmtoEarned) <= 0}
           >
-            Confirm
+            {isLoggingIncome ? "Logging..." : "Record Daily Income"}
           </Button>
         </div>
       </AnimatedModal>
@@ -1190,9 +1255,9 @@ export default function UserDashboardPage() {
           <Button 
             onClick={handleAddAccount}
             className="w-full mt-2"
-            disabled={!newAccountName.trim()}
+            disabled={!newAccountName.trim() || isAddingAccount}
           >
-            Create Account
+            {isAddingAccount ? "Adding..." : "Add Account"}
           </Button>
         </div>
       </AnimatedModal>
@@ -1284,9 +1349,9 @@ export default function UserDashboardPage() {
           <Button 
             onClick={handleUpdateAccount}
             className="w-full mt-2"
-            disabled={!editAccountName.trim()}
+            disabled={!editAccountName.trim() || isUpdatingAccount}
           >
-            Save Changes
+            {isUpdatingAccount ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </AnimatedModal>
@@ -1335,9 +1400,9 @@ export default function UserDashboardPage() {
           <Button 
             onClick={handleUpdateLog}
             className="w-full mt-2"
-            disabled={!editLogGmto || isNaN(parseFloat(editLogGmto)) || parseFloat(editLogGmto) <= 0}
+            disabled={!editLogGmto || isNaN(parseFloat(editLogGmto)) || parseFloat(editLogGmto) <= 0 || isUpdatingLog}
           >
-            Save Changes
+            {isUpdatingLog ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </AnimatedModal>
@@ -1354,7 +1419,9 @@ export default function UserDashboardPage() {
           <p className="text-sm text-muted-foreground">Are you sure you want to delete this account? This action cannot be undone.</p>
           <div className="flex gap-2 justify-end mt-4">
             <Button variant="outline" onClick={() => setIsDeleteAccountModalOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteAccount}>Delete Account</Button>
+            <Button variant="destructive" onClick={confirmDeleteAccount} disabled={isDeletingAccount}>
+              {isDeletingAccount ? "Deleting..." : "Delete Account"}
+            </Button>
           </div>
         </div>
       </AnimatedModal>
@@ -1371,7 +1438,9 @@ export default function UserDashboardPage() {
           <p className="text-sm text-muted-foreground">Are you sure you want to delete this income log? This action cannot be undone.</p>
           <div className="flex gap-2 justify-end mt-4">
             <Button variant="outline" onClick={() => setIsDeleteLogModalOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDeleteLog}>Delete Log</Button>
+            <Button variant="destructive" onClick={confirmDeleteLog} disabled={isDeletingLog}>
+              {isDeletingLog ? "Deleting..." : "Delete Log"}
+            </Button>
           </div>
         </div>
       </AnimatedModal>
@@ -1442,9 +1511,9 @@ export default function UserDashboardPage() {
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="ghost" onClick={() => setIsCashoutModalOpen(false)}>Cancel</Button>
-          <Button onClick={handleCashout} disabled={cashoutAccountIds.length === 0 || !cashoutFiat || isNaN(parseFloat(cashoutFiat))}>
+          <Button onClick={handleCashout} disabled={cashoutAccountIds.length === 0 || !cashoutFiat || isNaN(parseFloat(cashoutFiat)) || isCashingOut}>
             <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="mr-1.5 opacity-80" />
-            Record Sale
+            {isCashingOut ? "Recording..." : "Record Sale"}
           </Button>
         </div>
       </AnimatedModal>
@@ -1528,7 +1597,9 @@ export default function UserDashboardPage() {
 
           <div className="flex gap-3 justify-end mt-2">
             <Button variant="ghost" onClick={() => setIsRepairTicketModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleUseRepairTicket} className="bg-orange-500 hover:bg-orange-600 text-white border-0">Use Tickets</Button>
+            <Button onClick={handleUseRepairTicket} disabled={isUsingRepairTicket} className="bg-orange-500 hover:bg-orange-600 text-white border-0">
+              {isUsingRepairTicket ? "Processing..." : "Use Tickets"}
+            </Button>
           </div>
         </div>
       </AnimatedModal>
@@ -1548,8 +1619,8 @@ function DashboardCard({
 }) {
   return (
     <section className="rounded-xl border border-border/60 bg-background/40 p-4">
-      <div className="flex items-center justify-between">
-        <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.25em]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest sm:tracking-[0.25em]">
           {title}
         </div>
         {trailing}
