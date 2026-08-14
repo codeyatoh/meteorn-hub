@@ -929,22 +929,24 @@ export default function UserDashboardPage() {
                           <Image src="/repair-ticket.png" alt="tix" width={20} height={20} className={`object-contain ml-0.5 sm:ml-1 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} sm:w-6 sm:h-6`} />
 
                           {/* Repair Tickets */}
-                          <div className="ml-2 flex items-center gap-1 border-l border-border/50 pl-2">
-                            <span className="text-muted-foreground/50" title="Total Accumulated Tickets">
-                              {account.totalAccumulatedTickets}
-                            </span>
-                            {(account.totalAccumulatedTickets - account.repairTicketsUsed) > 0 && (
-                              <button 
-                                onClick={() => openRepairTicketModal(account.id)}
-                                className="p-1 text-orange-500/70 hover:text-orange-500 hover:bg-orange-500/10 rounded transition-colors inline-flex items-center gap-1 ml-1"
-                                title="Use Repair Ticket"
-                              >
-                                <WrenchIcon className="size-3" />
-                                <span className="font-bold">{account.totalAccumulatedTickets - account.repairTicketsUsed}</span>
-                              </button>
-                            )}
+                          <div className="ml-2 flex items-center gap-1.5 border-l border-border/50 pl-2">
+                            <div className="flex items-center gap-1 text-muted-foreground/50" title="Total Accumulated Tickets">
+                              <span className="text-[9px] uppercase tracking-widest hidden sm:inline">Total</span>
+                              <span className="font-medium">{account.totalAccumulatedTickets}</span>
+                            </div>
+                            
+                            <button 
+                              onClick={() => openRepairTicketModal(account.id)}
+                              disabled={(account.totalAccumulatedTickets - account.repairTicketsUsed) <= 0}
+                              className="p-1 rounded transition-colors inline-flex items-center gap-1 ml-0.5 text-orange-500/70 hover:text-orange-500 hover:bg-orange-500/10 disabled:opacity-30 disabled:pointer-events-none"
+                              title="Use Repair Ticket"
+                            >
+                              <WrenchIcon className="size-3" />
+                              <span className="font-bold">{account.totalAccumulatedTickets - account.repairTicketsUsed}</span>
+                            </button>
+                            
                             {account.repairTicketsUsed > 0 && (
-                              <span className="text-muted-foreground/30 text-[8px] ml-1" title="Used Tickets">
+                              <span className="text-muted-foreground/30 text-[8px] ml-0.5" title="Used Tickets">
                                 -{account.repairTicketsUsed}
                               </span>
                             )}
