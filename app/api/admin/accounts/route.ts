@@ -40,6 +40,7 @@ export async function GET() {
     avatar: a.avatar,
     referral_link: a.referral_link,
     created_at: a.created_at,
+    is_banned: a.is_banned ?? false,
   }));
 
   return NextResponse.json(result);

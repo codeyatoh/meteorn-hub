@@ -16,6 +16,7 @@ type AdminAccount = {
   avatar: string;
   referral_link: string | null;
   created_at: string;
+  is_banned: boolean;
 };
 
 export default function AdminAccountsPage() {
@@ -30,7 +31,6 @@ export default function AdminAccountsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
-  const [resettingId, setResettingId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -76,25 +76,6 @@ export default function AdminAccountsPage() {
       toast.error("Failed to update quota.", { classNames: { icon: "text-destructive" } });
     }
     setSavingId(null);
-  };
-
-  const resetTickets = async (id: number) => {
-    setResettingId(id);
-    const res = await fetch(`/api/admin/accounts/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reset_tickets: true }),
-    });
-
-    if (res.ok) {
-      setAccounts((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, tickets_done: 0 } : a))
-      );
-      toast.success("Tickets reset manually.", { classNames: { icon: "text-green-500" } });
-    } else {
-      toast.error("Failed to reset tickets.", { classNames: { icon: "text-destructive" } });
-    }
-    setResettingId(null);
   };
 
   return (
@@ -143,7 +124,7 @@ export default function AdminAccountsPage() {
               <span>Account</span>
               <span className="text-center hidden sm:block">Progress</span>
               <span className="text-center">Quota</span>
-              <span className="text-right">Actions</span>
+              <span className="text-right">Status</span>
             </div>
 
             {/* Rows */}
@@ -254,20 +235,14 @@ export default function AdminAccountsPage() {
                       )}
                     </div>
 
-                    {/* Reset button */}
-                    <div className="text-right">
-                      <button
-                        onClick={() => resetTickets(acc.id)}
-                        disabled={resettingId === acc.id || acc.tickets_done === 0}
-                        title="Reset tickets to 0"
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/50 px-2 py-1 text-[11px] font-mono text-muted-foreground hover:border-border hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        {resettingId === acc.id
-                          ? <Loader2 className="size-3 animate-spin" />
-                          : <RotateCcwIcon className="size-3" />
-                        }
-                        <span className="hidden sm:inline">Reset</span>
-                      </button>
+                    {/* Status column */}
+                    <div className="text-right flex items-center justify-end">
+                      <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full border ${acc.is_banned ? 'border-red-500/20 bg-red-500/5 text-red-500' : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-500'}`}>
+                        <span className={`size-1.5 rounded-full ${acc.is_banned ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                        <span className="text-[10px] font-mono uppercase tracking-widest">
+                          {acc.is_banned ? 'Banned' : 'Active'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
