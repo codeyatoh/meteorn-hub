@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   title: "Meteorn Hub",
   description: "Meteorn Hub - Your professional dashboard",
   icons: {
-    icon: "/meteorn-hub-logo.png",
-    apple: "/meteorn-hub-logo.png",
+    icon: "/particle-image.png",
+    apple: "/particle-image.png",
   },
   manifest: "/manifest.ts",
 };

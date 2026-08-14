@@ -11,12 +11,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#09090b',
     icons: [
       {
-        src: '/meteorn-hub-logo.png',
+        src: '/particle-image.png',
         sizes: '192x192',
         type: 'image/png',
       },
       {
-        src: '/meteorn-hub-logo.png',
+        src: '/particle-image.png',
         sizes: '512x512',
         type: 'image/png',
       },
