@@ -68,12 +68,12 @@ export function PwaInstaller() {
       maxWidth="sm"
     >
       <div className="flex flex-col items-center text-center space-y-4">
-        <div className="relative size-24 md:size-28">
+        <div className="relative size-24 md:size-28 rounded-2xl overflow-hidden shadow-lg border border-white/10">
           <Image 
             src="/particle-image.png" 
             alt="Meteorn Hub" 
             fill 
-            className="object-contain drop-shadow-lg" 
+            className="object-cover" 
             unoptimized
           />
         </div>
