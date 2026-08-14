@@ -246,7 +246,7 @@ export default function MembersPage() {
 
                   {/* Sold (P2P) */}
                   <div className="text-right flex flex-col items-end justify-center">
-                    <div className="flex items-center gap-1.5 font-mono text-sm text-amber-500">
+                    <div className="flex items-center gap-1.5 font-mono text-sm text-emerald-500">
                       <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="object-contain opacity-80" />
                       {u.sold_gmto > 0 ? u.sold_gmto.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                     </div>
