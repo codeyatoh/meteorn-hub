@@ -665,31 +665,54 @@ export default function UserDashboardPage() {
                   {isFilterDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsFilterDropdownOpen(false)} />
-                      <div className="absolute z-50 top-full right-0 mt-1.5 w-48 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col p-2 space-y-4 animate-in fade-in zoom-in-95 duration-100">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2">Status</label>
-                          <select 
-                            value={accountStatusFilter} 
-                            onChange={e => setAccountStatusFilter(e.target.value as "all" | "active" | "banned")}
-                            className="w-full rounded-sm bg-transparent border-0 text-sm px-2 py-1 outline-none hover:bg-muted"
-                          >
-                            <option value="all">All Accounts</option>
-                            <option value="active">Active Only</option>
-                            <option value="banned">Banned Only</option>
-                          </select>
+                      <div className="absolute z-50 top-full right-0 mt-1.5 w-52 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                        
+                        {/* Status Filter */}
+                        <div className="flex flex-col py-1.5 border-b border-input/50">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-3 py-1.5">Status</span>
+                          {[
+                            { value: 'all', label: 'All Accounts' },
+                            { value: 'active', label: 'Active Only' },
+                            { value: 'banned', label: 'Banned Only' }
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setAccountStatusFilter(opt.value as "all" | "active" | "banned")}
+                              className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors outline-none ${
+                                accountStatusFilter === opt.value 
+                                  ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+                                  : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
+                              }`}
+                            >
+                              <span className="font-medium">{opt.label}</span>
+                            </button>
+                          ))}
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2">Quota</label>
-                          <select 
-                            value={accountQuotaFilter} 
-                            onChange={e => setAccountQuotaFilter(e.target.value as "all" | "finished" | "incomplete")}
-                            className="w-full rounded-sm bg-transparent border-0 text-sm px-2 py-1 outline-none hover:bg-muted"
-                          >
-                            <option value="all">All Quotas</option>
-                            <option value="finished">Finished</option>
-                            <option value="incomplete">Incomplete</option>
-                          </select>
+
+                        {/* Quota Filter */}
+                        <div className="flex flex-col py-1.5">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-3 py-1.5">Quota</span>
+                          {[
+                            { value: 'all', label: 'All Quotas' },
+                            { value: 'finished', label: 'Finished' },
+                            { value: 'incomplete', label: 'Incomplete' }
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setAccountQuotaFilter(opt.value as "all" | "finished" | "incomplete")}
+                              className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors outline-none ${
+                                accountQuotaFilter === opt.value 
+                                  ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+                                  : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
+                              }`}
+                            >
+                              <span className="font-medium">{opt.label}</span>
+                            </button>
+                          ))}
                         </div>
+
                       </div>
                     </>
                   )}
