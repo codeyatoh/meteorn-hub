@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon, CopyIcon, ListFilterIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon, CopyIcon, ListFilterIcon, WrenchIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -25,7 +25,7 @@ const AVATAR_MAP: Record<string, ReactNode> = {
 const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 
 // Types
-type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null; email: string | null; isBanned: boolean; };
+type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null; email: string | null; isBanned: boolean; totalAccumulatedTickets: number; repairTicketsUsed: number; };
 type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string; is_sold: boolean; fiat_received: number };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
@@ -55,6 +55,8 @@ const handleReferralClick = (e: React.MouseEvent, url: string) => {
 export default function UserDashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomeLogs, setIncomeLogs] = useState<IncomeLog[]>([]);
+  const [totalP2PSoldFiat, setTotalP2PSoldFiat] = useState(0);
+  const [totalP2PSoldGmto, setTotalP2PSoldGmto] = useState(0);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -125,6 +127,11 @@ export default function UserDashboardPage() {
   const [isDeleteLogModalOpen, setIsDeleteLogModalOpen] = useState(false);
   const [deleteLogId, setDeleteLogId] = useState<string | null>(null);
 
+  // Repair Ticket Modal State
+  const [isRepairTicketModalOpen, setIsRepairTicketModalOpen] = useState(false);
+  const [repairTicketAccountId, setRepairTicketAccountId] = useState<number | null>(null);
+  const [repairTicketAmount, setRepairTicketAmount] = useState(1);
+
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [gmtoEarned, setGmtoEarned] = useState("");
   
@@ -169,7 +176,9 @@ export default function UserDashboardPage() {
           referralLink: acc.referral_link,
           walletAddress: acc.wallet_address,
           email: acc.email,
-          isBanned: acc.is_banned ?? false
+          isBanned: acc.is_banned ?? false,
+          totalAccumulatedTickets: acc.total_accumulated_tickets ?? 0,
+          repairTicketsUsed: acc.repair_tickets_used ?? 0
         })));
         if (accountsData.length > 0) setSelectedAccountId(accountsData[0].id);
       }
@@ -194,6 +203,19 @@ export default function UserDashboardPage() {
           is_sold: log.is_sold,
           fiat_received: parseFloat(log.fiat_received)
         })));
+      }
+
+      // Fetch all-time sold P2P logs
+      const { data: soldLogsData } = await supabase
+        .from('income_logs')
+        .select('gmto_amount, fiat_received')
+        .eq('is_sold', true);
+        
+      if (soldLogsData) {
+        const sumFiat = soldLogsData.reduce((acc, log) => acc + parseFloat(log.fiat_received || "0"), 0);
+        const sumGmto = soldLogsData.reduce((acc, log) => acc + parseFloat(log.gmto_amount || "0"), 0);
+        setTotalP2PSoldFiat(sumFiat);
+        setTotalP2PSoldGmto(sumGmto);
       }
     };
     
@@ -246,13 +268,18 @@ export default function UserDashboardPage() {
     const actualDelta = newCount - account.ticketsDone;
     if (actualDelta === 0) return;
     
+    let newAccumulated = account.totalAccumulatedTickets;
+    if (actualDelta > 0) {
+      newAccumulated += actualDelta;
+    }
+    
     setAccounts((prev) =>
-      prev.map((acc) => (acc.id === id ? { ...acc, ticketsDone: newCount } : acc))
+      prev.map((acc) => (acc.id === id ? { ...acc, ticketsDone: newCount, totalAccumulatedTickets: newAccumulated } : acc))
     );
     
     await supabase
       .from('user_accounts')
-      .update({ tickets_done: newCount })
+      .update({ tickets_done: newCount, total_accumulated_tickets: newAccumulated })
       .eq('id', id);
 
     if (userId) {
@@ -396,6 +423,47 @@ export default function UserDashboardPage() {
   const openViewWalletModal = (walletAddress: string) => {
     setViewWalletAddress(walletAddress);
     setIsViewWalletModalOpen(true);
+  };
+
+  const openRepairTicketModal = (accountId: number) => {
+    setRepairTicketAccountId(accountId);
+    setRepairTicketAmount(1);
+    setIsRepairTicketModalOpen(true);
+  };
+
+  const handleUseRepairTicket = async () => {
+    if (repairTicketAccountId === null) return;
+    const account = accounts.find(a => a.id === repairTicketAccountId);
+    if (!account) return;
+
+    const available = account.totalAccumulatedTickets - account.repairTicketsUsed;
+    if (repairTicketAmount <= 0 || repairTicketAmount > available) {
+      toast.error("Invalid amount of tickets.");
+      return;
+    }
+
+    const newUsed = account.repairTicketsUsed + repairTicketAmount;
+
+    // Optimistic UI update
+    setAccounts(prev => prev.map(acc => acc.id === repairTicketAccountId ? { ...acc, repairTicketsUsed: newUsed } : acc));
+
+    const { error } = await supabase
+      .from('user_accounts')
+      .update({ repair_tickets_used: newUsed })
+      .eq('id', repairTicketAccountId);
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to use repair tickets.");
+      // Rollback
+      setAccounts(prev => prev.map(acc => acc.id === repairTicketAccountId ? { ...acc, repairTicketsUsed: account.repairTicketsUsed } : acc));
+    } else {
+      toast.success(`Used ${repairTicketAmount} repair ticket(s).`);
+    }
+
+    setIsRepairTicketModalOpen(false);
+    setRepairTicketAccountId(null);
+    setRepairTicketAmount(1);
   };
 
   const handleUpdateAccount = async () => {
@@ -634,7 +702,7 @@ export default function UserDashboardPage() {
         </div>
 
         {/* Fact Cards */}
-        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <FactCard 
             label="Tickets Logged" 
             value={`${totalTicketsLogged} / ${totalMaxTickets}`} 
@@ -646,6 +714,12 @@ export default function UserDashboardPage() {
             value={`${currencySymbol}${totalGross.toFixed(2)}`} 
             sub={`$GMTO Price: ${currencySymbol}${gmtoPrice.toFixed(6)}`} 
             icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}
+          />
+          <FactCard 
+            label="Total P2P Sold" 
+            value={`${currencySymbol}${totalP2PSoldFiat.toFixed(2)}`} 
+            sub={`${totalP2PSoldGmto.toLocaleString()} GMTO sold`} 
+            icon={<WalletIcon className="size-5 opacity-40 text-emerald-500" />}
           />
         </div>
 
@@ -851,6 +925,28 @@ export default function UserDashboardPage() {
                           </button>
 
                           <Image src="/repair-ticket.png" alt="tix" width={20} height={20} className={`object-contain ml-0.5 sm:ml-1 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} sm:w-6 sm:h-6`} />
+
+                          {/* Repair Tickets */}
+                          <div className="ml-2 flex items-center gap-1 border-l border-border/50 pl-2">
+                            <span className="text-muted-foreground/50" title="Total Accumulated Tickets">
+                              {account.totalAccumulatedTickets}
+                            </span>
+                            {(account.totalAccumulatedTickets - account.repairTicketsUsed) > 0 && (
+                              <button 
+                                onClick={() => openRepairTicketModal(account.id)}
+                                className="p-1 text-orange-500/70 hover:text-orange-500 hover:bg-orange-500/10 rounded transition-colors inline-flex items-center gap-1 ml-1"
+                                title="Use Repair Ticket"
+                              >
+                                <WrenchIcon className="size-3" />
+                                <span className="font-bold">{account.totalAccumulatedTickets - account.repairTicketsUsed}</span>
+                              </button>
+                            )}
+                            {account.repairTicketsUsed > 0 && (
+                              <span className="text-muted-foreground/30 text-[8px] ml-1" title="Used Tickets">
+                                -{account.repairTicketsUsed}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -1394,6 +1490,43 @@ export default function UserDashboardPage() {
                 <span className="animate-in fade-in zoom-in duration-200">Copy</span>
               )}
             </Button>
+          </div>
+        </div>
+      </AnimatedModal>
+
+      {/* Repair Ticket Modal */}
+      <AnimatedModal isOpen={isRepairTicketModalOpen} onClose={() => setIsRepairTicketModalOpen(false)}>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-foreground">
+              <div className="p-2 rounded-full bg-orange-500/10 text-orange-500">
+                <WrenchIcon className="size-5" />
+              </div>
+              <h2 className="font-heading text-xl">Use Repair Tickets</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Select how many repair tickets you want to consume for this account.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Amount to use</label>
+            <input 
+              type="number"
+              min="1"
+              max={accounts.find(a => a.id === repairTicketAccountId)?.totalAccumulatedTickets ?? 1}
+              value={repairTicketAmount}
+              onChange={e => setRepairTicketAmount(parseInt(e.target.value) || 1)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+            />
+            <p className="text-xs text-muted-foreground">
+              Available: <span className="font-bold text-foreground">{(accounts.find(a => a.id === repairTicketAccountId)?.totalAccumulatedTickets ?? 0) - (accounts.find(a => a.id === repairTicketAccountId)?.repairTicketsUsed ?? 0)}</span>
+            </p>
+          </div>
+
+          <div className="flex gap-3 justify-end mt-2">
+            <Button variant="ghost" onClick={() => setIsRepairTicketModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleUseRepairTicket} className="bg-orange-500 hover:bg-orange-600 text-white">Use Tickets</Button>
           </div>
         </div>
       </AnimatedModal>
