@@ -95,6 +95,17 @@ export default function MembersPage() {
     });
   };
 
+  const formatDateTime = (iso: string | null) => {
+    if (!iso) return "Never";
+    return new Date(iso).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
   return (
     <div className="px-6 py-10">
       <div className="mx-auto max-w-5xl">
@@ -186,7 +197,7 @@ export default function MembersPage() {
             {/* Header */}
             <div className="overflow-x-auto">
               <div className="min-w-[500px] sm:min-w-0">
-                <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
+                <div className="grid grid-cols-[minmax(150px,2fr)_minmax(100px,1.2fr)_minmax(100px,1.2fr)_80px_100px_130px_80px_50px] gap-6 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                   <span>User</span>
                   <span className="text-right">Income</span>
                   <span className="text-right">Sold (P2P)</span>
@@ -194,6 +205,7 @@ export default function MembersPage() {
                   <span className="text-right hidden lg:block">Joined</span>
                   <span className="text-right hidden md:block">Last Seen</span>
                   <span className="text-right">Status</span>
+                  <span className="text-center">Action</span>
                 </div>
 
                 {/* Rows */}
@@ -208,7 +220,7 @@ export default function MembersPage() {
                 return filteredUsers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((u) => (
                 <div
                   key={u.id}
-                  className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-4 py-3 items-center transition-colors ${u.is_archived ? "opacity-50 hover:opacity-100" : "hover:bg-foreground/[0.02]"}`}
+                  className={`grid grid-cols-[minmax(150px,2fr)_minmax(100px,1.2fr)_minmax(100px,1.2fr)_80px_100px_130px_80px_50px] gap-6 px-4 py-3 items-center transition-colors ${u.is_archived ? "opacity-50 hover:opacity-100" : "hover:bg-foreground/[0.02]"}`}
                 >
                   {/* User info */}
                   <div className="min-w-0">
@@ -256,12 +268,12 @@ export default function MembersPage() {
                   </div>
 
                   {/* Last seen */}
-                  <div className="text-right text-xs text-muted-foreground hidden md:block">
-                    {formatDate(u.last_sign_in_at)}
+                  <div className="text-right text-[11px] text-muted-foreground hidden md:block">
+                    {formatDateTime(u.last_sign_in_at)}
                   </div>
 
-                  {/* Online status & Archive */}
-                  <div className="text-right flex items-center justify-end gap-3">
+                  {/* Online status */}
+                  <div className="text-right flex items-center justify-end">
                     {(() => {
                       const isOnline = u.last_sign_in_at && (new Date().getTime() - new Date(u.last_sign_in_at).getTime()) < 60 * 60 * 1000;
                       return (
@@ -273,6 +285,10 @@ export default function MembersPage() {
                         </div>
                       );
                     })()}
+                  </div>
+                  
+                  {/* Action */}
+                  <div className="text-center flex items-center justify-center">
                     <button
                       onClick={() => toggleArchive(u)}
                       disabled={togglingId === u.id}
