@@ -103,7 +103,6 @@ export default function AdminAccountsPage() {
                 const pct = acc.total_tickets > 0
                   ? Math.min(100, Math.round((acc.tickets_done / acc.total_tickets) * 100))
                   : 0;
-                const isEditing = editingId === acc.id;
 
                 return (
                   <div
