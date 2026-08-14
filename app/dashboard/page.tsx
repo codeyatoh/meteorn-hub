@@ -471,7 +471,7 @@ export default function UserDashboardPage() {
     const targetLog = incomeLogs.find(l => l.id === editLogId);
     const fiat = parseFloat(editLogFiat);
 
-    const updateData: any = { gmto_amount: gmto };
+    const updateData: { gmto_amount: number; fiat_received?: number } = { gmto_amount: gmto };
     if (targetLog?.is_sold && !isNaN(fiat) && fiat >= 0) {
       updateData.fiat_received = fiat;
     }
