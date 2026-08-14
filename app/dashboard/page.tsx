@@ -652,7 +652,7 @@ export default function UserDashboardPage() {
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {account.referralLink && (
-                          <a href={account.referralLink} target="_blank" rel="noopener noreferrer" className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
+                          <a href={account.referralLink} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
                             <LinkIcon className="size-3.5" />
                           </a>
                         )}
