@@ -1581,18 +1581,34 @@ export default function UserDashboardPage() {
           </p>
 
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Amount to use</label>
-            <input 
-              type="number"
-              min="1"
-              max={accounts.find(a => a.id === repairTicketAccountId)?.totalAccumulatedTickets ?? 1}
-              value={repairTicketAmount}
-              onChange={e => setRepairTicketAmount(parseInt(e.target.value) || 1)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-            />
-            <p className="text-xs text-muted-foreground">
-              Available: <span className="font-bold text-foreground">{(accounts.find(a => a.id === repairTicketAccountId)?.totalAccumulatedTickets ?? 0) - (accounts.find(a => a.id === repairTicketAccountId)?.repairTicketsUsed ?? 0)}</span>
-            </p>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Amount to use</label>
+              <p className="text-xs text-muted-foreground">
+                Available: <span className="font-bold text-foreground">{(accounts.find(a => a.id === repairTicketAccountId)?.totalAccumulatedTickets ?? 0) - (accounts.find(a => a.id === repairTicketAccountId)?.repairTicketsUsed ?? 0)}</span>
+              </p>
+            </div>
+            <div className="relative">
+              <input 
+                type="number"
+                min="1"
+                max={(accounts.find(a => a.id === repairTicketAccountId)?.totalAccumulatedTickets ?? 1) - (accounts.find(a => a.id === repairTicketAccountId)?.repairTicketsUsed ?? 0)}
+                value={repairTicketAmount}
+                onChange={e => setRepairTicketAmount(parseInt(e.target.value) || 1)}
+                className="w-full rounded-md border border-input bg-background pl-3 pr-14 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const acc = accounts.find(a => a.id === repairTicketAccountId);
+                  if (acc) {
+                    setRepairTicketAmount(Math.max(1, acc.totalAccumulatedTickets - acc.repairTicketsUsed));
+                  }
+                }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-medium uppercase bg-foreground/5 hover:bg-foreground/10 text-foreground px-2 py-1 rounded transition-colors"
+              >
+                Max
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-3 justify-end mt-2">
