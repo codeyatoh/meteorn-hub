@@ -55,6 +55,7 @@ const handleReferralClick = (e: React.MouseEvent, url: string) => {
 export default function UserDashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomeLogs, setIncomeLogs] = useState<IncomeLog[]>([]);
+  const [allUnsoldLogs, setAllUnsoldLogs] = useState<IncomeLog[]>([]);
   const [totalP2PSoldFiat, setTotalP2PSoldFiat] = useState(0);
   const [totalP2PSoldGmto, setTotalP2PSoldGmto] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -216,7 +217,7 @@ export default function UserDashboardPage() {
         })));
       }
 
-      // Fetch all-time sold P2P logs
+      // Fetch all-time sold P2P logs (for stats)
       const { data: soldLogsData } = await supabase
         .from('income_logs')
         .select('gmto_amount, fiat_received')
@@ -227,6 +228,25 @@ export default function UserDashboardPage() {
         const sumGmto = soldLogsData.reduce((acc, log) => acc + parseFloat(log.gmto_amount || "0"), 0);
         setTotalP2PSoldFiat(sumFiat);
         setTotalP2PSoldGmto(sumGmto);
+      }
+
+      // Fetch all-time UNSOLD income logs (for sell modal)
+      const { data: unsoldLogsData } = await supabase
+        .from('income_logs')
+        .select('*')
+        .eq('is_sold', false)
+        .order('created_at', { ascending: false });
+
+      if (unsoldLogsData) {
+        setAllUnsoldLogs(unsoldLogsData.map(log => ({
+          id: log.id.toString(),
+          time: new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(log.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          title: log.account_name,
+          gmto: parseFloat(log.gmto_amount),
+          color: log.color,
+          is_sold: log.is_sold,
+          fiat_received: parseFloat(log.fiat_received)
+        })));
       }
     };
     
@@ -366,7 +386,7 @@ export default function UserDashboardPage() {
     setIsCashingOut(true);
     try {
       const fiat = parseFloat(cashoutFiat);
-      const targetLogs = incomeLogs.filter(log => cashoutAccountIds.includes(log.id) && !log.is_sold);
+      const targetLogs = allUnsoldLogs.filter(log => cashoutAccountIds.includes(log.id) && !log.is_sold);
       const totalGmto = targetLogs.reduce((sum, log) => sum + log.gmto, 0);
 
       if (totalGmto <= 0) {
@@ -392,6 +412,7 @@ export default function UserDashboardPage() {
           console.error("Failed to update log", targetLog.id, error);
         } else {
           setIncomeLogs(prev => prev.map(log => log.id === targetLog.id ? { ...log, is_sold: true, fiat_received: proportionalFiat } : log));
+          setAllUnsoldLogs(prev => prev.filter(log => log.id !== targetLog.id));
         }
       }
 
@@ -1457,17 +1478,17 @@ export default function UserDashboardPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Select Unsold Income</label>
             <MultiSelectCombobox
-              options={incomeLogs.filter(log => !log.is_sold).map(log => ({
+              options={allUnsoldLogs.map(log => ({
                 value: log.id,
-                label: log.title,
+                label: `${log.title} — ${log.time}`,
                 icon: <div className="flex items-center gap-1.5 opacity-80 ml-2"><span className="text-xs">{log.gmto}</span><Image src="/gmto.png" alt="GMTO" width={12} height={12} /></div>
               }))}
               values={cashoutAccountIds}
               onValuesChange={setCashoutAccountIds}
               placeholder="Choose income logs"
               searchPlaceholder="Search logs..."
-              emptyText="No unsold income available today."
-              renderValue={(values) => `${values.length} account${values.length > 1 ? 's' : ''} selected (${incomeLogs.filter(l => values.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0)} GMTO)`}
+              emptyText="No unsold income logs found."
+              renderValue={(values) => `${values.length} log${values.length > 1 ? 's' : ''} selected (${allUnsoldLogs.filter(l => values.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0).toFixed(2)} GMTO)`}
             />
           </div>
           
@@ -1477,7 +1498,7 @@ export default function UserDashboardPage() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2"><Image src="/gmto.png" alt="GMTO" width={16} height={16} /></span>
               <input 
                 type="number"
-                value={cashoutAccountIds.length > 0 ? incomeLogs.filter(l => cashoutAccountIds.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0) : ""}
+                value={cashoutAccountIds.length > 0 ? allUnsoldLogs.filter(l => cashoutAccountIds.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0) : ""}
                 readOnly
                 placeholder="Select income logs first"
                 className="w-full rounded-md border border-input bg-foreground/[0.02] pl-9 pr-3 py-2 text-sm text-muted-foreground cursor-not-allowed focus:outline-none"
