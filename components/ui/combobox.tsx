@@ -24,35 +24,32 @@ export function Combobox({
   className,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [inputValue, setInputValue] = React.useState("")
+  const [prevValueProp, setPrevValueProp] = React.useState(value)
 
   const selectedOption = options.find((option) => option.value === value)
-
-  // Sync input value with selected option when popover closes
-  React.useEffect(() => {
-    if (!open) {
-      if (selectedOption) {
-        setInputValue(selectedOption.label)
-      } else {
-        setInputValue("")
-      }
-    }
-  }, [open, selectedOption])
-
+  
   // Initialize input value
-  React.useEffect(() => {
-    if (selectedOption && !inputValue && !open) {
-      setInputValue(selectedOption.label)
+  const [inputValue, setInputValue] = React.useState(selectedOption ? selectedOption.label : "")
+
+  // Sync input value when the external value prop changes
+  if (value !== prevValueProp) {
+    setPrevValueProp(value)
+    setInputValue(selectedOption ? selectedOption.label : "")
+  }
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen)
+    if (!newOpen) {
+      setInputValue(selectedOption ? selectedOption.label : "")
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }
 
   const filteredOptions = options.filter((option) =>
     option.label.toLowerCase().includes(inputValue.toLowerCase())
   )
 
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+    <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <PopoverPrimitive.Trigger asChild>
         <div className={cn("relative w-full", className)}>
           <input
