@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GamepadIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { GamepadIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, ListFilterIcon, CheckIcon } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
@@ -26,6 +26,8 @@ export default function AdminAccountsPage() {
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'banned'>('all');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
@@ -57,18 +59,64 @@ export default function AdminAccountsPage() {
               Platform-wide view of every game account. Edit quotas or manually reset tickets.
             </p>
           </div>
-          <div className="relative w-full sm:w-64">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search accounts..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-full border border-border/60 bg-background/50 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-muted-foreground/50"
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search accounts..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded-full border border-border/60 bg-background/50 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-muted-foreground/50"
+              />
+            </div>
+
+            {/* Filter Dropdown */}
+            <div className="relative">
+              <button 
+                type="button"
+                onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                className="flex h-9 px-3 items-center justify-center gap-2 rounded-full border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all outline-none"
+              >
+                <ListFilterIcon className="size-4" />
+                <span className="hidden sm:inline text-xs font-medium">Filter</span>
+              </button>
+              
+              {isFilterDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsFilterDropdownOpen(false)} />
+                  <div className="absolute z-50 top-full right-0 mt-2 w-40 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                    <div className="flex flex-col py-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-3 py-1.5">Status</span>
+                      {[
+                        { value: 'all', label: 'All Accounts' },
+                        { value: 'active', label: 'Active Only' },
+                        { value: 'banned', label: 'Banned Only' }
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setFilterStatus(opt.value as any);
+                            setPage(1);
+                            setIsFilterDropdownOpen(false);
+                          }}
+                          className={`flex items-center justify-between px-3 py-2 text-sm hover:bg-foreground/5 transition-colors ${
+                            filterStatus === opt.value ? 'text-foreground font-medium' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {opt.label}
+                          {filterStatus === opt.value && <CheckIcon className="size-3.5" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -95,10 +143,16 @@ export default function AdminAccountsPage() {
             <div className="divide-y divide-border/30 overflow-x-auto">
               <div className="min-w-[600px] sm:min-w-0">
               {(() => {
-                const filteredAccounts = accounts.filter(acc => 
-                  acc.name.toLowerCase().includes(search.toLowerCase()) || 
-                  acc.owner_name.toLowerCase().includes(search.toLowerCase())
-                );
+                const filteredAccounts = accounts.filter(acc => {
+                  const matchesSearch = acc.name.toLowerCase().includes(search.toLowerCase()) || 
+                                        acc.owner_name.toLowerCase().includes(search.toLowerCase());
+                  
+                  if (!matchesSearch) return false;
+                  
+                  if (filterStatus === 'active') return !acc.is_banned;
+                  if (filterStatus === 'banned') return acc.is_banned;
+                  return true;
+                });
                 return filteredAccounts.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((acc) => {
                 const pct = acc.total_tickets > 0
                   ? Math.min(100, Math.round((acc.tickets_done / acc.total_tickets) * 100))
