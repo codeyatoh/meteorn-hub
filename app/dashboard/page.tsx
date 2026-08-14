@@ -65,7 +65,7 @@ export default function UserDashboardPage() {
   // Pagination State
   const [accountsPage, setAccountsPage] = useState(1);
   const [incomePage, setIncomePage] = useState(1);
-  const ACCOUNTS_PER_PAGE = 8;
+  const ACCOUNTS_PER_PAGE = 5;
   const INCOME_PER_PAGE = 5;
   
   // Filters
