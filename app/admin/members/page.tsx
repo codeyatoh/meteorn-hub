@@ -24,8 +24,9 @@ export default function MembersPage() {
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("active");
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [gmtoPrice, setGmtoPrice] = useState(0);
   const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
@@ -39,6 +40,16 @@ export default function MembersPage() {
       })
       .catch(() => toast.error("Network error.", { classNames: { icon: "text-destructive" } }))
       .finally(() => setLoading(false));
+
+    // Fetch GMTO price in PHP
+    fetch("/api/gmto-price?currency=php")
+      .then(res => res.json())
+      .then(data => {
+        if (data["game-meteor-coin"] && data["game-meteor-coin"]["php"]) {
+          setGmtoPrice(data["game-meteor-coin"]["php"]);
+        }
+      })
+      .catch(err => console.warn("Failed to fetch GMTO price", err));
   }, []);
 
   const toggleRole = async (user: AdminUser) => {
@@ -230,8 +241,16 @@ export default function MembersPage() {
                   </div>
 
                   {/* Income */}
-                  <div className="text-right font-mono text-sm text-primary">
-                    {u.total_income > 0 ? u.total_income.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                  <div className="text-right flex flex-col items-end justify-center">
+                    <div className="flex items-center gap-1.5 font-mono text-sm text-primary">
+                      <img src="/gmto.png" alt="GMTO" className="size-3.5 object-contain opacity-80" />
+                      {u.total_income > 0 ? u.total_income.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                    </div>
+                    {u.total_income > 0 && gmtoPrice > 0 && (
+                      <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        ≈ ₱{(u.total_income * gmtoPrice).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    )}
                   </div>
 
                   {/* Account count */}
