@@ -7,6 +7,8 @@ import { AnimatedModal } from "@/components/ui/animated-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 
 import { GmtoChartConverter } from "@/features/dashboard/components/gmto-chart-converter";
+import { Combobox } from "@/components/ui/combobox";
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { ReactNode, useState, useEffect } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -57,7 +59,6 @@ export default function UserDashboardPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
-  const [isComboboxOpen, setIsComboboxOpen] = useState(false);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   
   // Pagination State
@@ -108,7 +109,6 @@ export default function UserDashboardPage() {
   
   const [cashoutAccountIds, setCashoutAccountIds] = useState<string[]>([]);
   const [cashoutFiat, setCashoutFiat] = useState("");
-  const [isCashoutDropdownOpen, setIsCashoutDropdownOpen] = useState(false);
   
 
   const [currency, setCurrency] = useState("usd");
@@ -849,43 +849,14 @@ export default function UserDashboardPage() {
         </p>
         <div className="space-y-4">
           <div className="space-y-1.5 relative">
-            <div className="relative">
-              <div 
-                onClick={() => setIsComboboxOpen(!isComboboxOpen)}
-                className={`w-full rounded-md border border-input bg-background pl-3 pr-10 py-2.5 text-sm cursor-pointer transition-colors flex items-center justify-between ${isComboboxOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
-              >
-                <span className={selectedAccountId ? "text-foreground font-medium" : "text-muted-foreground"}>
-                  {accounts.find(a => a.id === selectedAccountId)?.name || "Select account"}
-                </span>
-                <ChevronDownIcon className={`absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground transition-transform ${isComboboxOpen ? 'rotate-180' : ''}`} />
-              </div>
-
-              {isComboboxOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsComboboxOpen(false)} />
-                  <div className="absolute z-50 top-full mt-1.5 w-full bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col max-h-[200px] overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
-                    {accounts.map(acc => (
-                      <div
-                        key={acc.id}
-                        onClick={() => { setSelectedAccountId(acc.id); setIsComboboxOpen(false); }}
-                        className={`px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors ${
-                          selectedAccountId === acc.id 
-                            ? 'bg-primary/10 text-primary border-l-2 border-primary' 
-                            : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
-                        }`}
-                      >
-                        <span className="font-medium">{acc.name}</span>
-                      </div>
-                    ))}
-                    {accounts.length === 0 && (
-                      <div className="px-4 py-6 text-sm text-center text-muted-foreground">
-                        No accounts found.
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            <Combobox
+              options={accounts.map(acc => ({ value: acc.id.toString(), label: acc.name }))}
+              value={selectedAccountId?.toString()}
+              onValueChange={(val) => setSelectedAccountId(Number(val))}
+              placeholder="Select account"
+              searchPlaceholder="Search account..."
+              emptyText="No accounts found."
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -1176,56 +1147,19 @@ export default function UserDashboardPage() {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Select Unsold Income</label>
-            <div className="relative">
-              <div 
-                onClick={() => setIsCashoutDropdownOpen(!isCashoutDropdownOpen)}
-                className={`w-full rounded-md border border-input bg-background pl-3 pr-10 py-2.5 text-sm cursor-pointer transition-colors flex items-center justify-between ${isCashoutDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
-              >
-                <span className={cashoutAccountIds.length > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
-                  {cashoutAccountIds.length > 0 
-                    ? `${cashoutAccountIds.length} account${cashoutAccountIds.length > 1 ? 's' : ''} selected (${incomeLogs.filter(l => cashoutAccountIds.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0)} GMTO)` 
-                    : "Choose income logs"}
-                </span>
-                <ChevronDownIcon className={`absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground transition-transform ${isCashoutDropdownOpen ? 'rotate-180' : ''}`} />
-              </div>
-
-              {isCashoutDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsCashoutDropdownOpen(false)} />
-                  <div className="absolute z-50 top-full mt-1.5 w-full bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col max-h-[200px] overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
-                    {incomeLogs.filter(log => !log.is_sold).map(log => (
-                      <div
-                        key={log.id}
-                        onClick={() => {
-                          setCashoutAccountIds(prev => 
-                            prev.includes(log.id) 
-                              ? prev.filter(id => id !== log.id)
-                              : [...prev, log.id]
-                          );
-                        }}
-                        className={`px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors ${
-                          cashoutAccountIds.includes(log.id) 
-                            ? 'bg-primary/10 text-primary border-l-2 border-primary' 
-                            : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
-                        }`}
-                      >
-                        <span className="font-medium">{log.title}</span>
-                        <div className="flex items-center gap-1.5 opacity-80">
-                          <span className="text-xs">{log.gmto}</span>
-                          <Image src="/gmto.png" alt="GMTO" width={12} height={12} />
-                        </div>
-                      </div>
-                    ))}
-                    {incomeLogs.filter(log => !log.is_sold).length === 0 && (
-                      <div className="px-4 py-6 text-sm text-center text-muted-foreground flex flex-col items-center gap-2">
-                        <WalletIcon className="size-5 opacity-50" />
-                        No unsold income available today.
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            <MultiSelectCombobox
+              options={incomeLogs.filter(log => !log.is_sold).map(log => ({
+                value: log.id,
+                label: log.title,
+                icon: <div className="flex items-center gap-1.5 opacity-80 ml-2"><span className="text-xs">{log.gmto}</span><Image src="/gmto.png" alt="GMTO" width={12} height={12} /></div>
+              }))}
+              values={cashoutAccountIds}
+              onValuesChange={setCashoutAccountIds}
+              placeholder="Choose income logs"
+              searchPlaceholder="Search logs..."
+              emptyText="No unsold income available today."
+              renderValue={(values) => `${values.length} account${values.length > 1 ? 's' : ''} selected (${incomeLogs.filter(l => values.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0)} GMTO)`}
+            />
           </div>
           
           <div className="space-y-1.5">
