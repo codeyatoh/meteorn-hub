@@ -116,6 +116,7 @@ export default function UserDashboardPage() {
   const [isEditLogModalOpen, setIsEditLogModalOpen] = useState(false);
   const [editLogId, setEditLogId] = useState<string | null>(null);
   const [editLogGmto, setEditLogGmto] = useState("");
+  const [editLogFiat, setEditLogFiat] = useState("");
 
   // Delete Modal State
   const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
@@ -458,6 +459,7 @@ export default function UserDashboardPage() {
   const openEditLogModal = (log: IncomeLog) => {
     setEditLogId(log.id);
     setEditLogGmto(log.gmto.toString());
+    setEditLogFiat(log.fiat_received ? log.fiat_received.toString() : "");
     setIsEditLogModalOpen(true);
   };
 
@@ -466,13 +468,21 @@ export default function UserDashboardPage() {
     const gmto = parseFloat(editLogGmto);
     if (isNaN(gmto) || gmto <= 0) return;
 
+    const targetLog = incomeLogs.find(l => l.id === editLogId);
+    const fiat = parseFloat(editLogFiat);
+
+    const updateData: any = { gmto_amount: gmto };
+    if (targetLog?.is_sold && !isNaN(fiat) && fiat >= 0) {
+      updateData.fiat_received = fiat;
+    }
+
     const { error } = await supabase
       .from('income_logs')
-      .update({ gmto_amount: gmto })
+      .update(updateData)
       .eq('id', editLogId);
 
     if (!error) {
-      setIncomeLogs(prev => prev.map(log => log.id === editLogId ? { ...log, gmto } : log));
+      setIncomeLogs(prev => prev.map(log => log.id === editLogId ? { ...log, gmto, ...(targetLog?.is_sold ? { fiat_received: fiat } : {}) } : log));
       toast.success("Income log updated successfully.");
     } else {
       toast.error("Failed to update income log.");
@@ -1205,6 +1215,22 @@ export default function UserDashboardPage() {
               />
             </div>
           </div>
+
+          {editLogId && incomeLogs.find(l => l.id === editLogId)?.is_sold && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Total {currency.toUpperCase()} Received (P2P Sold)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span>
+                <input 
+                  type="number"
+                  className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={editLogFiat}
+                  onChange={(e) => setEditLogFiat(e.target.value)}
+                  step="0.01"
+                />
+              </div>
+            </div>
+          )}
 
           <Button 
             onClick={handleUpdateLog}
