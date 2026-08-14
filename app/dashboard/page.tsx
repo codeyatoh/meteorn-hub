@@ -41,7 +41,7 @@ const handleReferralClick = (e: React.MouseEvent, url: string) => {
           window.location.href = intentUrl;
           return;
         }
-      } catch (err) {
+      } catch {
         // Fallback to default routing on error
       }
     }
