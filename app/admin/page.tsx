@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminIncomeChart } from "@/features/admin/components/admin-income-chart";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { RealtimeSync } from "@/components/realtime-sync";
 import { AdminCurrencySelector } from "@/features/admin/components/admin-currency-selector";
 
 export default async function AdminOverviewPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
@@ -89,6 +90,7 @@ export default async function AdminOverviewPage(props: { searchParams: Promise<{
   return (
     <div className="px-6 py-10">
       <AutoRefresh />
+      <RealtimeSync />
       <div className="mx-auto max-w-5xl space-y-10">
 
         {/* Header */}

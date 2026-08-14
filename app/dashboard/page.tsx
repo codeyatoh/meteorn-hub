@@ -201,9 +201,21 @@ export default function UserDashboardPage() {
       new Promise(resolve => setTimeout(resolve, 1000))
     ]).finally(() => setLoading(false));
 
+    const channel = supabase.channel('dashboard_realtime_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_accounts' }, () => {
+        fetchDashboardData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'income_logs' }, () => {
+        fetchDashboardData();
+      })
+      .subscribe();
+
     // Re-fetch data when the window regains focus (e.g. switching back from another tab)
     window.addEventListener("focus", fetchDashboardData);
-    return () => window.removeEventListener("focus", fetchDashboardData);
+    return () => {
+      window.removeEventListener("focus", fetchDashboardData);
+      supabase.removeChannel(channel);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
