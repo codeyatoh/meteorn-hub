@@ -15,9 +15,11 @@ export async function GET() {
   const [
     { data: accounts, error: accountsError },
     { data: { users } },
+    { data: incomes },
   ] = await Promise.all([
     admin.from('user_accounts').select('*').order('created_at', { ascending: false }),
     admin.auth.admin.listUsers({ perPage: 1000 }),
+    admin.from('income_logs').select('user_id, account_name, gmto_amount'),
   ]);
 
   if (accountsError) {
@@ -30,6 +32,15 @@ export async function GET() {
     userMap[u.id] = (u.user_metadata?.nickname as string) || u.email || 'Unknown';
   });
 
+  // Build income lookup: `${user_id}_${account_name}` → total gmto
+  const incomeMap: Record<string, number> = {};
+  if (incomes) {
+    incomes.forEach((i) => {
+      const key = `${i.user_id}_${i.account_name}`;
+      incomeMap[key] = (incomeMap[key] || 0) + Number(i.gmto_amount);
+    });
+  }
+
   const result = (accounts ?? []).map((a) => ({
     id: a.id,
     user_id: a.user_id,
@@ -41,6 +52,7 @@ export async function GET() {
     referral_link: a.referral_link,
     created_at: a.created_at,
     is_banned: a.is_banned ?? false,
+    total_earned: incomeMap[`${a.user_id}_${a.name}`] || 0,
   }));
 
   return NextResponse.json(result);

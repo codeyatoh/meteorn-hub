@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GamepadIcon, Loader2, RotateCcwIcon, PencilIcon, CheckIcon, XIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { GamepadIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
@@ -17,6 +17,7 @@ type AdminAccount = {
   referral_link: string | null;
   created_at: string;
   is_banned: boolean;
+  total_earned: number;
 };
 
 export default function AdminAccountsPage() {
@@ -26,11 +27,6 @@ export default function AdminAccountsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const ITEMS_PER_PAGE = 8;
-
-  // Inline quota edit state
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [savingId, setSavingId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -44,39 +40,6 @@ export default function AdminAccountsPage() {
       .catch(() => toast.error("Network error.", { classNames: { icon: "text-destructive" } }))
       .finally(() => setLoading(false));
   }, []);
-
-  const startEdit = (account: AdminAccount) => {
-    setEditingId(account.id);
-    setEditValue(String(account.total_tickets));
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditValue("");
-  };
-
-  const saveQuota = async (id: number) => {
-    const val = parseInt(editValue, 10);
-    if (isNaN(val) || val < 1 || val > 100) return;
-
-    setSavingId(id);
-    const res = await fetch(`/api/admin/accounts/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ total_tickets: val }),
-    });
-
-    if (res.ok) {
-      setAccounts((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, total_tickets: val } : a))
-      );
-      toast.success("Quota updated successfully.", { classNames: { icon: "text-green-500" } });
-      setEditingId(null);
-    } else {
-      toast.error("Failed to update quota.", { classNames: { icon: "text-destructive" } });
-    }
-    setSavingId(null);
-  };
 
   return (
     <div className="px-6 py-10">
@@ -120,10 +83,11 @@ export default function AdminAccountsPage() {
         ) : (
           <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden">
             {/* Header row */}
-            <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-4 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
+            <div className="grid grid-cols-[1fr_auto_1fr_auto_auto] gap-6 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
               <span>Account</span>
-              <span className="text-center hidden sm:block">Progress</span>
+              <span className="text-right hidden sm:block">Progress</span>
               <span className="text-center">Quota</span>
+              <span className="text-right">Earned</span>
               <span className="text-right">Status</span>
             </div>
 
@@ -144,7 +108,7 @@ export default function AdminAccountsPage() {
                 return (
                   <div
                     key={acc.id}
-                    className="grid grid-cols-[1fr_auto_1fr_auto] gap-4 px-4 py-3 items-center hover:bg-foreground/[0.02] transition-colors"
+                    className="grid grid-cols-[1fr_auto_1fr_auto_auto] gap-6 px-4 py-3 items-center hover:bg-foreground/[0.02] transition-colors"
                   >
                     {/* Account info */}
                     <div className="flex items-center gap-3 min-w-0">
@@ -169,7 +133,7 @@ export default function AdminAccountsPage() {
                     </div>
 
                     {/* Progress bar */}
-                    <div className="hidden sm:flex items-center gap-2 w-28">
+                    <div className="hidden sm:flex items-center gap-2 w-28 justify-end">
                       <div className="flex-1 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-emerald-500 transition-all"
@@ -181,58 +145,21 @@ export default function AdminAccountsPage() {
                       </span>
                     </div>
 
-                    {/* Quota editor */}
-                    <div className="flex items-center justify-center gap-2">
-                      {isEditing ? (
-                        <>
-                          <input
-                            type="number"
-                            min={1}
-                            max={100}
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="w-16 rounded-md border border-input bg-background/50 px-2 py-1 text-sm text-center focus:outline-none focus:ring-1 focus:ring-primary/50"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") saveQuota(acc.id);
-                              if (e.key === "Escape") cancelEdit();
-                            }}
-                          />
-                          <button
-                            onClick={() => saveQuota(acc.id)}
-                            disabled={savingId === acc.id}
-                            className="text-emerald-500 hover:text-emerald-400 transition-colors disabled:opacity-50"
-                          >
-                            {savingId === acc.id
-                              ? <Loader2 className="size-3.5 animate-spin" />
-                              : <CheckIcon className="size-3.5" />
-                            }
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <XIcon className="size-3.5" />
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-sm text-foreground">
-                            {acc.tickets_done}
-                          </span>
-                          <span className="text-muted-foreground text-xs">/</span>
-                          <span className="font-mono text-sm text-muted-foreground">
-                            {acc.total_tickets}
-                          </span>
-                          <button
-                            onClick={() => startEdit(acc)}
-                            className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
-                            title="Edit quota"
-                          >
-                            <PencilIcon className="size-3" />
-                          </button>
-                        </div>
-                      )}
+                    {/* Quota */}
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="font-mono text-sm text-foreground">
+                        {acc.tickets_done}
+                      </span>
+                      <span className="text-muted-foreground text-xs">/</span>
+                      <span className="font-mono text-sm text-muted-foreground">
+                        {acc.total_tickets}
+                      </span>
+                    </div>
+
+                    {/* Earned */}
+                    <div className="text-right flex items-center justify-end gap-1.5 font-mono text-sm text-primary">
+                      <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="object-contain opacity-80" />
+                      {acc.total_earned > 0 ? acc.total_earned.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                     </div>
 
                     {/* Status column */}
