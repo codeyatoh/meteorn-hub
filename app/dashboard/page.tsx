@@ -854,7 +854,6 @@ export default function UserDashboardPage() {
               value={selectedAccountId?.toString()}
               onValueChange={(val) => setSelectedAccountId(Number(val))}
               placeholder="Select account"
-              searchPlaceholder="Search account..."
               emptyText="No accounts found."
             />
           </div>
@@ -1156,7 +1155,6 @@ export default function UserDashboardPage() {
               values={cashoutAccountIds}
               onValuesChange={setCashoutAccountIds}
               placeholder="Choose income logs"
-              searchPlaceholder="Search logs..."
               emptyText="No unsold income available today."
               renderValue={(values) => `${values.length} account${values.length > 1 ? 's' : ''} selected (${incomeLogs.filter(l => values.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0)} GMTO)`}
             />

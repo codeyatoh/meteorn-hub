@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "motion/react";
 import { XIcon } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 
 const springConfig = {
   type: "spring",
@@ -76,6 +76,17 @@ interface AnimatedModalProps extends AnimatedCardProps {
 }
 
 export function AnimatedModal({ isOpen, ...cardProps }: AnimatedModalProps) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
