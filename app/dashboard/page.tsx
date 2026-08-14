@@ -589,7 +589,9 @@ export default function UserDashboardPage() {
         email: data.email,
         referralLink: data.referral_link,
         walletAddress: data.wallet_address,
-        isBanned: false
+        isBanned: false,
+        totalAccumulatedTickets: 0,
+        repairTicketsUsed: 0
       }]);
       if (selectedAccountId === null) setSelectedAccountId(data.id);
       toast.success("Account added successfully.");
@@ -1495,19 +1497,17 @@ export default function UserDashboardPage() {
       </AnimatedModal>
 
       {/* Repair Ticket Modal */}
-      <AnimatedModal isOpen={isRepairTicketModalOpen} onClose={() => setIsRepairTicketModalOpen(false)}>
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-foreground">
-              <div className="p-2 rounded-full bg-orange-500/10 text-orange-500">
-                <WrenchIcon className="size-5" />
-              </div>
-              <h2 className="font-heading text-xl">Use Repair Tickets</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Select how many repair tickets you want to consume for this account.
-            </p>
-          </div>
+      <AnimatedModal 
+        isOpen={isRepairTicketModalOpen} 
+        onClose={() => setIsRepairTicketModalOpen(false)}
+        title="Use Repair Tickets"
+        icon={<WrenchIcon className="size-4" />}
+        maxWidth="sm"
+      >
+        <div className="flex flex-col gap-5 p-2">
+          <p className="text-sm text-muted-foreground mt-2">
+            Select how many repair tickets you want to consume for this account.
+          </p>
 
           <div className="flex flex-col gap-2">
             <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Amount to use</label>
@@ -1526,7 +1526,7 @@ export default function UserDashboardPage() {
 
           <div className="flex gap-3 justify-end mt-2">
             <Button variant="ghost" onClick={() => setIsRepairTicketModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleUseRepairTicket} className="bg-orange-500 hover:bg-orange-600 text-white">Use Tickets</Button>
+            <Button onClick={handleUseRepairTicket} className="bg-orange-500 hover:bg-orange-600 text-white border-0">Use Tickets</Button>
           </div>
         </div>
       </AnimatedModal>
