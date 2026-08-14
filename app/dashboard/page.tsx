@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon, CopyIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon, CopyIcon, ListFilterIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -25,7 +25,7 @@ const AVATAR_MAP: Record<string, ReactNode> = {
 const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 
 // Types
-type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null; email: string | null };
+type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null; email: string | null; isBanned: boolean; };
 type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string; is_sold: boolean; fiat_received: number };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
@@ -60,6 +60,7 @@ export default function UserDashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   
   // Pagination State
   const [accountsPage, setAccountsPage] = useState(1);
@@ -67,8 +68,26 @@ export default function UserDashboardPage() {
   const ACCOUNTS_PER_PAGE = 8;
   const INCOME_PER_PAGE = 5;
   
+  // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const filteredAccounts = accounts.filter(acc => acc.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const [accountStatusFilter, setAccountStatusFilter] = useState<"all" | "active" | "banned">("active");
+  const [accountQuotaFilter, setAccountQuotaFilter] = useState<"all" | "finished" | "incomplete">("all");
+
+  const filteredAccounts = accounts.filter(acc => {
+    const matchesSearch = acc.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = 
+      accountStatusFilter === "all" ? true :
+      accountStatusFilter === "active" ? !acc.isBanned :
+      acc.isBanned;
+    
+    const isDone = acc.ticketsDone >= acc.totalTickets;
+    const matchesQuota = 
+      accountQuotaFilter === "all" ? true :
+      accountQuotaFilter === "finished" ? isDone :
+      !isDone;
+
+    return matchesSearch && matchesStatus && matchesQuota;
+  });
   
   // Add Account State
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
@@ -86,6 +105,8 @@ export default function UserDashboardPage() {
   const [editAccountReferralLink, setEditAccountReferralLink] = useState("");
   const [editAccountWalletAddress, setEditAccountWalletAddress] = useState("");
   const [editAccountAvatar, setEditAccountAvatar] = useState("Avatar1");
+  const [editAccountIsBanned, setEditAccountIsBanned] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // View Wallet State
   const [isViewWalletModalOpen, setIsViewWalletModalOpen] = useState(false);
@@ -147,7 +168,8 @@ export default function UserDashboardPage() {
           avatar: acc.avatar,
           referralLink: acc.referral_link,
           walletAddress: acc.wallet_address,
-          email: acc.email
+          email: acc.email,
+          isBanned: acc.is_banned ?? false
         })));
         if (accountsData.length > 0) setSelectedAccountId(accountsData[0].id);
       }
@@ -355,6 +377,7 @@ export default function UserDashboardPage() {
     setEditAccountReferralLink(acc.referralLink || "");
     setEditAccountWalletAddress(acc.walletAddress || "");
     setEditAccountAvatar(acc.avatar || "Avatar1");
+    setEditAccountIsBanned(acc.isBanned || false);
     setIsEditAccountModalOpen(true);
   };
 
@@ -373,7 +396,8 @@ export default function UserDashboardPage() {
         avatar: editAccountAvatar,
         email: editAccountEmail.trim() || null,
         referral_link: editAccountReferralLink.trim() || null,
-        wallet_address: editAccountWalletAddress.trim() || null
+        wallet_address: editAccountWalletAddress.trim() || null,
+        is_banned: editAccountIsBanned
       })
       .eq('id', editAccountId);
 
@@ -384,7 +408,8 @@ export default function UserDashboardPage() {
         avatar: editAccountAvatar,
         email: editAccountEmail.trim() || null,
         referralLink: editAccountReferralLink.trim() || null,
-        walletAddress: editAccountWalletAddress.trim() || null
+        walletAddress: editAccountWalletAddress.trim() || null,
+        isBanned: editAccountIsBanned
       } : acc));
       toast.success("Account updated successfully.");
     } else {
@@ -474,7 +499,8 @@ export default function UserDashboardPage() {
         avatar: data.avatar,
         email: data.email,
         referralLink: data.referral_link,
-        walletAddress: data.wallet_address
+        walletAddress: data.wallet_address,
+        isBanned: false
       }]);
       if (selectedAccountId === null) setSelectedAccountId(data.id);
       toast.success("Account added successfully.");
@@ -534,14 +560,7 @@ export default function UserDashboardPage() {
               Here&apos;s an overview of your game accounts today.
             </p>
           </div>
-          
-          <div className="flex items-center gap-3 self-end sm:self-auto">
-            {/* Currency Selector */}
-          </div>
         </div>
-            <p className="mt-2 max-w-xl text-muted-foreground text-sm">
-              You have {accounts.filter(acc => acc.ticketsDone < acc.totalTickets).length} accounts pending for quota today. Keep up the grind!
-            </p>
           </div>
           
           <div className="flex flex-col items-start sm:items-end space-y-1.5 relative">
@@ -629,9 +648,54 @@ export default function UserDashboardPage() {
                       setSearchQuery(e.target.value);
                       setAccountsPage(1);
                     }}
-                    className="w-24 sm:w-32 rounded-md border border-input bg-background/50 pl-6 pr-2 py-1.5 text-[10px] sm:text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+                    className="w-20 sm:w-28 rounded-md border border-input bg-background/50 pl-6 pr-2 py-1.5 text-[10px] sm:text-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
                   />
                 </div>
+                
+                <div className="relative">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                    className="h-8 px-2 border-dashed flex items-center gap-1.5"
+                  >
+                    <ListFilterIcon className="size-3.5" />
+                    <span className="hidden sm:inline text-xs">Filter</span>
+                  </Button>
+                  
+                  {isFilterDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsFilterDropdownOpen(false)} />
+                      <div className="absolute z-50 top-full right-0 mt-1.5 w-48 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col p-2 space-y-4 animate-in fade-in zoom-in-95 duration-100">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2">Status</label>
+                          <select 
+                            value={accountStatusFilter} 
+                            onChange={e => setAccountStatusFilter(e.target.value as any)}
+                            className="w-full rounded-sm bg-transparent border-0 text-sm px-2 py-1 outline-none hover:bg-muted"
+                          >
+                            <option value="all">All Accounts</option>
+                            <option value="active">Active Only</option>
+                            <option value="banned">Banned Only</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2">Quota</label>
+                          <select 
+                            value={accountQuotaFilter} 
+                            onChange={e => setAccountQuotaFilter(e.target.value as any)}
+                            className="w-full rounded-sm bg-transparent border-0 text-sm px-2 py-1 outline-none hover:bg-muted"
+                          >
+                            <option value="all">All Quotas</option>
+                            <option value="finished">Finished</option>
+                            <option value="incomplete">Incomplete</option>
+                          </select>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <Button onClick={() => setIsAddAccountModalOpen(true)} variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
                   <PlusIcon className="size-3.5 sm:size-4 sm:mr-1" />
                   <span className="hidden sm:inline text-xs">Add</span>
@@ -668,10 +732,15 @@ export default function UserDashboardPage() {
 
                     <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
                       <span
-                        className={`block truncate flex-1 min-w-0 text-xs sm:text-sm transition-all ${isDone ? "text-emerald-500" : "text-foreground"}`}
+                        className={`block truncate flex-1 min-w-0 text-xs sm:text-sm transition-all ${isDone ? "text-emerald-500" : account.isBanned ? "text-red-500/70" : "text-foreground"}`}
                       >
                         {account.name}
                       </span>
+                      {account.isBanned && (
+                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-red-500/10 text-red-500">
+                          Banned
+                        </span>
+                      )}
                       <div className="flex items-center gap-1.5 shrink-0">
                         {account.referralLink && (
                           <>
@@ -715,29 +784,32 @@ export default function UserDashboardPage() {
                       )}
 
                       {/* Interactive Ticket Logger */}
-                      <div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.2em] shrink-0">
-                        <button 
-                          onClick={() => updateTicket(account.id, -1)}
-                          disabled={account.ticketsDone === 0}
-                          className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                        >
-                          <MinusIcon className="size-3" />
-                        </button>
-                        
-                        <span className={`w-9 text-center ${isDone ? "text-emerald-500" : "text-muted-foreground/70"}`}>
-                          {account.ticketsDone}/{account.totalTickets}
-                        </span>
-                        
-                        <button 
-                          onClick={() => updateTicket(account.id, 1)}
-                          disabled={isDone}
-                          className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                        >
-                          <PlusIcon className="size-3" />
-                        </button>
+                      {!account.isBanned && (
+                        <div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.2em] shrink-0">
+                          <button 
+                            onClick={() => updateTicket(account.id, -1)}
+                            disabled={account.ticketsDone === 0}
+                            className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                          >
+                            <MinusIcon className="size-3" />
+                          </button>
+                          
+                          <span className={`w-9 text-center ${isDone ? "text-emerald-500" : "text-muted-foreground/70"}`}>
+                            {account.ticketsDone}/{account.totalTickets}
+                          </span>
+                          
+                          <button 
+                            onClick={() => updateTicket(account.id, 1)}
+                            disabled={isDone}
+                            className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                          >
+                            <PlusIcon className="size-3" />
+                          </button>
 
-                        <Image src="/repair-ticket.png" alt="tix" width={20} height={20} className={`object-contain ml-0.5 sm:ml-1 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} sm:w-6 sm:h-6`} />
-                      </div>
+                          <Image src="/repair-ticket.png" alt="tix" width={20} height={20} className={`object-contain ml-0.5 sm:ml-1 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} sm:w-6 sm:h-6`} />
+                        </div>
+                      )}
+
                     </div>
                   </li>
                 );
@@ -850,10 +922,11 @@ export default function UserDashboardPage() {
         <div className="space-y-4">
           <div className="space-y-1.5 relative">
             <Combobox
-              options={accounts.map(acc => ({ value: acc.id.toString(), label: acc.name }))}
+              options={accounts.filter(a => !a.isBanned).map(acc => ({ value: acc.id.toString(), label: acc.name }))}
               value={selectedAccountId?.toString()}
               onValueChange={(val) => setSelectedAccountId(Number(val))}
               placeholder="Select account"
+              searchPlaceholder="Search account..."
               emptyText="No accounts found."
             />
           </div>
@@ -1053,6 +1126,17 @@ export default function UserDashboardPage() {
             />
           </div>
 
+          <div className="flex items-center justify-between p-3 border border-red-500/20 bg-red-500/5 rounded-md">
+            <div>
+              <p className="text-sm font-medium text-red-500">Banned Account</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Disables logging new income. Preserves old logs.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" checked={editAccountIsBanned} onChange={(e) => setEditAccountIsBanned(e.target.checked)} />
+              <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
+            </label>
+          </div>
+
           <Button 
             onClick={handleUpdateAccount}
             className="w-full mt-2"
@@ -1155,6 +1239,7 @@ export default function UserDashboardPage() {
               values={cashoutAccountIds}
               onValuesChange={setCashoutAccountIds}
               placeholder="Choose income logs"
+              searchPlaceholder="Search logs..."
               emptyText="No unsold income available today."
               renderValue={(values) => `${values.length} account${values.length > 1 ? 's' : ''} selected (${incomeLogs.filter(l => values.includes(l.id)).reduce((sum, log) => sum + log.gmto, 0)} GMTO)`}
             />
