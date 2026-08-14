@@ -70,16 +70,9 @@ export function Combobox({
                 {options.map((option) => (
                   <Command.Item
                     key={option.value}
-                    value={option.label}
+                    value={option.value}
+                    keywords={[option.label]}
                     onSelect={() => {
-                      onValueChange(option.value)
-                      setOpen(false)
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onClick={() => {
                       onValueChange(option.value)
                       setOpen(false)
                     }}
