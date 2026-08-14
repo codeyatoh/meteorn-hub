@@ -105,6 +105,14 @@ function CredentialsForm({ isLogin, setIsLogin }: { isLogin: boolean, setIsLogin
         });
         if (error) throw error;
         
+        if (data.user?.user_metadata?.is_archived) {
+          await supabase.auth.signOut();
+          toast.error("This account is deleted.", {
+            classNames: { icon: "text-destructive" },
+          });
+          return;
+        }
+
         toast.success("Signed in successfully", {
           classNames: { icon: "text-green-500" },
         });

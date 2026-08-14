@@ -15,9 +15,11 @@ export async function GET() {
   const [
     { data: { users }, error: usersError },
     { data: accounts },
+    { data: incomes },
   ] = await Promise.all([
     admin.auth.admin.listUsers({ perPage: 1000 }),
     admin.from('user_accounts').select('user_id'),
+    admin.from('income_logs').select('user_id, gmto_amount'),
   ]);
 
   if (usersError) {
@@ -32,14 +34,24 @@ export async function GET() {
     });
   }
 
+  // Build income lookup
+  const incomeCounts: Record<string, number> = {};
+  if (incomes) {
+    incomes.forEach((i) => {
+      incomeCounts[i.user_id] = (incomeCounts[i.user_id] || 0) + Number(i.gmto_amount);
+    });
+  }
+
   const result = users.map((u) => ({
     id: u.id,
     email: u.email ?? null,
     nickname: (u.user_metadata?.nickname as string) ?? null,
     role: (u.user_metadata?.role as string) ?? 'user',
+    is_archived: (u.user_metadata?.is_archived as boolean) ?? false,
     created_at: u.created_at,
     last_sign_in_at: u.last_sign_in_at ?? null,
     account_count: accountCounts[u.id] ?? 0,
+    total_income: incomeCounts[u.id] ?? 0,
   }));
 
   return NextResponse.json(result);
