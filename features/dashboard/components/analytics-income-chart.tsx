@@ -86,7 +86,7 @@ export function AnalyticsIncomeChart({ data, currencySymbol, filter }: Analytics
   if (data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        No income data for this period.
+        No GMTO sold during this period.
       </div>
     );
   }
@@ -98,7 +98,7 @@ export function AnalyticsIncomeChart({ data, currencySymbol, filter }: Analytics
         <div className="space-y-0.5">
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-1.5">
             <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="rounded-full" />
-            GMTO Income
+            GMTO Sold
           </p>
           <p className="font-mono text-2xl tracking-tight text-emerald-500">
             +<NumberFlow
@@ -107,7 +107,7 @@ export function AnalyticsIncomeChart({ data, currencySymbol, filter }: Analytics
             />
           </p>
           <p className="font-mono text-[11px] text-muted-foreground">
-            ≈ {currencySymbol}
+            {currencySymbol}
             <NumberFlow
               value={selectedData.fiat}
               format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}

@@ -153,8 +153,9 @@ export default function AnalyticsPage() {
   const grossFiat = (totalUnsoldGMTO * gmtoPrice) + totalFiatRealized;
 
   const chartData = useMemo(() => {
-    // Combine income logs and cashouts into a daily grouping
-    const grouped = incomeLogs.reduce((acc, log) => {
+    // Only use sold logs (cashouts) for the chart
+    const soldLogs = incomeLogs.filter(log => log.is_sold);
+    const grouped = soldLogs.reduce((acc, log) => {
       const date = new Date(log.created_at);
       const key = filter === 'today' 
         ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -162,18 +163,17 @@ export default function AnalyticsPage() {
       
       if (!acc[key]) acc[key] = { gmto: 0, fiat: 0 };
       acc[key].gmto += log.gmto_amount;
-      if (log.is_sold) {
-        acc[key].fiat += log.fiat_received;
-      }
+      acc[key].fiat += log.fiat_received;
+      
       return acc;
     }, {} as Record<string, { gmto: number; fiat: number }>);
 
     return Object.entries(grouped).map(([time, data]) => ({
       time,
       amount: data.gmto,
-      fiat: ((data.gmto - (data.fiat > 0 ? data.gmto : 0)) * gmtoPrice) + data.fiat // rough estimation for timeline
+      fiat: data.fiat
     }));
-  }, [incomeLogs, filter, gmtoPrice]);
+  }, [incomeLogs, filter]);
 
   const paginatedTickets = ticketLogs.slice((ticketPage - 1) * ITEMS_PER_PAGE, ticketPage * ITEMS_PER_PAGE);
   const totalTicketPages = Math.max(1, Math.ceil(ticketLogs.length / ITEMS_PER_PAGE));
@@ -244,15 +244,13 @@ export default function AnalyticsPage() {
               />
             </div>
 
-            {chartData.length > 0 && (
-              <div className="rounded-xl border border-border/60 bg-background/40 p-6 h-[340px]">
-                <AnalyticsIncomeChart
-                  data={chartData}
-                  currencySymbol={currencySymbol}
-                  filter={filter}
-                />
-              </div>
-            )}
+            <div className="rounded-xl border border-border/60 bg-background/40 p-6 h-[340px]">
+              <AnalyticsIncomeChart
+                data={chartData}
+                currencySymbol={currencySymbol}
+                filter={filter}
+              />
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="rounded-xl border border-border/60 bg-background/40 p-4 flex flex-col h-[400px]">
