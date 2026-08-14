@@ -106,7 +106,6 @@ export default function UserDashboardPage() {
   const [editAccountWalletAddress, setEditAccountWalletAddress] = useState("");
   const [editAccountAvatar, setEditAccountAvatar] = useState("Avatar1");
   const [editAccountIsBanned, setEditAccountIsBanned] = useState(false);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // View Wallet State
   const [isViewWalletModalOpen, setIsViewWalletModalOpen] = useState(false);
@@ -671,7 +670,7 @@ export default function UserDashboardPage() {
                           <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2">Status</label>
                           <select 
                             value={accountStatusFilter} 
-                            onChange={e => setAccountStatusFilter(e.target.value as any)}
+                            onChange={e => setAccountStatusFilter(e.target.value as "all" | "active" | "banned")}
                             className="w-full rounded-sm bg-transparent border-0 text-sm px-2 py-1 outline-none hover:bg-muted"
                           >
                             <option value="all">All Accounts</option>
@@ -683,7 +682,7 @@ export default function UserDashboardPage() {
                           <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2">Quota</label>
                           <select 
                             value={accountQuotaFilter} 
-                            onChange={e => setAccountQuotaFilter(e.target.value as any)}
+                            onChange={e => setAccountQuotaFilter(e.target.value as "all" | "finished" | "incomplete")}
                             className="w-full rounded-sm bg-transparent border-0 text-sm px-2 py-1 outline-none hover:bg-muted"
                           >
                             <option value="all">All Quotas</option>
