@@ -283,10 +283,7 @@ export default function UserDashboardPage() {
       const actualDelta = newCount - account.ticketsDone;
       if (actualDelta === 0) return;
       
-      let newAccumulated = account.totalAccumulatedTickets;
-      if (actualDelta > 0) {
-        newAccumulated += actualDelta;
-      }
+      const newAccumulated = account.totalAccumulatedTickets + actualDelta;
       
       setAccounts((prev) =>
         prev.map((acc) => (acc.id === id ? { ...acc, ticketsDone: newCount, totalAccumulatedTickets: newAccumulated } : acc))
