@@ -19,7 +19,7 @@ export async function GET() {
   ] = await Promise.all([
     admin.auth.admin.listUsers({ perPage: 1000 }),
     admin.from('user_accounts').select('user_id'),
-    admin.from('income_logs').select('user_id, gmto_amount'),
+    admin.from('income_logs').select('user_id, gmto_amount, is_sold, fiat_received'),
   ]);
 
   if (usersError) {
@@ -35,10 +35,17 @@ export async function GET() {
   }
 
   // Build income lookup
-  const incomeCounts: Record<string, number> = {};
+  const incomeCounts: Record<string, { total: number, sold_gmto: number, fiat: number }> = {};
   if (incomes) {
     incomes.forEach((i) => {
-      incomeCounts[i.user_id] = (incomeCounts[i.user_id] || 0) + Number(i.gmto_amount);
+      if (!incomeCounts[i.user_id]) {
+        incomeCounts[i.user_id] = { total: 0, sold_gmto: 0, fiat: 0 };
+      }
+      incomeCounts[i.user_id].total += Number(i.gmto_amount);
+      if (i.is_sold) {
+        incomeCounts[i.user_id].sold_gmto += Number(i.gmto_amount);
+        incomeCounts[i.user_id].fiat += Number(i.fiat_received);
+      }
     });
   }
 
@@ -51,7 +58,9 @@ export async function GET() {
     created_at: u.created_at,
     last_sign_in_at: u.last_sign_in_at ?? null,
     account_count: accountCounts[u.id] ?? 0,
-    total_income: incomeCounts[u.id] ?? 0,
+    total_income: incomeCounts[u.id]?.total ?? 0,
+    sold_gmto: incomeCounts[u.id]?.sold_gmto ?? 0,
+    fiat_received: incomeCounts[u.id]?.fiat ?? 0,
   }));
 
   return NextResponse.json(result);

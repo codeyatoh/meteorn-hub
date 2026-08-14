@@ -15,6 +15,8 @@ type AdminUser = {
   last_sign_in_at: string | null;
   account_count: number;
   total_income: number;
+  sold_gmto: number;
+  fiat_received: number;
   is_archived: boolean;
 };
 
@@ -184,9 +186,10 @@ export default function MembersPage() {
             {/* Header */}
             <div className="overflow-x-auto">
               <div className="min-w-[500px] sm:min-w-0">
-                <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                   <span>User</span>
                   <span className="text-right">Income</span>
+                  <span className="text-right">Sold (P2P)</span>
                   <span className="text-right hidden sm:block">Accounts</span>
                   <span className="text-right hidden lg:block">Joined</span>
                   <span className="text-right hidden md:block">Last Seen</span>
@@ -205,7 +208,7 @@ export default function MembersPage() {
                 return filteredUsers.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((u) => (
                 <div
                   key={u.id}
-                  className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-3 items-center transition-colors ${u.is_archived ? "opacity-50 hover:opacity-100" : "hover:bg-foreground/[0.02]"}`}
+                  className={`grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-4 py-3 items-center transition-colors ${u.is_archived ? "opacity-50 hover:opacity-100" : "hover:bg-foreground/[0.02]"}`}
                 >
                   {/* User info */}
                   <div className="min-w-0">
@@ -225,6 +228,19 @@ export default function MembersPage() {
                     {u.total_income > 0 && gmtoPrice > 0 && (
                       <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
                         ≈ ₱{(u.total_income * gmtoPrice).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Sold (P2P) */}
+                  <div className="text-right flex flex-col items-end justify-center">
+                    <div className="flex items-center gap-1.5 font-mono text-sm text-amber-500">
+                      <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="object-contain opacity-80" />
+                      {u.sold_gmto > 0 ? u.sold_gmto.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                    </div>
+                    {u.fiat_received > 0 && (
+                      <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        ₱{u.fiat_received.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     )}
                   </div>
