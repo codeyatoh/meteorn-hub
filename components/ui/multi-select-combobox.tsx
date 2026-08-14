@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import * as React from "react"
 import { CheckIcon, ChevronDownIcon, SearchIcon } from "lucide-react"
@@ -56,7 +56,7 @@ export function MultiSelectCombobox({
                 ? `${values.length} selected` 
                 : placeholder}
           </span>
-          <ChevronDownIcon className="h-4 w-4 shrink-0 opacity-50" />
+          <ChevronDownIcon className={cn("h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
         </button>
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
