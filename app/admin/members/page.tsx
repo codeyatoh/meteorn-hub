@@ -33,8 +33,6 @@ export default function MembersPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/admin/users").then(res => res.json()),
-    Promise.all([
-      fetch("/api/admin/users").then(res => res.json()),
       new Promise(resolve => setTimeout(resolve, 1000))
     ])
       .then(([data]) => {
