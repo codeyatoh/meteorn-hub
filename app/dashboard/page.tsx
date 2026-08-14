@@ -661,11 +661,7 @@ export default function UserDashboardPage() {
                             </a>
                           </>
                         )}
-                        {account.walletAddress && (
-                          <button onClick={() => openViewWalletModal(account.walletAddress!)} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="View Wallet Address">
-                            <WalletIcon className="size-3.5" />
-                          </button>
-                        )}
+
                         {account.email && (
                           <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
                             <MailIcon className="size-3.5" />
@@ -684,6 +680,17 @@ export default function UserDashboardPage() {
                           <TrashIcon className="size-3.5" />
                         </button>
                       </div>
+
+                      {/* Wallet Button */}
+                      {account.walletAddress && (
+                        <button 
+                          onClick={() => openViewWalletModal(account.walletAddress!)} 
+                          className="p-1.5 text-primary hover:bg-primary/20 bg-primary/10 rounded-md transition-colors inline-flex items-center shadow-sm shrink-0" 
+                          title="View Wallet Address"
+                        >
+                          <WalletIcon className="size-3.5" />
+                        </button>
+                      )}
 
                       {/* Interactive Ticket Logger */}
                       <div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.2em] shrink-0">
