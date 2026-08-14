@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { UsersIcon, Loader2, ShieldIcon, UserIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon, RefreshCcwIcon, ListFilterIcon } from "lucide-react";
+import { UsersIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon, RefreshCcwIcon, ListFilterIcon } from "lucide-react";
 import { toast } from "sonner";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 
@@ -33,11 +33,16 @@ export default function MembersPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/admin/users").then(res => res.json()),
+    Promise.all([
+      fetch("/api/admin/users").then(res => res.json()),
       new Promise(resolve => setTimeout(resolve, 1000))
     ])
       .then(([data]) => {
-        if (Array.isArray(data)) setUsers(data);
-        else toast.error("Failed to load users.", { classNames: { icon: "text-destructive" } });
+        if (Array.isArray(data)) {
+          setUsers(data.filter(u => u.role !== 'admin'));
+        } else {
+          toast.error("Failed to load users.", { classNames: { icon: "text-destructive" } });
+        }
       })
       .catch(() => toast.error("Network error.", { classNames: { icon: "text-destructive" } }))
       .finally(() => setLoading(false));
@@ -52,34 +57,6 @@ export default function MembersPage() {
       })
       .catch(err => console.warn("Failed to fetch GMTO price", err));
   }, []);
-
-  const toggleRole = async (user: AdminUser) => {
-    const newRole = user.role === "admin" ? "user" : "admin";
-    setTogglingId(user.id);
-
-    // Optimistic update
-    setUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u))
-    );
-
-    const res = await fetch(`/api/admin/users/${user.id}/role`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: newRole }),
-    });
-
-    if (!res.ok) {
-      // Revert on failure
-      setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, role: user.role } : u))
-      );
-      toast.error("Failed to update role. Please try again.", { classNames: { icon: "text-destructive" } });
-    } else {
-      toast.success("Role updated successfully.", { classNames: { icon: "text-green-500" } });
-    }
-
-    setTogglingId(null);
-  };
 
   const toggleArchive = async (user: AdminUser) => {
     const newArchivedState = !user.is_archived;
@@ -209,13 +186,13 @@ export default function MembersPage() {
             {/* Header */}
             <div className="overflow-x-auto">
               <div className="min-w-[500px] sm:min-w-0">
-                <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-2 border-b border-border/40 text-[10px] font-mono text-muted-foreground uppercase tracking-[0.1em]">
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                   <span>User</span>
                   <span className="text-right">Income</span>
                   <span className="text-right hidden sm:block">Accounts</span>
                   <span className="text-right hidden lg:block">Joined</span>
                   <span className="text-right hidden md:block">Last Seen</span>
-                  <span className="text-right">Role</span>
+                  <span className="text-right">Status</span>
                 </div>
 
                 {/* Rows */}
@@ -269,8 +246,19 @@ export default function MembersPage() {
                     {formatDate(u.last_sign_in_at)}
                   </div>
 
-                  {/* Role toggle */}
-                  <div className="text-right flex items-center justify-end gap-2">
+                  {/* Online status & Archive */}
+                  <div className="text-right flex items-center justify-end gap-3">
+                    {(() => {
+                      const isOnline = u.last_sign_in_at && (new Date().getTime() - new Date(u.last_sign_in_at).getTime()) < 60 * 60 * 1000;
+                      return (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/50 border border-border/40">
+                          <span className={`size-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'}`} />
+                          <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+                            {isOnline ? 'Online' : 'Offline'}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <button
                       onClick={() => toggleArchive(u)}
                       disabled={togglingId === u.id}
@@ -279,28 +267,8 @@ export default function MembersPage() {
                     >
                       {u.is_archived ? <RefreshCcwIcon className="size-3" /> : <TrashIcon className="size-3 text-destructive" />}
                     </button>
-                    <button
-                      onClick={() => toggleRole(u)}
-                      disabled={togglingId === u.id}
-                      title={u.role === "admin" ? "Demote to user" : "Promote to admin"}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/50 px-2 py-1 text-[11px] font-mono hover:border-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {togglingId === u.id ? (
-                        <Loader2 className="size-3 animate-spin" />
-                      ) : u.role === "admin" ? (
-                        <>
-                          <ShieldIcon className="size-3 text-primary" />
-                          <span className="text-primary">Admin</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserIcon className="size-3 text-muted-foreground" />
-                          <span className="text-muted-foreground">User</span>
-                        </>
-                      )}
-                    </button>
-                    </div>
                   </div>
+                </div>
                 ));
                 })()}
                 </div>
