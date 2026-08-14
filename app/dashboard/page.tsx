@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon, CopyIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -652,9 +652,14 @@ export default function UserDashboardPage() {
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {account.referralLink && (
-                          <a href={account.referralLink} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
-                            <LinkIcon className="size-3.5" />
-                          </a>
+                          <>
+                            <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied!"); }} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Referral Link">
+                              <CopyIcon className="size-3.5" />
+                            </button>
+                            <a href={account.referralLink} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
+                              <LinkIcon className="size-3.5" />
+                            </a>
+                          </>
                         )}
                         {account.walletAddress && (
                           <button onClick={() => openViewWalletModal(account.walletAddress!)} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="View Wallet Address">
