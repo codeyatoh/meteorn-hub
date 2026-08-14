@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { UsersIcon, Loader2, ShieldIcon, UserIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon, RefreshCcwIcon, ListFilterIcon } from "lucide-react";
 import { toast } from "sonner";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
@@ -243,7 +244,7 @@ export default function MembersPage() {
                   {/* Income */}
                   <div className="text-right flex flex-col items-end justify-center">
                     <div className="flex items-center gap-1.5 font-mono text-sm text-primary">
-                      <img src="/gmto.png" alt="GMTO" className="size-3.5 object-contain opacity-80" />
+                      <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="object-contain opacity-80" />
                       {u.total_income > 0 ? u.total_income.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                     </div>
                     {u.total_income > 0 && gmtoPrice > 0 && (
