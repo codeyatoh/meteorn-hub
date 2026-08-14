@@ -923,34 +923,34 @@ export default function UserDashboardPage() {
                           Banned
                         </span>
                       )}
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                         {account.referralLink && (
                           <>
-                            <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied!"); }} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Referral Link">
-                              <CopyIcon className="size-3.5" />
+                            <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied!"); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Referral Link">
+                              <CopyIcon className="size-4" />
                             </button>
-                            <button onClick={(e) => handleReferralClick(e, account.referralLink!)} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center" title="Open Referral Link">
-                              <LinkIcon className="size-3.5" />
+                            <button onClick={(e) => handleReferralClick(e, account.referralLink!)} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center rounded-md" title="Open Referral Link">
+                              <LinkIcon className="size-4" />
                             </button>
                           </>
                         )}
 
                         {account.email && (
-                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="p-1 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95" title="Copy Email">
-                            <MailIcon className="size-3.5" />
+                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Email">
+                            <MailIcon className="size-4" />
                           </button>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex flex-wrap items-center w-full sm:w-auto mt-1.5 sm:mt-0 justify-center sm:justify-end gap-x-3 gap-y-2">
+                    <div className="flex flex-wrap items-center w-full sm:w-auto mt-2 sm:mt-0 justify-center sm:justify-end gap-x-4 gap-y-3">
                       {/* Action Buttons */}
-                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
-                        <button onClick={() => openEditAccountModal(account)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
-                          <PencilIcon className="size-3.5" />
+                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1.5 transition-opacity shrink-0">
+                        <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
+                          <PencilIcon className="size-4" />
                         </button>
-                        <button onClick={() => openDeleteAccountModal(account.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors" title="Delete Account">
-                          <TrashIcon className="size-3.5" />
+                        <button onClick={() => openDeleteAccountModal(account.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors" title="Delete Account">
+                          <TrashIcon className="size-4" />
                         </button>
                       </div>
 
@@ -958,57 +958,57 @@ export default function UserDashboardPage() {
                       {account.walletAddress && (
                         <button 
                           onClick={() => openViewWalletModal(account.walletAddress!)} 
-                          className="p-1.5 text-primary hover:bg-primary/20 bg-primary/10 rounded-md transition-colors inline-flex items-center shadow-sm shrink-0" 
+                          className="p-2 text-primary hover:bg-primary/20 bg-primary/10 rounded-md transition-colors inline-flex items-center shadow-sm shrink-0" 
                           title="View Wallet Address"
                         >
-                          <WalletIcon className="size-3.5" />
+                          <WalletIcon className="size-4" />
                         </button>
                       )}
 
                       {/* Interactive Ticket Logger */}
                       {!account.isBanned && (
-                        <div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.2em] shrink-0">
+                        <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] shrink-0">
                           <button 
                             onClick={() => updateTicket(account.id, -1)}
                             disabled={account.ticketsDone === 0 || updatingTicketsIds.has(account.id)}
-                            className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                            className="p-1.5 sm:p-2 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
                           >
-                            <MinusIcon className="size-3" />
+                            <MinusIcon className="size-4" />
                           </button>
                           
-                          <span className={`w-9 text-center ${isDone ? "text-emerald-500" : "text-muted-foreground/70"}`}>
+                          <span className={`w-10 sm:w-11 text-center ${isDone ? "text-emerald-500" : "text-muted-foreground/70"}`}>
                             {account.ticketsDone}/{account.totalTickets}
                           </span>
                           
                           <button 
                             onClick={() => updateTicket(account.id, 1)}
                             disabled={isDone || updatingTicketsIds.has(account.id)}
-                            className="p-1 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                            className="p-1.5 sm:p-2 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
                           >
-                            <PlusIcon className="size-3" />
+                            <PlusIcon className="size-4" />
                           </button>
 
-                          <Image src="/repair-ticket.png" alt="tix" width={20} height={20} className={`object-contain ml-0.5 sm:ml-1 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} sm:w-6 sm:h-6`} />
+                          <Image src="/repair-ticket.png" alt="tix" width={24} height={24} className={`object-contain ml-1 sm:ml-1.5 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} w-5 h-5 sm:w-6 sm:h-6`} />
 
                           {/* Repair Tickets */}
-                          <div className="ml-2 flex items-center gap-1.5 border-l border-border/50 pl-2">
-                            <div className="flex items-center gap-1 text-muted-foreground/50" title="Total Accumulated Tickets">
-                              <span className="text-[9px] uppercase tracking-widest hidden sm:inline">Total</span>
-                              <span className="font-medium">{account.totalAccumulatedTickets}</span>
+                          <div className="ml-2 sm:ml-3 flex items-center gap-2 border-l border-border/50 pl-2 sm:pl-3">
+                            <div className="flex items-center gap-1 sm:gap-1.5 text-muted-foreground/50" title="Total Accumulated Tickets">
+                              <span className="text-[9px] sm:text-[10px] uppercase tracking-widest hidden sm:inline">Total</span>
+                              <span className="font-medium text-xs sm:text-sm">{account.totalAccumulatedTickets}</span>
                             </div>
                             
                             <button 
                               onClick={() => openRepairTicketModal(account.id)}
                               disabled={(account.totalAccumulatedTickets - account.repairTicketsUsed) <= 0}
-                              className="p-1 rounded transition-colors inline-flex items-center gap-1 ml-0.5 text-orange-500/70 hover:text-orange-500 hover:bg-orange-500/10 disabled:opacity-30 disabled:pointer-events-none"
+                              className="p-1.5 sm:p-2 rounded-md transition-colors inline-flex items-center gap-1 sm:gap-1.5 text-orange-500/70 hover:text-orange-500 hover:bg-orange-500/10 disabled:opacity-30 disabled:pointer-events-none"
                               title="Use Repair Ticket"
                             >
-                              <WrenchIcon className="size-3" />
-                              <span className="font-bold">{account.totalAccumulatedTickets - account.repairTicketsUsed}</span>
+                              <WrenchIcon className="size-4" />
+                              <span className="font-bold text-xs sm:text-sm">{account.totalAccumulatedTickets - account.repairTicketsUsed}</span>
                             </button>
                             
                             {account.repairTicketsUsed > 0 && (
-                              <span className="text-muted-foreground/30 text-[8px] ml-0.5" title="Used Tickets">
+                              <span className="text-muted-foreground/30 text-[9px] sm:text-[10px] ml-0.5" title="Used Tickets">
                                 -{account.repairTicketsUsed}
                               </span>
                             )}
