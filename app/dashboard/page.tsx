@@ -1407,7 +1407,7 @@ function PaginationControls({
   totalPages: number;
   onPageChange: (page: number) => void;
 }) {
-  if (totalPages <= 1) return null;
+  if (totalPages === 0) return null;
   return (
     <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/40">
       <button 
