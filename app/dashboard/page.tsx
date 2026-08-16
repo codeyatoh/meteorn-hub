@@ -64,6 +64,7 @@ export default function UserDashboardPage() {
   const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isIncomeFilterDropdownOpen, setIsIncomeFilterDropdownOpen] = useState(false);
   const [incomeLogFilter, setIncomeLogFilter] = useState<"all" | "sold" | "unsold">("all");
   
   // Pagination State
@@ -1079,18 +1080,46 @@ export default function UserDashboardPage() {
             title="Income Logs" 
             trailing={
               <div className="flex items-center gap-2">
-                <select
-                  value={incomeLogFilter}
-                  onChange={(e) => {
-                    setIncomeLogFilter(e.target.value as "all" | "sold" | "unsold");
-                    setIncomePage(1);
-                  }}
-                  className="h-8 rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="all">All</option>
-                  <option value="sold">Sold</option>
-                  <option value="unsold">Unsold</option>
-                </select>
+                <div className="relative">
+                  <button 
+                    type="button"
+                    onClick={() => setIsIncomeFilterDropdownOpen(!isIncomeFilterDropdownOpen)}
+                    className={`w-20 sm:w-24 flex items-center justify-between rounded-md border border-input bg-background px-2.5 py-1.5 text-xs font-medium cursor-pointer transition-colors ${isIncomeFilterDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
+                  >
+                    <span className="capitalize">{incomeLogFilter}</span>
+                    <ChevronDownIcon className={`size-3 text-muted-foreground transition-transform ${isIncomeFilterDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isIncomeFilterDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsIncomeFilterDropdownOpen(false)} />
+                      <div className="absolute z-50 top-full left-0 mt-1.5 w-24 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                        {[
+                          { value: 'all', label: 'All' },
+                          { value: 'sold', label: 'Sold' },
+                          { value: 'unsold', label: 'Unsold' }
+                        ].map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              setIncomeLogFilter(opt.value as "all" | "sold" | "unsold");
+                              setIncomePage(1);
+                              setIsIncomeFilterDropdownOpen(false);
+                            }}
+                            className={`px-3 py-2 text-xs cursor-pointer flex items-center transition-colors outline-none ${
+                              incomeLogFilter === opt.value 
+                                ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+                                : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
+                            }`}
+                          >
+                            <span className="font-medium">{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <Button onClick={() => setIsCashoutModalOpen(true)} variant="outline" size="sm" className="h-8">
                   <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="mr-1.5 opacity-80" />
                   Sell
