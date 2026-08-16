@@ -286,8 +286,9 @@ export default function UserDashboardPage() {
   }, [currency]);
 
   // Compute dynamic stats
-  const totalTicketsLogged = accounts.reduce((sum, acc) => sum + acc.ticketsDone, 0);
-  const totalMaxTickets = accounts.reduce((sum, acc) => sum + acc.totalTickets, 0);
+  const activeAccountsForStats = accounts.filter(acc => !acc.isBanned);
+  const totalTicketsLogged = activeAccountsForStats.reduce((sum, acc) => sum + acc.ticketsDone, 0);
+  const totalMaxTickets = activeAccountsForStats.reduce((sum, acc) => sum + acc.totalTickets, 0);
   
   const totalGross = incomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
 
@@ -791,7 +792,7 @@ export default function UserDashboardPage() {
           <FactCard 
             label="Tickets Logged" 
             value={`${totalTicketsLogged} / ${totalMaxTickets}`} 
-            sub={`across ${accounts.length} accounts today`} 
+            sub={`across ${activeAccountsForStats.length} accounts today`} 
             icon={<Image src="/repair-ticket.png" alt="ticket" width={24} height={24} className="object-contain" />}
           />
           <FactCard 
@@ -846,7 +847,7 @@ export default function UserDashboardPage() {
                   {isFilterDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsFilterDropdownOpen(false)} />
-                      <div className="absolute z-50 top-full right-0 mt-1.5 w-52 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute z-50 top-full left-0 sm:left-auto sm:right-0 mt-1.5 w-52 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
                         
                         {/* Status Filter */}
                         <div className="flex flex-col py-1.5 border-b border-input/50">
