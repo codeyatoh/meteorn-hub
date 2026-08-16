@@ -64,6 +64,7 @@ export default function UserDashboardPage() {
   const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [incomeLogFilter, setIncomeLogFilter] = useState<"all" | "sold" | "unsold">("all");
   
   // Pagination State
   const [accountsPage, setAccountsPage] = useState(1);
@@ -120,6 +121,7 @@ export default function UserDashboardPage() {
   const [editLogId, setEditLogId] = useState<string | null>(null);
   const [editLogGmto, setEditLogGmto] = useState("");
   const [editLogFiat, setEditLogFiat] = useState("");
+  const [editLogIsSold, setEditLogIsSold] = useState(false);
 
   // Delete Modal State
   const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
@@ -195,14 +197,10 @@ export default function UserDashboardPage() {
         if (accountsData.length > 0) setSelectedAccountId(accountsData[0].id);
       }
       
-      // Fetch today's income logs
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      
+      // Fetch all income logs
       const { data: logsData } = await supabase
         .from('income_logs')
         .select('*')
-        .gte('created_at', startOfDay.toISOString())
         .order('created_at', { ascending: false });
         
       if (logsData) {
@@ -290,7 +288,13 @@ export default function UserDashboardPage() {
   const totalTicketsLogged = activeAccountsForStats.reduce((sum, acc) => sum + acc.ticketsDone, 0);
   const totalMaxTickets = activeAccountsForStats.reduce((sum, acc) => sum + acc.totalTickets, 0);
   
-  const totalGross = incomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
+  const filteredIncomeLogs = incomeLogs.filter(log => {
+    if (incomeLogFilter === "all") return true;
+    if (incomeLogFilter === "sold") return log.is_sold;
+    return !log.is_sold;
+  });
+
+  const totalGross = filteredIncomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
 
   const updateTicket = async (id: number, delta: number) => {
     if (updatingTicketsIds.has(id)) return;
@@ -305,6 +309,11 @@ export default function UserDashboardPage() {
       if (actualDelta === 0) return;
       
       const newAccumulated = account.totalAccumulatedTickets + actualDelta;
+      
+      if (actualDelta < 0 && newAccumulated < account.repairTicketsUsed) {
+        toast.error("Cannot decrease tickets that have already been used for repair.");
+        return;
+      }
       
       setAccounts((prev) =>
         prev.map((acc) => (acc.id === id ? { ...acc, ticketsDone: newCount, totalAccumulatedTickets: newAccumulated } : acc))
@@ -602,6 +611,7 @@ export default function UserDashboardPage() {
     setEditLogId(log.id);
     setEditLogGmto(log.gmto.toString());
     setEditLogFiat(log.fiat_received ? log.fiat_received.toString() : "");
+    setEditLogIsSold(log.is_sold);
     setIsEditLogModalOpen(true);
   };
 
@@ -615,9 +625,17 @@ export default function UserDashboardPage() {
       const targetLog = incomeLogs.find(l => l.id === editLogId);
       const fiat = parseFloat(editLogFiat);
 
-      const updateData: { gmto_amount: number; fiat_received?: number } = { gmto_amount: gmto };
-      if (targetLog?.is_sold && !isNaN(fiat) && fiat >= 0) {
-        updateData.fiat_received = fiat;
+      const updateData: { gmto_amount: number; fiat_received?: number | null; is_sold?: boolean } = { gmto_amount: gmto };
+      
+      if (targetLog?.is_sold) {
+        updateData.is_sold = editLogIsSold;
+        if (editLogIsSold) {
+          if (!isNaN(fiat) && fiat >= 0) {
+            updateData.fiat_received = fiat;
+          }
+        } else {
+          updateData.fiat_received = null;
+        }
       }
 
       const { error } = await supabase
@@ -626,7 +644,14 @@ export default function UserDashboardPage() {
         .eq('id', editLogId);
 
       if (!error) {
-        setIncomeLogs(prev => prev.map(log => log.id === editLogId ? { ...log, gmto, ...(targetLog?.is_sold ? { fiat_received: fiat } : {}) } : log));
+        setIncomeLogs(prev => prev.map(log => log.id === editLogId ? { 
+          ...log, 
+          gmto, 
+          ...(targetLog?.is_sold ? { 
+            is_sold: editLogIsSold, 
+            fiat_received: editLogIsSold ? fiat : 0 
+          } : {}) 
+        } : log));
         toast.success("Income log updated successfully.");
       } else {
         toast.error("Failed to update income log.");
@@ -796,7 +821,7 @@ export default function UserDashboardPage() {
             icon={<Image src="/repair-ticket.png" alt="ticket" width={24} height={24} className="object-contain" />}
           />
           <FactCard 
-            label="Today's Est. Income" 
+            label="Est. Income" 
             value={`${currencySymbol}${totalGross.toFixed(2)}`} 
             sub={`$GMTO Price: ${currencySymbol}${gmtoPrice.toFixed(6)}`} 
             icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}
@@ -992,7 +1017,7 @@ export default function UserDashboardPage() {
                         <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] shrink-0">
                           <button 
                             onClick={() => updateTicket(account.id, -1)}
-                            disabled={account.ticketsDone === 0 || updatingTicketsIds.has(account.id)}
+                            disabled={account.ticketsDone === 0 || updatingTicketsIds.has(account.id) || (account.totalAccumulatedTickets - 1 < account.repairTicketsUsed)}
                             className="p-1.5 sm:p-2 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
                           >
                             <MinusIcon className="size-4" />
@@ -1051,9 +1076,21 @@ export default function UserDashboardPage() {
           </DashboardCard>
 
           <DashboardCard 
-            title="Today's Income" 
+            title="Income Logs" 
             trailing={
               <div className="flex items-center gap-2">
+                <select
+                  value={incomeLogFilter}
+                  onChange={(e) => {
+                    setIncomeLogFilter(e.target.value as "all" | "sold" | "unsold");
+                    setIncomePage(1);
+                  }}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="all">All</option>
+                  <option value="sold">Sold</option>
+                  <option value="unsold">Unsold</option>
+                </select>
                 <Button onClick={() => setIsCashoutModalOpen(true)} variant="outline" size="sm" className="h-8">
                   <Image src="/gmto.png" alt="GMTO" width={14} height={14} className="mr-1.5 opacity-80" />
                   Sell
@@ -1066,7 +1103,7 @@ export default function UserDashboardPage() {
             }
           >
             <ul className="mt-2 flex flex-col gap-2 min-h-[220px] pr-1">
-              {incomeLogs.slice((incomePage - 1) * INCOME_PER_PAGE, incomePage * INCOME_PER_PAGE).map((log) => {
+              {filteredIncomeLogs.slice((incomePage - 1) * INCOME_PER_PAGE, incomePage * INCOME_PER_PAGE).map((log) => {
                 const logGross = log.gmto * gmtoPrice;
 
                 return (
@@ -1088,9 +1125,14 @@ export default function UserDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    {!log.is_sold ? (
-                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
+                    {/* Status & Action Buttons */}
+                    <div className="shrink-0 flex items-center gap-2">
+                      {log.is_sold && (
+                        <span className="text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full tracking-wider border border-emerald-500/20">
+                          Sold
+                        </span>
+                      )}
+                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                         <button onClick={() => openEditLogModal(log)} className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit Log">
                           <PencilIcon className="size-3.5" />
                         </button>
@@ -1098,13 +1140,7 @@ export default function UserDashboardPage() {
                           <TrashIcon className="size-3.5" />
                         </button>
                       </div>
-                    ) : (
-                      <div className="shrink-0 flex items-center">
-                        <span className="text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full tracking-wider border border-emerald-500/20">
-                          Sold
-                        </span>
-                      </div>
-                    )}
+                    </div>
 
                     <div className="text-right ml-2 shrink-0">
                       <div className="text-sm font-medium text-emerald-500/90">
@@ -1122,7 +1158,7 @@ export default function UserDashboardPage() {
             </ul>
             <PaginationControls 
               currentPage={incomePage} 
-              totalPages={Math.ceil(incomeLogs.length / INCOME_PER_PAGE)} 
+              totalPages={Math.ceil(filteredIncomeLogs.length / INCOME_PER_PAGE)} 
               onPageChange={setIncomePage} 
             />
           </DashboardCard>
@@ -1401,19 +1437,32 @@ export default function UserDashboardPage() {
           </div>
 
           {editLogId && incomeLogs.find(l => l.id === editLogId)?.is_sold && (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Total {currency.toUpperCase()} Received (P2P Sold)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span>
-                <input 
-                  type="number"
-                  className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  value={editLogFiat}
-                  onChange={(e) => setEditLogFiat(e.target.value)}
-                  step="0.01"
-                />
+            <>
+              <div className={`space-y-1.5 transition-opacity ${!editLogIsSold ? "opacity-50 pointer-events-none" : ""}`}>
+                <label className="text-sm font-medium text-foreground">Total {currency.toUpperCase()} Received (P2P Sold)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span>
+                  <input 
+                    type="number"
+                    className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    value={editLogFiat}
+                    onChange={(e) => setEditLogFiat(e.target.value)}
+                    step="0.01"
+                  />
+                </div>
               </div>
-            </div>
+              
+              <div className="flex items-center justify-between p-3 border border-orange-500/20 bg-orange-500/5 rounded-md mt-4">
+                <div>
+                  <p className="text-sm font-medium text-orange-500">Sold Status</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Toggle off to revert to unsold.</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={editLogIsSold} onChange={(e) => setEditLogIsSold(e.target.checked)} />
+                  <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                </label>
+              </div>
+            </>
           )}
 
           <Button 
