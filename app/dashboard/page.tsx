@@ -70,8 +70,8 @@ export default function UserDashboardPage() {
   // Pagination State
   const [accountsPage, setAccountsPage] = useState(1);
   const [incomePage, setIncomePage] = useState(1);
-  const ACCOUNTS_PER_PAGE = 5;
-  const INCOME_PER_PAGE = 5;
+  const ACCOUNTS_PER_PAGE = 6;
+  const INCOME_PER_PAGE = 6;
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -1731,14 +1731,16 @@ function DashboardCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border/60 bg-background/40 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className="flex flex-col h-full rounded-xl border border-border/60 bg-background/40 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest sm:tracking-[0.25em]">
           {title}
         </div>
         {trailing}
       </div>
-      {children}
+      <div className="flex flex-col flex-1">
+        {children}
+      </div>
     </section>
   );
 }
@@ -1754,7 +1756,7 @@ function PaginationControls({
 }) {
   if (totalPages === 0) return null;
   return (
-    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/40">
+    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/40">
       <button 
         onClick={() => onPageChange(currentPage - 1)} 
         disabled={currentPage === 1}
