@@ -71,7 +71,7 @@ export default function UserDashboardPage() {
   const [accountsPage, setAccountsPage] = useState(1);
   const [incomePage, setIncomePage] = useState(1);
   const ACCOUNTS_PER_PAGE = 6;
-  const INCOME_PER_PAGE = 5;
+  const INCOME_PER_PAGE = 4;
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
