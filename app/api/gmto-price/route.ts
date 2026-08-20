@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=game-meteor-coin&vs_currencies=${currency}`,
+      `https://api.coingecko.com/api/v3/simple/price?ids=game-meteor-coin&vs_currencies=usd,php,eur`,
       {
         headers: {
           'x-cg-demo-api-key': process.env.COINGECKO_API_KEY || '',

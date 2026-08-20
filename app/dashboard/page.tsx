@@ -9,7 +9,7 @@ import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { GmtoChartConverter } from "@/features/dashboard/components/gmto-chart-converter";
 import { Combobox } from "@/components/ui/combobox";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
@@ -26,7 +26,7 @@ const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 
 // Types
 type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null; email: string | null; isBanned: boolean; totalAccumulatedTickets: number; repairTicketsUsed: number; };
-type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string; is_sold: boolean; fiat_received: number };
+type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string; is_sold: boolean; fiat_received: number; fiat_currency: string };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
 
@@ -144,7 +144,8 @@ export default function UserDashboardPage() {
   
 
   const [currency, setCurrency] = useState("usd");
-  const [gmtoPrice, setGmtoPrice] = useState(0.30); // Default fallback price
+  const [gmtoPrice, setGmtoPrice] = useState(0); 
+  const [allGmtoPrices, setAllGmtoPrices] = useState<Record<string, number>>({});
   
   const [nickname, setNickname] = useState("User");
   const [userId, setUserId] = useState<string | null>(null);
@@ -212,17 +213,20 @@ export default function UserDashboardPage() {
           gmto: parseFloat(log.gmto_amount),
           color: log.color,
           is_sold: log.is_sold,
-          fiat_received: parseFloat(log.fiat_received)
+          fiat_received: parseFloat(log.fiat_received),
+          fiat_currency: log.fiat_currency || 'php'
         })));
       }
 
       // Fetch all-time sold P2P logs (for stats)
       const { data: soldLogsData } = await supabase
         .from('income_logs')
-        .select('gmto_amount, fiat_received')
+        .select('gmto_amount, fiat_received, fiat_currency')
         .eq('is_sold', true);
         
       if (soldLogsData) {
+        // We will calculate the total fiat later dynamically using current exchange rates,
+        // but we'll save the initial fiat sum (in their native saved currency) just in case.
         const sumFiat = soldLogsData.reduce((acc, log) => acc + parseFloat(log.fiat_received || "0"), 0);
         const sumGmto = soldLogsData.reduce((acc, log) => acc + parseFloat(log.gmto_amount || "0"), 0);
         setTotalP2PSoldFiat(sumFiat);
@@ -244,7 +248,8 @@ export default function UserDashboardPage() {
           gmto: parseFloat(log.gmto_amount),
           color: log.color,
           is_sold: log.is_sold,
-          fiat_received: parseFloat(log.fiat_received)
+          fiat_received: parseFloat(log.fiat_received),
+          fiat_currency: log.fiat_currency || 'php'
         })));
       }
     };
@@ -274,11 +279,32 @@ export default function UserDashboardPage() {
 
   // Fetch GMTO price via server-side proxy (avoids CORS)
   useEffect(() => {
-    fetch(`/api/gmto-price?currency=${currency}`)
+    // Try to load from local storage first for instant UI updates
+    const cachedPrices = localStorage.getItem('gmto_all_prices');
+    if (cachedPrices) {
+      setTimeout(() => {
+        try {
+          const parsed = JSON.parse(cachedPrices);
+          setAllGmtoPrices(parsed);
+          if (parsed[currency]) {
+            setGmtoPrice(parsed[currency]);
+          }
+        } catch {
+          console.warn("Failed to parse cached gmto prices");
+        }
+      }, 0);
+    }
+
+    fetch(`/api/gmto-price`)
       .then(res => res.json())
       .then(data => {
-        if (data["game-meteor-coin"] && data["game-meteor-coin"][currency]) {
-          setGmtoPrice(data["game-meteor-coin"][currency]);
+        if (data["game-meteor-coin"]) {
+          const prices = data["game-meteor-coin"];
+          setAllGmtoPrices(prices);
+          localStorage.setItem('gmto_all_prices', JSON.stringify(prices));
+          if (prices[currency]) {
+            setGmtoPrice(prices[currency]);
+          }
         }
       })
       .catch(err => console.warn("Failed to fetch GMTO price", err));
@@ -294,6 +320,18 @@ export default function UserDashboardPage() {
     if (incomeLogFilter === "sold") return log.is_sold;
     return !log.is_sold;
   });
+
+  const getConvertedFiat = useCallback((amount: number, fromCurrency: string, toCurrency: string) => {
+    if (fromCurrency === toCurrency || !allGmtoPrices[fromCurrency] || !allGmtoPrices[toCurrency]) return amount;
+    const exchangeRate = allGmtoPrices[toCurrency] / allGmtoPrices[fromCurrency];
+    return amount * exchangeRate;
+  }, [allGmtoPrices]);
+
+  const totalP2PSoldFiatConverted = useMemo(() => {
+    return incomeLogs.filter(log => log.is_sold).reduce((sum, log) => {
+      return sum + getConvertedFiat(log.fiat_received, log.fiat_currency, currency);
+    }, 0);
+  }, [incomeLogs, currency, getConvertedFiat]);
 
   const totalGross = filteredIncomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
 
@@ -376,7 +414,8 @@ export default function UserDashboardPage() {
           gmto: parseFloat(data.gmto_amount),
           color: data.color,
           is_sold: data.is_sold,
-          fiat_received: parseFloat(data.fiat_received)
+          fiat_received: parseFloat(data.fiat_received),
+          fiat_currency: data.fiat_currency || 'php'
         };
         setIncomeLogs(prev => [formattedLog, ...prev]);
         toast.success("Income logged successfully!");
@@ -414,7 +453,8 @@ export default function UserDashboardPage() {
           .from('income_logs')
           .update({
             is_sold: true,
-            fiat_received: proportionalFiat
+            fiat_received: proportionalFiat,
+            fiat_currency: currency
           })
           .eq('id', targetLog.id);
 
@@ -422,7 +462,7 @@ export default function UserDashboardPage() {
           success = false;
           console.error("Failed to update log", targetLog.id, error);
         } else {
-          setIncomeLogs(prev => prev.map(log => log.id === targetLog.id ? { ...log, is_sold: true, fiat_received: proportionalFiat } : log));
+          setIncomeLogs(prev => prev.map(log => log.id === targetLog.id ? { ...log, is_sold: true, fiat_received: proportionalFiat, fiat_currency: currency } : log));
           setAllUnsoldLogs(prev => prev.filter(log => log.id !== targetLog.id));
         }
       }
@@ -1176,7 +1216,11 @@ export default function UserDashboardPage() {
 
                       <div className="text-right ml-2 shrink-0">
                         <div className="text-sm font-medium text-emerald-500/90">
-                          +{currencySymbol}{log.is_sold ? log.fiat_received.toFixed(2) : logGross.toFixed(2)}
+                          +{currencySymbol}
+                          {log.is_sold 
+                            ? getConvertedFiat(log.fiat_received, log.fiat_currency, currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            : (gmtoPrice === 0 ? "..." : logGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+                          }
                         </div>
                         {log.is_sold && (
                           <div className="text-[10px] text-muted-foreground/70 mt-0.5">
@@ -1200,6 +1244,22 @@ export default function UserDashboardPage() {
 
         {/* Weekly Calendar & Chart Section */}
         <div className="mt-8 flex flex-col gap-3">
+            <div className="rounded-xl border border-border/60 bg-background/40 p-5 backdrop-blur-xl">
+              <div className="flex items-center gap-2 mb-4">
+                <WalletIcon className="size-4 text-emerald-500" />
+                <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Total P2P Sold</h3>
+              </div>
+              <div className="font-heading text-xl sm:text-2xl text-foreground mt-1">
+                {allGmtoPrices[currency] === undefined ? (
+                  <span className="animate-pulse opacity-50">...</span>
+                ) : (
+                  `${currencySymbol}${totalP2PSoldFiatConverted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {totalP2PSoldGmto.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GMTO sold
+              </div>
+            </div>
 
           <GmtoChartConverter currency={currency} />
         </div>

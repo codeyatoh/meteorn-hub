@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, ReactNode, useMemo } from "react";
+import { useEffect, useState, ReactNode, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BarChart2 } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
@@ -22,6 +22,7 @@ type IncomeLog = {
   created_at: string;
   is_sold: boolean;
   fiat_received: number;
+  fiat_currency: string;
 };
 
 type FilterType = 'today' | 'weekly' | 'monthly' | 'all';
@@ -42,7 +43,8 @@ export default function AnalyticsPage() {
   const ITEMS_PER_PAGE = 8;
   
   const [currency, setCurrency] = useState("usd");
-  const [gmtoPrice, setGmtoPrice] = useState(0.30);
+  const [gmtoPrice, setGmtoPrice] = useState(0);
+  const [allGmtoPrices, setAllGmtoPrices] = useState<Record<string, number>>({});
   
   const supabase = createClient();
 
@@ -59,11 +61,30 @@ export default function AnalyticsPage() {
 
       // Fetch GMTO Price via server-side proxy (avoids CORS)
       const userCurrency = user.user_metadata?.currency || "usd";
-      fetch(`/api/gmto-price?currency=${userCurrency}`)
+      
+      const cachedPrices = localStorage.getItem('gmto_all_prices');
+      if (cachedPrices) {
+        setTimeout(() => {
+          try {
+            const parsed = JSON.parse(cachedPrices);
+            setAllGmtoPrices(parsed);
+            if (parsed[userCurrency]) {
+              setGmtoPrice(parsed[userCurrency]);
+            }
+          } catch {}
+        }, 0);
+      }
+
+      fetch(`/api/gmto-price`)
         .then(res => res.json())
         .then(data => {
-          if (data["game-meteor-coin"] && data["game-meteor-coin"][userCurrency]) {
-            setGmtoPrice(data["game-meteor-coin"][userCurrency]);
+          if (data["game-meteor-coin"]) {
+            const prices = data["game-meteor-coin"];
+            setAllGmtoPrices(prices);
+            localStorage.setItem('gmto_all_prices', JSON.stringify(prices));
+            if (prices[userCurrency]) {
+              setGmtoPrice(prices[userCurrency]);
+            }
           }
         })
         .catch(err => console.warn("Failed to fetch GMTO price", err));
@@ -119,7 +140,8 @@ export default function AnalyticsPage() {
         setIncomeLogs(iLogs.map(l => ({
           ...l,
           gmto_amount: typeof l.gmto_amount === 'string' ? parseFloat(l.gmto_amount) : l.gmto_amount,
-          fiat_received: typeof l.fiat_received === 'string' ? parseFloat(l.fiat_received) : l.fiat_received
+          fiat_received: typeof l.fiat_received === 'string' ? parseFloat(l.fiat_received) : l.fiat_received,
+          fiat_currency: l.fiat_currency || 'php'
         })));
       }
       
@@ -145,11 +167,17 @@ export default function AnalyticsPage() {
     ? todayAccountsCount 
     : new Set([...todayActiveAccounts, ...oldLogs.map(log => log.account_name)]).size;
 
+  const getConvertedFiat = useCallback((amount: number, fromCurrency: string, toCurrency: string) => {
+    if (fromCurrency === toCurrency || !allGmtoPrices[fromCurrency] || !allGmtoPrices[toCurrency]) return amount;
+    const exchangeRate = allGmtoPrices[toCurrency] / allGmtoPrices[fromCurrency];
+    return amount * exchangeRate;
+  }, [allGmtoPrices]);
+
   const totalGMTOEarned = incomeLogs.reduce((sum, log) => sum + log.gmto_amount, 0);
   const totalGMTOSold = incomeLogs.filter(l => l.is_sold).reduce((sum, log) => sum + log.gmto_amount, 0);
   const totalUnsoldGMTO = Math.max(0, totalGMTOEarned - totalGMTOSold);
 
-  const totalFiatRealized = incomeLogs.filter(l => l.is_sold).reduce((sum, log) => sum + log.fiat_received, 0);
+  const totalFiatRealized = incomeLogs.filter(l => l.is_sold).reduce((sum, log) => sum + getConvertedFiat(log.fiat_received, log.fiat_currency, currency), 0);
   const grossFiat = (totalUnsoldGMTO * gmtoPrice) + totalFiatRealized;
 
   const chartData = useMemo(() => {
@@ -163,7 +191,7 @@ export default function AnalyticsPage() {
       
       if (!acc[key]) acc[key] = { gmto: 0, fiat: 0 };
       acc[key].gmto += log.gmto_amount;
-      acc[key].fiat += log.fiat_received;
+      acc[key].fiat += getConvertedFiat(log.fiat_received, log.fiat_currency, currency);
       
       return acc;
     }, {} as Record<string, { gmto: number; fiat: number }>);
@@ -173,7 +201,7 @@ export default function AnalyticsPage() {
       amount: data.gmto,
       fiat: data.fiat
     }));
-  }, [incomeLogs, filter]);
+  }, [incomeLogs, filter, currency, getConvertedFiat]);
 
   const paginatedTickets = ticketLogs.slice((ticketPage - 1) * ITEMS_PER_PAGE, ticketPage * ITEMS_PER_PAGE);
   const totalTicketPages = Math.max(1, Math.ceil(ticketLogs.length / ITEMS_PER_PAGE));
@@ -238,7 +266,11 @@ export default function AnalyticsPage() {
               />
               <StatCard 
                 label={`Total Income (${filter})`}
-                value={`${currencySymbol}${grossFiat.toFixed(2)}`}
+                value={
+                  gmtoPrice === 0 || allGmtoPrices[currency] === undefined 
+                    ? <span className="animate-pulse opacity-50">...</span> 
+                    : `${currencySymbol}${grossFiat.toFixed(2)}`
+                }
                 sub={`${totalGMTOEarned.toFixed(2)} GMTO earned (${totalGMTOSold > 0 ? `${totalGMTOSold.toFixed(2)} sold` : '0 sold'})`}
                 icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}
               />
@@ -395,7 +427,7 @@ export default function AnalyticsPage() {
   );
 }
 
-function StatCard({ label, value, sub, icon }: { label: string; value: string; sub: string; icon?: ReactNode }) {
+function StatCard({ label, value, sub, icon }: { label: string; value: ReactNode; sub: string; icon?: ReactNode }) {
   return (
     <div className="rounded-xl border border-border/60 bg-background/40 p-4">
       <div className="flex items-center justify-between">

@@ -46,7 +46,7 @@ export default async function AdminOverviewPage(props: { searchParams: Promise<{
   );
 
   // Fetch live GMTO price
-  let gmtoPrice = 0.30; // fallback
+  let gmtoPrice = 0; // fallback
   try {
     const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=game-meteor-coin&vs_currencies=${currency}`, {
       headers: { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY || '' },

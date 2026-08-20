@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.income_logs (
   color TEXT DEFAULT 'bg-emerald-500/80' NOT NULL,
   is_sold BOOLEAN DEFAULT false NOT NULL,
   fiat_received NUMERIC DEFAULT 0 NOT NULL,
+  fiat_currency TEXT DEFAULT 'php' NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
