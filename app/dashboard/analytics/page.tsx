@@ -269,7 +269,7 @@ export default function AnalyticsPage() {
                 value={
                   gmtoPrice === 0 || allGmtoPrices[currency] === undefined 
                     ? <span className="animate-pulse opacity-50">...</span> 
-                    : `${currencySymbol}${grossFiat.toFixed(2)}`
+                    : `${currencySymbol}${grossFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 }
                 sub={`${totalGMTOEarned.toFixed(2)} GMTO earned (${totalGMTOSold > 0 ? `${totalGMTOSold.toFixed(2)} sold` : '0 sold'})`}
                 icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}

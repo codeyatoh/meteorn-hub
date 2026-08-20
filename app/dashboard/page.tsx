@@ -860,7 +860,7 @@ export default function UserDashboardPage() {
           />
           <FactCard 
             label="Est. Income" 
-            value={`${currencySymbol}${totalGross.toFixed(2)}`} 
+            value={`${currencySymbol}${totalGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
             sub={`$GMTO Price: ${currencySymbol}${gmtoPrice.toFixed(6)}`} 
             icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}
           />
