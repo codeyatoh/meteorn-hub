@@ -56,7 +56,7 @@ export default function UserDashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [incomeLogs, setIncomeLogs] = useState<IncomeLog[]>([]);
   const [allUnsoldLogs, setAllUnsoldLogs] = useState<IncomeLog[]>([]);
-  const [totalP2PSoldFiat, setTotalP2PSoldFiat] = useState(0);
+  const [allSoldLogs, setAllSoldLogs] = useState<{ gmto_amount: string; fiat_received: string; fiat_currency: string }[]>([]);
   const [totalP2PSoldGmto, setTotalP2PSoldGmto] = useState(0);
   const [loading, setLoading] = useState(true);
   
@@ -225,11 +225,8 @@ export default function UserDashboardPage() {
         .eq('is_sold', true);
         
       if (soldLogsData) {
-        // We will calculate the total fiat later dynamically using current exchange rates,
-        // but we'll save the initial fiat sum (in their native saved currency) just in case.
-        const sumFiat = soldLogsData.reduce((acc, log) => acc + parseFloat(log.fiat_received || "0"), 0);
+        setAllSoldLogs(soldLogsData);
         const sumGmto = soldLogsData.reduce((acc, log) => acc + parseFloat(log.gmto_amount || "0"), 0);
-        setTotalP2PSoldFiat(sumFiat);
         setTotalP2PSoldGmto(sumGmto);
       }
 
@@ -328,10 +325,10 @@ export default function UserDashboardPage() {
   }, [allGmtoPrices]);
 
   const totalP2PSoldFiatConverted = useMemo(() => {
-    return incomeLogs.filter(log => log.is_sold).reduce((sum, log) => {
-      return sum + getConvertedFiat(log.fiat_received, log.fiat_currency, currency);
+    return allSoldLogs.reduce((sum, log) => {
+      return sum + getConvertedFiat(parseFloat(log.fiat_received || "0"), log.fiat_currency || "php", currency);
     }, 0);
-  }, [incomeLogs, currency, getConvertedFiat]);
+  }, [allSoldLogs, currency, getConvertedFiat]);
 
   const totalGross = filteredIncomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
 
@@ -869,7 +866,11 @@ export default function UserDashboardPage() {
           />
           <FactCard 
             label="Total P2P Sold" 
-            value={`${currencySymbol}${totalP2PSoldFiat.toFixed(2)}`} 
+            value={
+              allGmtoPrices[currency] === undefined 
+                ? <span className="animate-pulse opacity-50">...</span> 
+                : `${currencySymbol}${totalP2PSoldFiatConverted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            }
             sub={`${totalP2PSoldGmto.toLocaleString()} GMTO sold`} 
             icon={<WalletIcon className="size-5 opacity-40 text-emerald-500" />}
           />
@@ -1244,22 +1245,6 @@ export default function UserDashboardPage() {
 
         {/* Weekly Calendar & Chart Section */}
         <div className="mt-8 flex flex-col gap-3">
-            <div className="rounded-xl border border-border/60 bg-background/40 p-5 backdrop-blur-xl">
-              <div className="flex items-center gap-2 mb-4">
-                <WalletIcon className="size-4 text-emerald-500" />
-                <h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Total P2P Sold</h3>
-              </div>
-              <div className="font-heading text-xl sm:text-2xl text-foreground mt-1">
-                {allGmtoPrices[currency] === undefined ? (
-                  <span className="animate-pulse opacity-50">...</span>
-                ) : (
-                  `${currencySymbol}${totalP2PSoldFiatConverted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {totalP2PSoldGmto.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GMTO sold
-              </div>
-            </div>
 
           <GmtoChartConverter currency={currency} />
         </div>
@@ -1849,7 +1834,7 @@ function FactCard({
   icon,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   sub: string;
   icon?: ReactNode;
 }) {

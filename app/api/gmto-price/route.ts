@@ -6,8 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Avoids CORS by making the request from the server, not the browser.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const currency = searchParams.get('currency') || 'usd';
+  // No longer extracting single currency from query as we fetch usd,php,eur simultaneously
 
   try {
     const res = await fetch(
