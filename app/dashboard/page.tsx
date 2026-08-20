@@ -939,7 +939,7 @@ export default function UserDashboardPage() {
                 return (
                   <li
                     key={account.id}
-                    className="group flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 rounded-md px-2 py-2 transition-colors hover:bg-foreground/[0.03]"
+                    className="group flex flex-wrap xl:flex-nowrap items-center gap-2 xl:gap-3 rounded-md px-2 py-2 transition-colors hover:bg-foreground/[0.03]"
                   >
                     <div
                       className={`flex size-4 sm:size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
@@ -962,7 +962,7 @@ export default function UserDashboardPage() {
 
                     <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
                       <span
-                        className={`block truncate flex-1 min-w-0 text-xs sm:text-sm transition-all ${isDone ? "text-emerald-500" : account.isBanned ? "text-red-500/70" : "text-foreground"}`}
+                        className={`block break-words whitespace-normal flex-1 min-w-[50px] text-xs sm:text-sm transition-all ${isDone ? "text-emerald-500" : account.isBanned ? "text-red-500/70" : "text-foreground"}`}
                       >
                         {account.name}
                       </span>
@@ -991,7 +991,7 @@ export default function UserDashboardPage() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-wrap items-center w-full sm:w-auto mt-2 sm:mt-0 justify-center sm:justify-end gap-x-4 gap-y-3">
+                    <div className="flex flex-wrap items-center w-full xl:w-auto mt-2 xl:mt-0 justify-center xl:justify-end gap-x-4 gap-y-3">
                       {/* Action Buttons */}
                       <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1.5 transition-opacity shrink-0">
                         <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
@@ -1138,48 +1138,52 @@ export default function UserDashboardPage() {
                 return (
                   <li
                     key={log.id}
-                    className="group flex items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-foreground/[0.03]"
+                    className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 rounded-md px-2 py-2 transition-colors hover:bg-foreground/[0.03]"
                   >
-                    <div className="flex w-12 flex-col items-center font-mono text-[11px]">
-                      <span className="text-foreground">{log.time}</span>
-                    </div>
-                    <span className={`size-1.5 rounded-full ${log.color}`} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm text-foreground">{log.title}</div>
-                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 text-muted-foreground text-xs">
-                        <Image src="/gmto.png" alt="GMTO" width={20} height={20} className="object-contain" />
-                        <span className="font-medium text-foreground/80">{log.gmto} GMTO</span>
-                        <span className="opacity-50">•</span>
-                        <span>Gross: {currencySymbol}{logGross.toFixed(2)}</span>
+                    <div className="flex items-start sm:items-center gap-3 w-full sm:w-auto sm:flex-1 min-w-0">
+                      <div className="flex w-12 shrink-0 flex-col items-center font-mono text-[11px] mt-0.5 sm:mt-0">
+                        <span className="text-foreground">{log.time}</span>
+                      </div>
+                      <span className={`size-1.5 shrink-0 rounded-full ${log.color} mt-2 sm:mt-0`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm text-foreground">{log.title}</div>
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5 text-muted-foreground text-xs">
+                          <Image src="/gmto.png" alt="GMTO" width={20} height={20} className="object-contain shrink-0" />
+                          <span className="font-medium text-foreground/80 truncate">{log.gmto} GMTO</span>
+                          <span className="opacity-50 shrink-0">•</span>
+                          <span className="truncate">Gross: {currencySymbol}{logGross.toFixed(2)}</span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Status & Action Buttons */}
-                    <div className="shrink-0 flex items-center gap-2">
-                      {log.is_sold && (
-                        <span className="text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full tracking-wider border border-emerald-500/20">
-                          Sold
-                        </span>
-                      )}
-                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity">
-                        <button onClick={() => openEditLogModal(log)} className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit Log">
-                          <PencilIcon className="size-3.5" />
-                        </button>
-                        <button onClick={() => openDeleteLogModal(log.id)} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors" title="Delete Log">
-                          <TrashIcon className="size-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="text-right ml-2 shrink-0">
-                      <div className="text-sm font-medium text-emerald-500/90">
-                        +{currencySymbol}{log.is_sold ? log.fiat_received.toFixed(2) : logGross.toFixed(2)}
-                      </div>
-                      {log.is_sold && (
-                        <div className="text-[10px] text-muted-foreground/70 mt-0.5">
-                          Sold Price
+                    <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto shrink-0 pl-[4.5rem] sm:pl-0 mt-1 sm:mt-0">
+                      <div className="flex items-center gap-2">
+                        {log.is_sold && (
+                          <span className="text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full tracking-wider border border-emerald-500/20">
+                            Sold
+                          </span>
+                        )}
+                        <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                          <button onClick={() => openEditLogModal(log)} className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit Log">
+                            <PencilIcon className="size-3.5" />
+                          </button>
+                          <button onClick={() => openDeleteLogModal(log.id)} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors" title="Delete Log">
+                            <TrashIcon className="size-3.5" />
+                          </button>
                         </div>
-                      )}
+                      </div>
+
+                      <div className="text-right ml-2 shrink-0">
+                        <div className="text-sm font-medium text-emerald-500/90">
+                          +{currencySymbol}{log.is_sold ? log.fiat_received.toFixed(2) : logGross.toFixed(2)}
+                        </div>
+                        {log.is_sold && (
+                          <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                            Sold Price
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </li>
                 );
