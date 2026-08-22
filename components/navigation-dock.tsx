@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, BarChart2, Settings, LogOut, Loader2, Target } from "lucide-react";
-import { toast } from "sonner";
+import { Home, BarChart2, Settings, LogOut, Loader2 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -70,22 +70,6 @@ export function NavigationDock() {
           </Link>
         </DockIcon>
 
-        <DockIcon>
-          <button
-            onClick={() => toast.info("Goal tracking is coming soon!", { classNames: { icon: "text-primary" } })}
-            className="flex size-full items-center justify-center rounded-full transition-colors text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-          >
-            <Tooltip>
-              <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
-                <Target className="size-4 sm:size-5" />
-              </TooltipTrigger>
-              <TooltipContent sideOffset={12}>
-                <p>Goals</p>
-              </TooltipContent>
-            </Tooltip>
-          </button>
-        </DockIcon>
-        
         <DockIcon>
           <Link
             href="/dashboard/settings"
