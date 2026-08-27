@@ -200,13 +200,20 @@ export default function TempMailPage() {
 
   // ── Destroy session ──
   const handleDestroy = async () => {
+    if (!session) return;
     setDestroying(true);
+    const prevAddress = session.address;
     try {
       await fetch("/api/temp-mail/create", { method: "DELETE" });
       setSession(null);
       setMessages([]);
       setSelectedMsg(null);
-      // Keep username in the field so user can quickly regenerate
+      
+      // Keep username/domain in the field so user can quickly regenerate
+      const [u, d] = prevAddress.split("@");
+      if (u) setUsername(u);
+      if (d) setDomain(d);
+      
       toast.success("Temp email destroyed.", { classNames: { icon: "text-green-500" } });
     } catch {
       toast.error("Failed to destroy session.", { classNames: { icon: "text-destructive" } });
