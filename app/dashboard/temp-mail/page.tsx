@@ -72,14 +72,28 @@ function prepareHtml(html: string) {
 }
 
 // ─── Random username (letters only) ──────────────────────────────────────────
-const WORD_PARTS = [
+const ADJECTIVES = [
   "star","moon","blue","red","oak","pine","fox","hawk","wolf","jade",
   "nova","echo","river","sage","dawn","dusk","mist","storm","bright","swift",
   "calm","bold","keen","lone","wild","fire","ice","cloud","peak","ray",
+  "amber","onyx","ivory","cobalt","slate","ember","coral","fern","teal","ash",
+  "gold","silver","bronze","iron","steel","solar","lunar","arctic","coastal","alpine",
+  "deep","vast","noir","pure","dark","glow","zen","free","true","prime",
+  "crisp","sharp","cool","warm","clear","raw","soft","keen","rare","fine",
+];
+const NOUNS = [
+  "blade","wave","crest","drift","veil","path","gate","core","forge","realm",
+  "ridge","vale","shore","grove","field","brook","creek","cliff","dune","plain",
+  "vault","rift","spire","grove","haven","cape","bay","glen","ford","moor",
+  "hawk","wolf","raven","crane","falcon","heron","tern","kite","swift","wren",
+  "stone","marble","flint","quartz","obsidian","topaz","garnet","pearl","opal","ruby",
+  "trail","track","route","lane","road","pass","bridge","arch","tower","dome",
+  "spark","flame","ember","frost","gust","tide","surge","pulse","flow","beam",
+  "ghost","shade","echo","trace","signal","cypher","vector","node","cipher","prism",
 ];
 function generateRandomUsername(): string {
-  const a = WORD_PARTS[Math.floor(Math.random() * WORD_PARTS.length)];
-  const b = WORD_PARTS[Math.floor(Math.random() * WORD_PARTS.length)];
+  const a = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const b = NOUNS[Math.floor(Math.random() * NOUNS.length)];
   return `${a}${b}`;
 }
 
