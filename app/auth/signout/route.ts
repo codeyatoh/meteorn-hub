@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
   )
 
-  await supabase.auth.signOut()
+  await supabase.auth.signOut({ scope: 'local' })
 
   return NextResponse.redirect(new URL('/login', request.url))
 }

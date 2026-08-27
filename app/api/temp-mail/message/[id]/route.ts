@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import PostalMime from 'postal-mime';
 
 /**
  * GET /api/temp-mail/message/[id]
@@ -39,14 +40,17 @@ export async function GET(
       return NextResponse.json({ error: 'Message not found.' }, { status: 404 });
     }
 
+    const parser = new PostalMime();
+    const parsedEmail = await parser.parse(msg.body || '');
+
     return NextResponse.json({
       id: msg.id.toString(),
-      subject: msg.subject || '(No subject)',
-      from: { address: msg.mail_from, name: '' },
-      to: [{ address: msg.mail_to }],
+      subject: parsedEmail.subject || msg.subject || '(No subject)',
+      from: parsedEmail.from ? { address: parsedEmail.from.address, name: parsedEmail.from.name } : { address: msg.mail_from, name: '' },
+      to: parsedEmail.to && parsedEmail.to.length > 0 ? parsedEmail.to.map(t => ({ address: t.address })) : [{ address: msg.mail_to }],
       createdAt: msg.received_at,
-      text: msg.body || '',
-      html: msg.body ? [msg.body] : [],
+      text: parsedEmail.text || '',
+      html: parsedEmail.html ? [parsedEmail.html] : [],
       seen: true,
     });
   } catch (err) {
