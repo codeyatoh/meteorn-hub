@@ -83,10 +83,13 @@ const ADJECTIVES = [
   "mystic","silent","broken","frozen","hollow","radiant","ancient","hidden","sacred","cursed",
   "bright","faded","vivid","smoky","hazy","misty","dusky","sunny","shady","rainy",
   "velvet","silken","rough","smooth","heavy","light","tangled","twisted","gentle","fierce",
-  "crimson","violet","indigo","scarlet","golden","silver","ebony","pearl","topaz","emerald",
+  "crimson","violet","indigo","scarlet","golden","ebony","pearl","topaz","emerald","sapphire",
   "cosmic","stellar","galactic","orbital","quantum","digital","electric","magnetic","atomic","sonic",
-  "frozen","blazing","shining","drifting","rising","falling","flying","burning","glowing","fading",
-  "lucky","clever","silent","hollow","broken","restless","endless","fearless","timeless","boundless",
+  "blazing","shining","drifting","rising","falling","flying","burning","glowing","fading","surging",
+  "lucky","clever","restless","endless","fearless","timeless","boundless","weightless","breathless","careless",
+  // Medaka color types (as adjectives)
+  "hikari","miyuki","platinum","albino","kohaku","shiro","orochi","ginga","ryusei","yukiguni",
+  "hagoromo","rakuraku","kaga","panda","shirogane","matsukaze","yamato","daruma","balloon","lyretail",
 ];
 const NOUNS = [
   "blade","wave","crest","drift","veil","path","gate","core","forge","realm",
@@ -97,13 +100,20 @@ const NOUNS = [
   "trail","track","route","lane","road","pass","bridge","arch","tower","dome",
   "spark","flame","ember","frost","gust","tide","surge","pulse","flow","beam",
   "ghost","shade","echo","trace","signal","cypher","vector","node","cipher","prism",
-  "arrow","shield","lance","crown","throne","forge","anvil","hammer","chain","key",
+  "arrow","shield","lance","crown","throne","anvil","hammer","chain","key","seal",
   "horizon","zenith","orbit","galaxy","cosmos","nebula","pulsar","quasar","comet","meteor",
   "canyon","cavern","lagoon","delta","basin","crater","summit","glacier","tundra","marsh",
-  "phoenix","dragon","serpent","chimera","golem","specter","wraith","shade","titan","colossus",
-  "circuit","matrix","kernel","daemon","cipher","vector","pixel","codec","shader","render",
-  "storm","thunder","lightning","cyclone","tempest","squall","gale","torrent","blizzard","avalanche",
-  "garden","forest","jungle","desert","island","mountain","ocean","valley","meadow","canyon",
+  "phoenix","dragon","serpent","chimera","golem","specter","wraith","titan","colossus","leviathan",
+  "circuit","matrix","kernel","daemon","pixel","codec","shader","render","buffer","thread",
+  "storm","thunder","cyclone","tempest","squall","gale","torrent","blizzard","avalanche","tsunami",
+  "garden","forest","jungle","desert","island","mountain","ocean","valley","meadow","reef",
+  // Medaka fish variety names (as nouns)
+  "medaka","oryzias","koi","guppy","betta","tetro","neon","danio","rasbora","molly",
+  "platy","swordtail","endler","gambusia","furcata","celebes","ricefish","killifish","panchax","aphyosemion",
+  // Extra nature/element words
+  "aurora","solstice","equinox","eclipse","zenith","meridian","parallax","vortex","anomaly","paradox",
+  "crystal","diamond","sapphire","amethyst","tourmaline","malachite","citrine","peridot","zircon","tanzanite",
+  "monsoon","typhoon","sirocco","mistral","zephyr","haboob","chinook","foehn","tramontane","bora",
 ];
 function generateRandomUsername(): string {
   const a = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
