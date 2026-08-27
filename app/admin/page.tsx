@@ -8,6 +8,7 @@ import { AdminIncomeChart } from "@/features/admin/components/admin-income-chart
 import { AutoRefresh } from "@/components/auto-refresh";
 import { RealtimeSync } from "@/components/realtime-sync";
 import { AdminCurrencySelector } from "@/features/admin/components/admin-currency-selector";
+import { MaintenanceCard } from "@/features/admin/components/maintenance-card";
 
 export default async function AdminOverviewPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -149,6 +150,9 @@ export default async function AdminOverviewPage(props: { searchParams: Promise<{
             <AdminIncomeChart data={chartData} gmtoPrice={gmtoPrice} currencySymbol={currencySymbol} />
           </div>
         </div>
+
+        {/* Database Maintenance */}
+        <MaintenanceCard />
 
       </div>
     </div>
