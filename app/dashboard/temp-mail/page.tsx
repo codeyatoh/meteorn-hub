@@ -117,11 +117,13 @@ export default function TempMailPage() {
   // ── Countdown timer ──
   useEffect(() => {
     if (!session) return;
+    const t = setTimeout(() => setCountdown(formatCountdown(session.expires_at)), 0);
     if (countdownRef.current) clearInterval(countdownRef.current);
     countdownRef.current = setInterval(() => {
       setCountdown(formatCountdown(session.expires_at));
     }, 1000);
     return () => {
+      clearTimeout(t);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, [session]);
@@ -142,7 +144,12 @@ export default function TempMailPage() {
       if (!res.ok) return;
       const data = await res.json();
       setSession({ address: data.address, expires_at: data.expires_at });
-      setMessages(data.messages ?? []);
+      
+      const currentReadIds = new Set(JSON.parse(localStorage.getItem('temp_mail_read') || '[]'));
+      setMessages((data.messages ?? []).map((m: Message) => ({
+        ...m,
+        seen: currentReadIds.has(m.id)
+      })));
     } catch {
       if (!silent) toast.error("Failed to refresh inbox.");
     } finally {
@@ -218,6 +225,10 @@ export default function TempMailPage() {
       const data = await res.json();
       setSelectedMsg(data);
       // Mark as seen locally
+      const currentReadIds = new Set(JSON.parse(localStorage.getItem('temp_mail_read') || '[]'));
+      currentReadIds.add(id);
+      localStorage.setItem('temp_mail_read', JSON.stringify(Array.from(currentReadIds)));
+      
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, seen: true } : m)));
     } catch {
       toast.error("Failed to load message.", { classNames: { icon: "text-destructive" } });
@@ -271,58 +282,84 @@ export default function TempMailPage() {
               transition={{ duration: 0.2 }}
               className="space-y-4"
             >
-              <button
-                onClick={() => setSelectedMsg(null)}
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronLeft className="size-4" />
-                Back to inbox
-              </button>
+              <div className="flex items-center justify-between mb-2">
+                <button
+                  onClick={() => setSelectedMsg(null)}
+                  className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground bg-foreground/5 hover:bg-foreground/10 px-4 py-2 rounded-full transition-all"
+                >
+                  <ChevronLeft className="size-4" />
+                  Back to inbox
+                </button>
+              </div>
 
-              <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden">
+              <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-background/80 to-background/40 overflow-hidden shadow-xl shadow-black/5 backdrop-blur-xl relative">
+                {/* Decorative blur */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none -z-10" />
+
                 {/* Email header */}
-                <div className="p-5 border-b border-border/40 space-y-2">
-                  <h2 className="text-base font-semibold text-foreground leading-snug">
-                    {selectedMsg.subject || "(No subject)"}
-                  </h2>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-mono uppercase tracking-wider text-[10px]">From</span>
-                      <span className="text-foreground">
-                        {selectedMsg.from.name
-                          ? `${selectedMsg.from.name} <${selectedMsg.from.address}>`
-                          : selectedMsg.from.address}
-                      </span>
+                <div className="p-6 sm:p-8 border-b border-border/40 relative">
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
+                    <div className="space-y-5 flex-1 min-w-0">
+                      <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-snug tracking-tight truncate whitespace-normal break-words">
+                        {selectedMsg.subject || "(No subject)"}
+                      </h2>
+                      
+                      <div className="flex items-center gap-3">
+                        {/* Avatar */}
+                        <div className="size-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg flex-shrink-0 border border-primary/20">
+                          {(selectedMsg.from.name || selectedMsg.from.address).charAt(0).toUpperCase()}
+                        </div>
+                        
+                        <div className="flex flex-col gap-0.5 text-sm min-w-0">
+                          <div className="flex items-center gap-2 text-foreground flex-wrap">
+                            <span className="font-semibold truncate max-w-full">
+                              {selectedMsg.from.name || selectedMsg.from.address.split('@')[0]}
+                            </span>
+                            <span className="text-muted-foreground/60 text-xs truncate">
+                              &lt;{selectedMsg.from.address}&gt;
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1.5 truncate">
+                            To: <span className="text-foreground/80 font-mono text-[11px] truncate">{selectedMsg.to?.[0]?.address ?? session?.address}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-mono uppercase tracking-wider text-[10px]">To</span>
-                      <span className="text-foreground">{selectedMsg.to?.[0]?.address ?? session?.address}</span>
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-1">
+
+                    <div className="text-xs text-muted-foreground font-mono bg-foreground/5 px-3 py-1.5 rounded-md border border-border/30 flex-shrink-0 self-start">
                       {new Date(selectedMsg.createdAt).toLocaleString("en-US", {
-                        month: "short", day: "numeric", year: "numeric",
-                        hour: "numeric", minute: "2-digit",
+                        month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
                       })}
                     </div>
                   </div>
                 </div>
 
                 {/* Email body */}
-                <div className="bg-[#fdfdfd] dark:bg-zinc-100 m-5 rounded-xl border border-black/5 dark:border-white/10 overflow-hidden shadow-sm relative">
-                  {selectedMsg.html?.length > 0 ? (
-                    <iframe
-                      srcDoc={prepareHtml(selectedMsg.html[0])}
-                      className="w-full min-h-[500px] bg-transparent border-0"
-                      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-                      title="Email content"
-                    />
-                  ) : (
-                    <div className="p-6 overflow-auto">
-                      <pre className="text-sm text-zinc-900 whitespace-pre-wrap font-sans leading-relaxed">
-                        {selectedMsg.text || "(Empty message)"}
-                      </pre>
+                <div className="p-4 sm:p-8 bg-black/10 dark:bg-black/30">
+                  <div className="bg-white rounded-xl overflow-hidden shadow-2xl border border-white/20 relative mx-auto w-full max-w-full ring-1 ring-black/5">
+                    {/* Top bar like macOS / Mail window */}
+                    <div className="h-10 bg-[#f4f5f5] border-b border-black/5 flex items-center px-4 gap-2">
+                      <div className="size-3 rounded-full bg-[#ff5f56]" />
+                      <div className="size-3 rounded-full bg-[#ffbd2e]" />
+                      <div className="size-3 rounded-full bg-[#27c93f]" />
                     </div>
-                  )}
+
+                    {selectedMsg.html?.length > 0 ? (
+                      <iframe
+                        srcDoc={prepareHtml(selectedMsg.html[0])}
+                        className="w-full min-h-[500px] bg-white border-0"
+                        sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                        title="Email content"
+                      />
+                    ) : (
+                      <div className="p-6 sm:p-10 overflow-auto bg-white min-h-[300px]">
+                        <pre className="text-sm text-zinc-800 whitespace-pre-wrap font-sans leading-relaxed">
+                          {selectedMsg.text || "(Empty message)"}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
