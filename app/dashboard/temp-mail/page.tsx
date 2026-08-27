@@ -1,0 +1,596 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import {
+  Mail,
+  Copy,
+  CheckIcon,
+  RefreshCw,
+  Trash2,
+  Clock,
+  Inbox,
+  ChevronDown,
+  ChevronLeft,
+  Loader2,
+  AtSign,
+} from "lucide-react";
+import { GenerateButton } from "@/components/ui/generate-button";
+import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { AnimatePresence, motion } from "motion/react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Message = {
+  id: string;
+  subject: string;
+  from: { address: string; name: string };
+  createdAt: string;
+  seen: boolean;
+  intro: string;
+};
+
+type MessageDetail = Message & {
+  to: { address: string }[];
+  text: string;
+  html: string[];
+};
+
+type Session = {
+  address: string;
+  expires_at: string;
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatRelativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function formatCountdown(expiresAt: string) {
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  if (diff <= 0) return "00:00";
+  const mins = Math.floor(diff / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function prepareHtml(html: string) {
+  if (!html) return "";
+  const baseTag = '<base target="_blank">';
+  const styleTag = '<style>body { overflow-x: hidden !important; word-wrap: break-word !important; overflow-wrap: break-word !important; font-family: system-ui, -apple-system, sans-serif; } img { max-width: 100% !important; height: auto !important; }</style>';
+  
+  if (html.toLowerCase().includes('<head>')) {
+    return html.replace(/<head>/i, `<head>${baseTag}${styleTag}`);
+  }
+  return baseTag + styleTag + html;
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function TempMailPage() {
+  const [pageLoading, setPageLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+
+  // Generator form
+  const [username, setUsername] = useState("");
+  const [domain, setDomain] = useState("");
+  const [domains, setDomains] = useState<string[]>([]);
+  const [domainOpen, setDomainOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  // Inbox
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedMsg, setSelectedMsg] = useState<MessageDetail | null>(null);
+  const [loadingMsg, setLoadingMsg] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [destroying, setDestroying] = useState(false);
+  const [inboxPage, setInboxPage] = useState(0);
+  const INBOX_PAGE_SIZE = 8;
+
+  // Countdown
+  const [countdown, setCountdown] = useState("10:00");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Load existing session + domains on mount ──
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/temp-mail/session").then((r) => r.json()),
+      fetch("/api/temp-mail/domains").then((r) => r.json()),
+      new Promise((res) => setTimeout(res, 800)),
+    ]).then(([sessionData, domainData]) => {
+      if (sessionData.session) {
+        setSession(sessionData.session);
+      }
+      if (domainData.domains?.length) {
+        setDomains(domainData.domains);
+        setDomain(domainData.domains[0] || ''); // Default to first (yatmail.lat)
+      }
+    }).finally(() => setPageLoading(false));
+  }, []);
+
+  // ── Countdown timer ──
+  useEffect(() => {
+    if (!session) return;
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setCountdown(formatCountdown(session.expires_at));
+    }, 1000);
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [session]);
+
+  // ── Auto-refresh inbox every 10 seconds ──
+  const fetchMessages = useCallback(async (silent = true) => {
+    if (!silent) setRefreshing(true);
+    try {
+      const res = await fetch("/api/temp-mail/messages");
+      if (res.status === 410 || res.status === 404) {
+        // Session expired
+        setSession(null);
+        setMessages([]);
+        if (pollRef.current) clearInterval(pollRef.current);
+        if (!silent) toast.error("Session expired. Generate a new address.");
+        return;
+      }
+      if (!res.ok) return;
+      const data = await res.json();
+      setSession({ address: data.address, expires_at: data.expires_at });
+      setMessages(data.messages ?? []);
+    } catch {
+      if (!silent) toast.error("Failed to refresh inbox.");
+    } finally {
+      if (!silent) setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      if (pollRef.current) clearInterval(pollRef.current);
+      return;
+    }
+    // Immediately fetch (deferred to avoid synchronous setState in effect)
+    const t = setTimeout(() => fetchMessages(true), 0);
+    pollRef.current = setInterval(() => fetchMessages(true), 10000);
+    return () => {
+      clearTimeout(t);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [session, fetchMessages]);
+
+  // ── Generate new temp email ──
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !domain) return;
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/temp-mail/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim().toLowerCase(), domain }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to create mailbox.", { classNames: { icon: "text-destructive" } });
+        return;
+      }
+      setSession({ address: data.address, expires_at: data.expires_at });
+      setMessages([]);
+      setSelectedMsg(null);
+      toast.success(`Inbox ready: ${data.address}`, { classNames: { icon: "text-green-500" } });
+    } catch {
+      toast.error("Network error. Please try again.", { classNames: { icon: "text-destructive" } });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // ── Destroy session ──
+  const handleDestroy = async () => {
+    setDestroying(true);
+    try {
+      await fetch("/api/temp-mail/create", { method: "DELETE" });
+      setSession(null);
+      setMessages([]);
+      setSelectedMsg(null);
+      setUsername("");
+      toast.success("Temp email destroyed.", { classNames: { icon: "text-green-500" } });
+    } catch {
+      toast.error("Failed to destroy session.", { classNames: { icon: "text-destructive" } });
+    } finally {
+      setDestroying(false);
+    }
+  };
+
+  // ── Open message detail ──
+  const openMessage = async (id: string) => {
+    setLoadingMsg(true);
+    setSelectedMsg(null);
+    try {
+      const res = await fetch(`/api/temp-mail/message/${id}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSelectedMsg(data);
+      // Mark as seen locally
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, seen: true } : m)));
+    } catch {
+      toast.error("Failed to load message.", { classNames: { icon: "text-destructive" } });
+    } finally {
+      setLoadingMsg(false);
+    }
+  };
+
+  // ── Copy email address ──
+  const copyAddress = () => {
+    if (!session) return;
+    navigator.clipboard.writeText(session.address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (pageLoading) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
+        <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 sm:px-6 py-10 relative min-h-screen">
+      <div className="mx-auto max-w-3xl">
+
+        {/* ── Header ── */}
+        <div className="mb-8">
+          <div className="inline-flex items-center justify-center px-3 py-1 text-[10px] font-mono font-medium tracking-widest text-primary uppercase bg-primary/10 rounded-full mb-3">
+            <Mail className="size-3 mr-2" />
+            Temp Mail
+          </div>
+          <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+            Temporary Email
+          </h1>
+          <p className="mt-2 text-muted-foreground text-sm">
+            Generate a disposable email address to receive codes and verifications.
+          </p>
+        </div>
+
+        {/* ── Message Detail View ── */}
+        <AnimatePresence mode="wait">
+          {selectedMsg && (
+            <motion.div
+              key="detail"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
+              <button
+                onClick={() => setSelectedMsg(null)}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronLeft className="size-4" />
+                Back to inbox
+              </button>
+
+              <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden">
+                {/* Email header */}
+                <div className="p-5 border-b border-border/40 space-y-2">
+                  <h2 className="text-base font-semibold text-foreground leading-snug">
+                    {selectedMsg.subject || "(No subject)"}
+                  </h2>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-mono uppercase tracking-wider text-[10px]">From</span>
+                      <span className="text-foreground">
+                        {selectedMsg.from.name
+                          ? `${selectedMsg.from.name} <${selectedMsg.from.address}>`
+                          : selectedMsg.from.address}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-mono uppercase tracking-wider text-[10px]">To</span>
+                      <span className="text-foreground">{selectedMsg.to?.[0]?.address ?? session?.address}</span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      {new Date(selectedMsg.createdAt).toLocaleString("en-US", {
+                        month: "short", day: "numeric", year: "numeric",
+                        hour: "numeric", minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email body */}
+                <div className="bg-[#fdfdfd] dark:bg-zinc-100 m-5 rounded-xl border border-black/5 dark:border-white/10 overflow-hidden shadow-sm relative">
+                  {selectedMsg.html?.length > 0 ? (
+                    <iframe
+                      srcDoc={prepareHtml(selectedMsg.html[0])}
+                      className="w-full min-h-[500px] bg-transparent border-0"
+                      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                      title="Email content"
+                    />
+                  ) : (
+                    <div className="p-6 overflow-auto">
+                      <pre className="text-sm text-zinc-900 whitespace-pre-wrap font-sans leading-relaxed">
+                        {selectedMsg.text || "(Empty message)"}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {!selectedMsg && (
+            <motion.div
+              key="main"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              {/* ── Active Session Card ── */}
+              {session ? (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1.5">
+                        Active Inbox
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-lg font-semibold text-foreground font-mono break-all">
+                          {session.address}
+                        </span>
+                        <button
+                          onClick={copyAddress}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-all ${
+                            copied
+                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                              : "bg-foreground/5 text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+                          }`}
+                        >
+                          {copied ? (
+                            <><CheckIcon className="size-3" /> Copied</>
+                          ) : (
+                            <><Copy className="size-3" /> Copy</>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleDestroy}
+                      disabled={destroying}
+                      className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                      title="Destroy this inbox"
+                    >
+                      {destroying ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                    </button>
+                  </div>
+
+                  {/* Timer */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="size-3.5" />
+                    <span>
+                      Resets on incoming mail · expires in{" "}
+                      <span className={`font-mono font-medium ${
+                        parseInt(countdown.split(":")[0]) < 2 ? "text-destructive" : "text-foreground"
+                      }`}>
+                        {countdown}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* ── Generator Form ── */
+                <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Generate Address
+                  </div>
+
+                  <form onSubmit={handleGenerate} className="space-y-4">
+                    {/* Username + Domain row */}
+                    <div className="flex flex-col sm:flex-row items-stretch gap-3">
+                      {/* Username */}
+                      <div className="flex-[2] relative">
+                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                          <AtSign className="size-4 text-muted-foreground/70" />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="yourusername"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+                          minLength={3}
+                          maxLength={30}
+                          required
+                          className="w-full h-11 rounded-xl border border-border/50 bg-background/50 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-muted-foreground/50 font-mono shadow-sm"
+                        />
+                      </div>
+
+                      {/* Domain Dropdown */}
+                      <div className="flex-1 relative">
+                        <button
+                          type="button"
+                          onClick={() => setDomainOpen((o) => !o)}
+                          className={`w-full h-11 flex items-center justify-between gap-2 px-4 rounded-xl border border-border/50 bg-background/50 text-sm font-mono transition-colors shadow-sm ${
+                            domainOpen ? "ring-1 ring-primary/50 border-primary/50" : "hover:bg-foreground/[0.03]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 truncate">
+                            <><span className="text-muted-foreground/60">@</span><span className="truncate">{domain}</span></>
+                          </div>
+                          <ChevronDown className={`size-4 text-muted-foreground transition-transform flex-shrink-0 ${domainOpen ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {domainOpen && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setDomainOpen(false)} />
+                            <div className="absolute z-50 right-0 top-full mt-1.5 w-full min-w-[220px] rounded-xl border border-border bg-background shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                              <div className="py-1">
+                                {/* Domain list */}
+                                {domains.map((d) => (
+                                  <button
+                                    key={d}
+                                    type="button"
+                                    onClick={() => { setDomain(d); setDomainOpen(false); }}
+                                    className={`w-full px-4 py-2.5 text-sm text-left font-mono transition-colors flex items-center justify-between ${
+                                      domain === d
+                                        ? "bg-primary/10 text-primary"
+                                        : "text-foreground hover:bg-foreground/[0.04]"
+                                    }`}
+                                  >
+                                    <span className="truncate">@{d}</span>
+                                    {domain === d && <CheckIcon className="size-3.5 flex-shrink-0" />}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground/80 font-medium">
+                      3–30 characters · lowercase letters, numbers, dots, and dashes allowed
+                    </p>
+
+                    <div className="pt-2">
+                      <GenerateButton 
+                        onClick={handleGenerate}
+                        isGenerating={generating}
+                        disabled={generating || !username || !domain}
+                        hue={210}
+                      />
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* ── Inbox ── */}
+              {session && (
+                <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden">
+                  {/* Inbox header */}
+                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40">
+                    <div className="flex items-center gap-2">
+                      <Inbox className="size-4 text-muted-foreground" />
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Inbox
+                      </span>
+                      {messages.filter((m) => !m.seen).length > 0 && (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                          {messages.filter((m) => !m.seen).length}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => fetchMessages(false)}
+                      disabled={refreshing}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                      {refreshing ? "Refreshing..." : "Refresh"}
+                    </button>
+                  </div>
+
+                  {/* Message list */}
+                  {loadingMsg ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-6">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Mail className="size-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Waiting for emails</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Auto-refreshes every 10 seconds. Send an email to{" "}
+                          <span className="font-mono text-foreground">{session.address}</span>
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border/30">
+                      {messages
+                        .slice(inboxPage * INBOX_PAGE_SIZE, (inboxPage + 1) * INBOX_PAGE_SIZE)
+                        .map((msg) => (
+                        <button
+                          key={msg.id}
+                          onClick={() => openMessage(msg.id)}
+                          className="w-full text-left px-5 py-4 hover:bg-foreground/[0.02] transition-colors group"
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Unread dot */}
+                            <div className="mt-1.5 flex-shrink-0">
+                              <span className={`block size-2 rounded-full ${msg.seen ? "bg-transparent" : "bg-primary"}`} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className={`text-sm truncate ${msg.seen ? "text-muted-foreground font-normal" : "text-foreground font-medium"}`}>
+                                  {msg.from.name || msg.from.address}
+                                </span>
+                                <span className="text-[11px] text-muted-foreground flex-shrink-0">
+                                  {formatRelativeTime(msg.createdAt)}
+                                </span>
+                              </div>
+                              <p className={`text-sm truncate mt-0.5 ${msg.seen ? "text-muted-foreground/60" : "text-foreground/80"}`}>
+                                {msg.subject || "(No subject)"}
+                              </p>
+                              {msg.intro && (
+                                <p className="text-xs text-muted-foreground/50 truncate mt-0.5">
+                                  {msg.intro}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer + Pagination */}
+                  <div className="px-5 py-3 border-t border-border/40 flex items-center justify-between gap-3">
+                    <p className="text-[10px] text-muted-foreground font-mono">
+                      {messages.length} message{messages.length !== 1 ? "s" : ""} · auto-refreshing every 10s
+                    </p>
+                    {messages.length > INBOX_PAGE_SIZE && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setInboxPage((p) => Math.max(0, p - 1))}
+                          disabled={inboxPage === 0}
+                          className="h-6 w-6 flex items-center justify-center rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronLeft className="size-3.5" />
+                        </button>
+                        <span className="text-[10px] font-mono text-muted-foreground">
+                          {inboxPage + 1} / {Math.ceil(messages.length / INBOX_PAGE_SIZE)}
+                        </span>
+                        <button
+                          onClick={() => setInboxPage((p) => Math.min(Math.ceil(messages.length / INBOX_PAGE_SIZE) - 1, p + 1))}
+                          disabled={inboxPage >= Math.ceil(messages.length / INBOX_PAGE_SIZE) - 1}
+                          className="h-6 w-6 flex items-center justify-center rounded-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronDown className="size-3.5 -rotate-90" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}

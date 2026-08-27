@@ -11,7 +11,7 @@ import {
   type CartesianViewBox,
 } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { useMotionValueEvent, useSpring } from "motion/react";
+import { useMotionValueEvent, useSpring, useMotionValue } from "motion/react";
 import NumberFlow from "@number-flow/react";
 import * as React from "react";
 import Image from "next/image";
@@ -53,31 +53,32 @@ export function AdminIncomeChart({ data, gmtoPrice, currencySymbol }: AdminIncom
       ? { index: activeIndex, date: data[activeIndex].date, amount: data[activeIndex].amount }
       : maxData;
 
-  const valueSpring = useSpring(selectedData.amount, { stiffness: 110, damping: 20 });
+  const motionValue = useMotionValue(selectedData.amount);
+  const valueSpring = useSpring(motionValue, { stiffness: 110, damping: 20 });
   const [springValue, setSpringValue] = React.useState(selectedData.amount);
+
+  React.useEffect(() => {
+    motionValue.set(selectedData.amount);
+  }, [selectedData.amount, motionValue]);
 
   const handleBarHover = React.useCallback(
     (index: number) => {
       setActiveIndex(index);
-      valueSpring.set(data[index]?.amount ?? maxData.amount);
     },
-    [data, maxData.amount, valueSpring],
+    [],
   );
 
   useMotionValueEvent(valueSpring, "change", (latest) => {
-    setSpringValue(latest);
+    // Avoid synchronous state updates during render to prevent Maximum update depth exceeded
+    setTimeout(() => {
+      setSpringValue(latest);
+    }, 0);
   });
 
-  const [prevData, setPrevData] = React.useState(data);
-  if (prevData !== data) {
-    setPrevData(data);
-    setActiveIndex(null);
-  }
-
   React.useEffect(() => {
-    valueSpring.set(maxData.amount);
-  }, [maxData.amount, valueSpring]);
-
+    const t = setTimeout(() => setActiveIndex(null), 0);
+    return () => clearTimeout(t);
+  }, [data]);
   if (data.length === 0) {
     return (
       <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
@@ -132,7 +133,6 @@ export function AdminIncomeChart({ data, gmtoPrice, currencySymbol }: AdminIncom
             }}
             onMouseLeave={() => {
               setActiveIndex(null);
-              valueSpring.set(maxData.amount);
             }}
           >
             <XAxis

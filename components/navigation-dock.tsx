@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, BarChart2, Settings, LogOut, Loader2 } from "lucide-react";
+import { Home, BarChart2, Settings, LogOut, Loader2, Mail } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Dock, DockIcon } from "@/components/ui/dock";
@@ -65,6 +65,25 @@ export function NavigationDock() {
               </TooltipTrigger>
               <TooltipContent sideOffset={12}>
                 <p>Analytics</p>
+              </TooltipContent>
+            </Tooltip>
+          </Link>
+        </DockIcon>
+
+        <DockIcon>
+          <Link
+            href="/dashboard/temp-mail"
+            className={cn(
+              "flex size-full items-center justify-center rounded-full transition-colors",
+              pathname?.startsWith("/dashboard/temp-mail") ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+            )}
+          >
+            <Tooltip>
+              <TooltipTrigger render={<div className="flex size-full items-center justify-center" />}>
+                <Mail className="size-4 sm:size-5" />
+              </TooltipTrigger>
+              <TooltipContent sideOffset={12}>
+                <p>Temp Mail</p>
               </TooltipContent>
             </Tooltip>
           </Link>
