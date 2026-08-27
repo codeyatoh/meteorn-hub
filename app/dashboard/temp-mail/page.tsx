@@ -106,10 +106,16 @@ export default function TempMailPage() {
     ]).then(([sessionData, domainData]) => {
       if (sessionData.session) {
         setSession(sessionData.session);
+        // Pre-fill username from existing active session
+        const [u, d] = (sessionData.session.address as string).split('@');
+        if (u) setUsername(u);
+        if (d) setDomain(d);
       }
       if (domainData.domains?.length) {
         setDomains(domainData.domains);
-        setDomain(domainData.domains[0] || ''); // Default to first (yatmail.lat)
+        if (!sessionData.session) {
+          setDomain(domainData.domains[0] || ''); // Default only if no session
+        }
       }
     }).finally(() => setPageLoading(false));
   }, []);
@@ -134,11 +140,18 @@ export default function TempMailPage() {
     try {
       const res = await fetch("/api/temp-mail/messages");
       if (res.status === 410 || res.status === 404) {
-        // Session expired
-        setSession(null);
+        // Session expired — retain username so user can quickly regenerate
+        setSession((prev) => {
+          if (prev?.address) {
+            const [u, d] = prev.address.split('@');
+            setUsername(u ?? '');
+            setDomain((currentDomain) => d ?? currentDomain);
+          }
+          return null;
+        });
         setMessages([]);
         if (pollRef.current) clearInterval(pollRef.current);
-        if (!silent) toast.error("Session expired. Generate a new address.");
+        toast.error("Your temp email has expired. Generate a new one.", { classNames: { icon: 'text-destructive' } });
         return;
       }
       if (!res.ok) return;
