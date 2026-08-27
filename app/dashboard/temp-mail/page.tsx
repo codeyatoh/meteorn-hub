@@ -206,7 +206,7 @@ export default function TempMailPage() {
       setSession(null);
       setMessages([]);
       setSelectedMsg(null);
-      setUsername("");
+      // Keep username in the field so user can quickly regenerate
       toast.success("Temp email destroyed.", { classNames: { icon: "text-green-500" } });
     } catch {
       toast.error("Failed to destroy session.", { classNames: { icon: "text-destructive" } });
