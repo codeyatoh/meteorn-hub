@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   Loader2,
   AtSign,
+  Shuffle,
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
@@ -68,6 +69,18 @@ function prepareHtml(html: string) {
     return html.replace(/<head>/i, `<head>${baseTag}${styleTag}`);
   }
   return baseTag + styleTag + html;
+}
+
+// ─── Random username (letters only) ──────────────────────────────────────────
+const WORD_PARTS = [
+  "star","moon","blue","red","oak","pine","fox","hawk","wolf","jade",
+  "nova","echo","river","sage","dawn","dusk","mist","storm","bright","swift",
+  "calm","bold","keen","lone","wild","fire","ice","cloud","peak","ray",
+];
+function generateRandomUsername(): string {
+  const a = WORD_PARTS[Math.floor(Math.random() * WORD_PARTS.length)];
+  const b = WORD_PARTS[Math.floor(Math.random() * WORD_PARTS.length)];
+  return `${a}${b}`;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -469,8 +482,18 @@ export default function TempMailPage() {
                           minLength={3}
                           maxLength={30}
                           required
-                          className="w-full h-11 rounded-xl border border-border/50 bg-background/50 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-muted-foreground/50 font-mono shadow-sm"
+                          className="w-full h-11 rounded-xl border border-border/50 bg-background/50 pl-9 pr-24 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-muted-foreground/50 font-mono shadow-sm"
                         />
+                        {/* Random username button */}
+                        <button
+                          type="button"
+                          title="Generate random letters-only username"
+                          onClick={() => setUsername(generateRandomUsername())}
+                          className="absolute inset-y-0 right-2 flex items-center gap-1 px-2 my-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold transition-all"
+                        >
+                          <Shuffle className="size-3" />
+                          Random
+                        </button>
                       </div>
 
                       {/* Domain Dropdown */}
