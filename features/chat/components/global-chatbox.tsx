@@ -129,13 +129,13 @@ export function GlobalChatbox() {
         { event: "INSERT", schema: "public", table: "global_chats" },
         async (payload) => {
           const newMsg = payload.new as GlobalChat;
+          // Use RPC to get display name — reads auth.users via SECURITY DEFINER
           const { data: ua } = await supabase
-            .from("profiles")
-            .select("full_name, role")
-            .eq("id", newMsg.user_id)
+            .rpc("get_chat_profiles", { user_ids: [newMsg.user_id] })
             .single();
 
-          const fullMsg: GlobalChat = { ...newMsg, user_profile: ua };
+          const fullMsg: GlobalChat = { ...newMsg, user_profile: ua ? { full_name: (ua as {full_name: string; role: string}).full_name, role: (ua as {full_name: string; role: string}).role } : null };
+
 
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
@@ -175,14 +175,13 @@ export function GlobalChatbox() {
     };
   }, [currentUserId, supabase]);
 
-  // Helper: fetch user names for a list of user_ids
+  // Helper: fetch user display names for a list of user_ids via secure RPC
   const fetchUserNames = useCallback(async (userIds: string[]) => {
     if (userIds.length === 0) return new Map<string, { full_name?: string; role?: string }>();
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, full_name, role")
-      .in("id", userIds);
-    return new Map((data ?? []).map((u) => [u.id, { full_name: u.full_name, role: u.role }]));
+    const { data, error } = await supabase
+      .rpc("get_chat_profiles", { user_ids: userIds });
+    if (error) console.error("[Chat] fetchUserNames RPC error:", error.message);
+    return new Map((data ?? []).map((u: { user_id: string; full_name: string; role: string }) => [u.user_id, { full_name: u.full_name, role: u.role }]));
   }, [supabase]);
 
   // Load initial messages as soon as auth resolves

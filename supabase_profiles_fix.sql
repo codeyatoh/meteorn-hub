@@ -1,66 +1,34 @@
 -- ============================================================
--- COMPLETE PROFILES FIX
+-- CHAT DISPLAY NAMES — Clean RPC Approach
 -- Run this entire script in Supabase SQL Editor
 -- ============================================================
 
--- 1. Allow authenticated users to read any profile (for chat display names)
---    Without this, the chat cannot see other users' nicknames.
+-- Drop old broken policies if they were partially created
 DROP POLICY IF EXISTS "Authenticated users can view all profiles" ON public.profiles;
-CREATE POLICY "Authenticated users can view all profiles"
-  ON public.profiles FOR SELECT
-  USING (auth.role() = 'authenticated');
-
--- 2. Allow users to INSERT their own profile row (needed on first login)
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
-CREATE POLICY "Users can insert own profile"
-  ON public.profiles FOR INSERT
-  WITH CHECK (auth.uid() = id);
+DROP TRIGGER IF EXISTS on_auth_user_created_or_updated ON auth.users;
+DROP FUNCTION IF EXISTS public.sync_user_profile();
 
--- 3. Backfill: Sync existing auth.users nickname → profiles.full_name
---    (Copies data for any user who already completed onboarding)
-INSERT INTO public.profiles (id, full_name, role)
-SELECT
-  id,
-  COALESCE(
-    raw_user_meta_data->>'nickname',
-    split_part(email, '@', 1)
-  ) AS full_name,
-  COALESCE(raw_user_meta_data->>'role', 'user') AS role
-FROM auth.users
-ON CONFLICT (id) DO UPDATE
-  SET full_name = EXCLUDED.full_name,
-      role = EXCLUDED.role;
-
--- 4. Create trigger function: auto-sync nickname to profiles on auth.users update
-CREATE OR REPLACE FUNCTION public.sync_user_profile()
-RETURNS TRIGGER
-LANGUAGE plpgsql
+-- Create a SECURITY DEFINER function that reads auth.users on behalf of the caller.
+-- This bypasses RLS on auth.users and returns ONLY safe display fields (nickname, role).
+-- Authenticated users can call this function to look up any user's display name.
+CREATE OR REPLACE FUNCTION public.get_chat_profiles(user_ids uuid[])
+RETURNS TABLE(user_id uuid, full_name text, role text)
+LANGUAGE sql
 SECURITY DEFINER
+STABLE
 SET search_path = public
 AS $$
-BEGIN
-  INSERT INTO public.profiles (id, full_name, role)
-  VALUES (
-    NEW.id,
+  SELECT
+    id AS user_id,
     COALESCE(
-      NEW.raw_user_meta_data->>'nickname',
-      split_part(NEW.email, '@', 1)
-    ),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'user')
-  )
-  ON CONFLICT (id) DO UPDATE
-    SET full_name = COALESCE(
-          NEW.raw_user_meta_data->>'nickname',
-          split_part(NEW.email, '@', 1)
-        ),
-        role = COALESCE(NEW.raw_user_meta_data->>'role', 'user'),
-        updated_at = now();
-  RETURN NEW;
-END;
+      raw_user_meta_data->>'nickname',
+      split_part(email, '@', 1)
+    ) AS full_name,
+    COALESCE(raw_user_meta_data->>'role', 'user') AS role
+  FROM auth.users
+  WHERE id = ANY(user_ids);
 $$;
 
--- 5. Wire the trigger on auth.users (fires on INSERT and UPDATE)
-DROP TRIGGER IF EXISTS on_auth_user_created_or_updated ON auth.users;
-CREATE TRIGGER on_auth_user_created_or_updated
-  AFTER INSERT OR UPDATE ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.sync_user_profile();
+-- Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION public.get_chat_profiles(uuid[]) TO authenticated;
