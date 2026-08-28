@@ -69,10 +69,7 @@ export function AdminIncomeChart({ data, gmtoPrice, currencySymbol }: AdminIncom
   );
 
   useMotionValueEvent(valueSpring, "change", (latest) => {
-    // Avoid synchronous state updates during render to prevent Maximum update depth exceeded
-    setTimeout(() => {
-      setSpringValue(latest);
-    }, 0);
+    setSpringValue(latest);
   });
 
   React.useEffect(() => {

@@ -364,13 +364,16 @@ export function GlobalChatbox() {
             onClick={() => togglePanel("gif")}
             title="GIFs"
             className={[
-              "p-2 rounded-xl transition-colors text-sm font-bold leading-none",
+              "p-1.5 rounded-xl transition-colors",
               activePanel === "gif"
                 ? "bg-primary/20 text-primary"
                 : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
             ].join(" ")}
           >
-            GIF
+            <svg viewBox="0 0 24 24" className="size-5 fill-current" aria-label="GIF">
+              <rect x="2" y="6" width="20" height="12" rx="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="800" fontFamily="monospace" fill="currentColor" letterSpacing="0.5">GIF</text>
+            </svg>
           </button>
 
           {/* Text input */}
