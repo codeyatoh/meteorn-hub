@@ -795,18 +795,6 @@ export default function UserDashboardPage() {
           </div>
           
           <div className="flex items-end gap-2">
-            {/* Global Wallet Button */}
-            {globalWalletAddress && (
-              <button
-                type="button"
-                onClick={() => openViewWalletModal()}
-                className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
-                title="View My Wallet"
-              >
-                <WalletIcon className="size-3.5" />
-                <span className="hidden sm:inline">Wallet</span>
-              </button>
-            )}
             <div className="flex flex-col items-start sm:items-end space-y-1.5 relative">
               <label className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Currency</label>
               <div className="relative">
@@ -854,6 +842,21 @@ export default function UserDashboardPage() {
                 )}
               </div>
             </div>
+
+            {/* Global Wallet Button — after currency */}
+            {globalWalletAddress && (
+              <div className="flex flex-col items-center space-y-1.5">
+                <label className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Wallet</label>
+                <button
+                  type="button"
+                  onClick={() => openViewWalletModal()}
+                  className="flex items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/20 transition-colors h-[34px]"
+                  title="View My Wallet"
+                >
+                  <WalletIcon className="size-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
