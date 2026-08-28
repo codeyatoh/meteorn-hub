@@ -140,6 +140,7 @@ export default function TempMailPage() {
   const [loadingMsg, setLoadingMsg] = useState(false);
   const [copied, setCopied] = useState(false);
   const [destroying, setDestroying] = useState(false);
+  const destroyingRef = useRef(false);
   const [inboxPage, setInboxPage] = useState(0);
   const INBOX_PAGE_SIZE = 8;
 
@@ -202,7 +203,9 @@ export default function TempMailPage() {
         });
         setMessages([]);
         if (pollRef.current) clearInterval(pollRef.current);
-        toast.error("Your temp email has expired. Generate a new one.", { classNames: { icon: 'text-destructive' } });
+        if (!destroyingRef.current) {
+          toast.error("Your temp email has expired. Generate a new one.", { classNames: { icon: 'text-destructive' } });
+        }
         return;
       }
       if (!res.ok) return;
@@ -240,6 +243,7 @@ export default function TempMailPage() {
     e.preventDefault();
     if (!username.trim() || !domain) return;
     setGenerating(true);
+    destroyingRef.current = false;
     try {
       const res = await fetch("/api/temp-mail/create", {
         method: "POST",
@@ -266,6 +270,7 @@ export default function TempMailPage() {
   const handleDestroy = async () => {
     if (!session) return;
     setDestroying(true);
+    destroyingRef.current = true;
     const prevAddress = session.address;
     try {
       await fetch("/api/temp-mail/create", { method: "DELETE" });
@@ -280,6 +285,7 @@ export default function TempMailPage() {
       
       toast.success("Temp email destroyed.", { classNames: { icon: "text-green-500" } });
     } catch {
+      destroyingRef.current = false;
       toast.error("Failed to destroy session.", { classNames: { icon: "text-destructive" } });
     } finally {
       setDestroying(false);
