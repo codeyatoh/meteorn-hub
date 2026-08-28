@@ -1,17 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { MessageCircle, Minimize2, Send, Smile, Image as ImageIcon, X } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { MessageCircle, X, Send, Smile, ImageIcon, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { ChatMessage } from "@/components/ui/chat-message";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 import { GiphyFetch } from "@giphy/js-fetch-api";
 import { Grid } from "@giphy/react-components";
+import type { IGif } from "@giphy/js-types";
 
-const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY || "");
+const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY ?? "");
 
 type GlobalChat = {
   id: number;
@@ -20,7 +19,7 @@ type GlobalChat = {
   type: string;
   gif_url: string | null;
   created_at: string;
-  users?: { name?: string; avatar?: string };
+  user_accounts?: { name?: string; avatar?: string } | null;
 };
 
 type Reaction = {
@@ -30,64 +29,67 @@ type Reaction = {
   emoji: string;
 };
 
+type PanelType = "emoji" | "gif" | null;
+
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "👀"];
+
 export function GlobalChatbox() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<GlobalChat[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [input, setInput] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [gifSearch, setGifSearch] = useState("");
+  const [hoveredMsg, setHoveredMsg] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  const fetchGifs = (offset: number) => {
-    return gifSearch ? gf.search(gifSearch, { offset, limit: 10 }) : gf.trending({ offset, limit: 10 });
-  };
-
+  // Fetch current user once
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setCurrentUserId(user.id);
-    };
-    fetchUser();
+    });
   }, [supabase]);
 
+  // Load data and subscribe when opened
   useEffect(() => {
     if (!isOpen || !currentUserId) return;
-    
-    // Load initial messages
-    const loadData = async () => {
+
+    const load = async () => {
       const { data: chats } = await supabase
         .from("global_chats")
-        .select(`*, users:user_accounts(name, avatar)`)
+        .select("*, user_accounts(name, avatar)")
         .order("created_at", { ascending: false })
         .limit(50);
-      
-      if (chats) setMessages(chats.reverse());
+
+      if (chats) setMessages((chats as GlobalChat[]).reverse());
 
       const { data: rx } = await supabase.from("chat_reactions").select("*");
-      if (rx) setReactions(rx);
+      if (rx) setReactions(rx as Reaction[]);
     };
-    loadData();
+    load();
 
-    // Subscribe to new messages
-    const chatSub = supabase.channel('global_chats_changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'global_chats' }, async (payload) => {
+    const chatSub = supabase
+      .channel("global_chats_realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chats" }, async (payload) => {
         const newMsg = payload.new as GlobalChat;
-        // Fetch user info for new message
-        const { data: userData } = await supabase.from('user_accounts').select('name, avatar').eq('user_id', newMsg.user_id).single();
-        setMessages(prev => [...prev, { ...newMsg, users: userData || {} }]);
+        const { data: ua } = await supabase
+          .from("user_accounts")
+          .select("name, avatar")
+          .eq("user_id", newMsg.user_id)
+          .single();
+        setMessages((prev) => [...prev, { ...newMsg, user_accounts: ua }]);
       })
       .subscribe();
 
-    const rxSub = supabase.channel('chat_reactions_changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_reactions' }, (payload) => {
-        setReactions(prev => [...prev, payload.new as Reaction]);
+    const rxSub = supabase
+      .channel("chat_reactions_realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_reactions" }, (payload) => {
+        setReactions((prev) => [...prev, payload.new as Reaction]);
       })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chat_reactions' }, (payload) => {
-        setReactions(prev => prev.filter(r => r.id !== payload.old.id));
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "chat_reactions" }, (payload) => {
+        setReactions((prev) => prev.filter((r) => r.id !== (payload.old as Reaction).id));
       })
       .subscribe();
 
@@ -95,229 +97,313 @@ export function GlobalChatbox() {
       supabase.removeChannel(chatSub);
       supabase.removeChannel(rxSub);
     };
-  }, [isOpen, supabase]);
+  }, [isOpen, currentUserId, supabase]);
 
+  // Scroll to bottom on new message
   useEffect(() => {
     if (messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
-  const handleSendText = async (e: React.FormEvent) => {
+  const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !currentUserId) return;
     const msg = input.trim();
     setInput("");
-    setShowEmojiPicker(false);
-    
-    await supabase.from("global_chats").insert({
-      user_id: currentUserId,
-      message: msg,
-      type: "text"
-    });
+    setActivePanel(null);
+    await supabase.from("global_chats").insert({ user_id: currentUserId, message: msg, type: "text" });
   };
 
-  const handleSendGif = async (gif: any, e: React.SyntheticEvent<HTMLElement, Event>) => {
+  const sendGif = async (gif: IGif, e: React.SyntheticEvent<HTMLElement, Event>) => {
     e.preventDefault();
-    setShowGifPicker(false);
+    if (!currentUserId) return;
+    setActivePanel(null);
     await supabase.from("global_chats").insert({
       user_id: currentUserId,
       type: "gif",
-      gif_url: gif.images.fixed_height.url
+      gif_url: gif.images.fixed_height.url,
     });
   };
 
   const toggleReaction = async (messageId: number, emoji: string) => {
-    const existing = reactions.find(r => r.message_id === messageId && r.user_id === currentUserId && r.emoji === emoji);
+    if (!currentUserId) return;
+    const existing = reactions.find(
+      (r) => r.message_id === messageId && r.user_id === currentUserId && r.emoji === emoji
+    );
     if (existing) {
+      setReactions((prev) => prev.filter((r) => r.id !== existing.id));
       await supabase.from("chat_reactions").delete().match({ id: existing.id });
-      // Optimistic delete
-      setReactions(prev => prev.filter(r => r.id !== existing.id));
     } else {
-      const { data } = await supabase.from("chat_reactions").insert({
-        message_id: messageId,
-        user_id: currentUserId,
-        emoji
-      }).select().single();
-      // Optimistic insert
-      if (data) setReactions(prev => [...prev, data]);
+      const { data } = await supabase
+        .from("chat_reactions")
+        .insert({ message_id: messageId, user_id: currentUserId, emoji })
+        .select()
+        .single();
+      if (data) setReactions((prev) => [...prev, data as Reaction]);
     }
   };
 
-  const quickReactions = ["👍", "❤️", "😂", "🔥", "👀"];
+  const togglePanel = (panel: PanelType) => {
+    setActivePanel((prev) => (prev === panel ? null : panel));
+  };
+
+  const fetchGifs = useCallback(
+    (offset: number) =>
+      gifSearch ? gf.search(gifSearch, { offset, limit: 12 }) : gf.trending({ offset, limit: 12 }),
+    [gifSearch]
+  );
 
   if (!currentUserId) return null;
 
+  // — Closed state: floating bubble —
   if (!isOpen) {
     return (
-      <div className="fixed bottom-4 right-4 z-[100] sm:bottom-6 sm:right-6">
-        <Button 
+      <div className="fixed bottom-24 right-4 z-[90] sm:bottom-6 sm:right-6">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(true)}
-          className="rounded-full size-12 shadow-lg shadow-primary/20 bg-background/50 border border-primary/30 text-primary hover:bg-background/80 transition-all duration-300 backdrop-blur-md"
+          className="size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
         >
-          <MessageCircle className="size-6" />
-        </Button>
+          <MessageCircle className="size-5" />
+        </motion.button>
       </div>
     );
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] sm:bottom-6 sm:right-6 w-[350px] max-h-[600px] h-[80vh] flex flex-col bg-background/60 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
+    <div
+      className={[
+        "fixed z-[90] flex flex-col",
+        // Mobile: full-width bottom sheet above nav dock
+        "bottom-20 left-2 right-2 max-h-[65vh]",
+        // Desktop: floating panel bottom-right
+        "sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-h-[600px] sm:h-[80vh]",
+        "bg-background/70 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden",
+        "animate-in slide-in-from-bottom-4 fade-in duration-300",
+      ].join(" ")}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-foreground/[0.02]">
+      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border/40">
         <div className="flex items-center gap-2">
-          <MessageCircle className="size-4 text-primary" />
-          <span className="font-mono text-xs uppercase tracking-wider font-semibold text-foreground">Global Chat</span>
+          <div className="size-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="font-mono text-[11px] uppercase tracking-widest font-bold text-foreground/80">
+            Global Chat
+          </span>
         </div>
-        <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-          <Minimize2 className="size-4" />
+        <button
+          onClick={() => setIsOpen(false)}
+          className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-foreground/5"
+        >
+          <ChevronDown className="size-4" />
         </button>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0">
+        {messages.length === 0 && (
+          <div className="h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center">
+            <p>No messages yet.<br />Be the first to say something! 👋</p>
+          </div>
+        )}
         {messages.map((msg) => {
           const isMe = msg.user_id === currentUserId;
-          const msgReactions = reactions.filter(r => r.message_id === msg.id);
-          // Group reactions by emoji
-          const groupedReactions = msgReactions.reduce((acc, r) => {
+          const msgRx = reactions.filter((r) => r.message_id === msg.id);
+          const grouped = msgRx.reduce((acc, r) => {
             acc[r.emoji] = (acc[r.emoji] || 0) + 1;
             return acc;
           }, {} as Record<string, number>);
 
           return (
-            <div key={msg.id} className="group relative flex flex-col">
+            <div
+              key={msg.id}
+              className="flex flex-col gap-0.5 group"
+              onMouseEnter={() => setHoveredMsg(msg.id)}
+              onMouseLeave={() => setHoveredMsg(null)}
+            >
               {!isMe && (
-                <div className="text-[10px] text-muted-foreground mb-1 ml-1 flex items-center gap-1.5">
-                  <span className="font-semibold text-foreground/80">{msg.users?.name || "Player"}</span>
-                </div>
+                <span className="text-[10px] font-semibold text-muted-foreground ml-1">
+                  {msg.user_accounts?.name ?? "Player"}
+                </span>
               )}
-              
-              <div className={`flex items-end gap-2 relative ${isMe ? "self-end" : "self-start"}`}>
-                <ChatMessage
-                  from={isMe ? "user" : "assistant"}
-                  time={format(new Date(msg.created_at), "h:mm a")}
-                  className="max-w-full"
+
+              <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                {/* Bubble */}
+                <div
+                  className={[
+                    "max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-snug",
+                    isMe
+                      ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
+                      : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
+                  ].join(" ")}
                 >
-                  {msg.type === "text" && msg.message}
+                  {msg.type === "text" && <span>{msg.message}</span>}
                   {msg.type === "gif" && msg.gif_url && (
-                    <img src={msg.gif_url} alt="GIF" className="max-w-[200px] rounded-md object-contain" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={msg.gif_url} alt="GIF" className="max-w-[180px] rounded-lg object-contain" />
                   )}
-                </ChatMessage>
-                
-                {/* Reaction Popover (appears on hover) */}
-                <div className={`absolute bottom-0 p-1 bg-background border border-border rounded-full shadow-lg flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 ${isMe ? "right-full mr-2" : "left-full ml-2"}`}>
-                  {quickReactions.map(emoji => (
-                    <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)} className="hover:scale-125 transition-transform text-sm">
-                      {emoji}
-                    </button>
-                  ))}
                 </div>
+
+                {/* Quick react on hover */}
+                <AnimatePresence>
+                  {hoveredMsg === msg.id && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg"
+                    >
+                      {QUICK_REACTIONS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => toggleReaction(msg.id, emoji)}
+                          className="text-sm hover:scale-125 transition-transform leading-none"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              {/* Display Reactions */}
-              {Object.keys(groupedReactions).length > 0 && (
-                <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
-                  {Object.entries(groupedReactions).map(([emoji, count]) => {
-                    const iReacted = msgReactions.some(r => r.emoji === emoji && r.user_id === currentUserId);
+              {/* Reaction pills */}
+              {Object.keys(grouped).length > 0 && (
+                <div className={`flex flex-wrap gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                  {Object.entries(grouped).map(([emoji, count]) => {
+                    const iReacted = msgRx.some((r) => r.emoji === emoji && r.user_id === currentUserId);
                     return (
-                      <button 
-                        key={emoji} 
+                      <button
+                        key={emoji}
                         onClick={() => toggleReaction(msg.id, emoji)}
-                        className={`px-1.5 py-0.5 rounded-full border text-[10px] flex items-center gap-1 transition-colors ${iReacted ? "bg-primary/20 border-primary/50" : "bg-foreground/[0.05] border-border/50 hover:bg-foreground/[0.1]"}`}
+                        className={[
+                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border transition-colors",
+                          iReacted
+                            ? "bg-primary/20 border-primary/40 text-primary"
+                            : "bg-foreground/[0.04] border-border/40 text-muted-foreground hover:bg-foreground/[0.08]",
+                        ].join(" ")}
                       >
                         <span>{emoji}</span>
-                        <span className={iReacted ? "text-primary" : "text-muted-foreground"}>{count}</span>
+                        <span>{count}</span>
                       </button>
-                    )
+                    );
                   })}
                 </div>
               )}
+
+              {/* Timestamp */}
+              <span className={`text-[9px] text-muted-foreground/50 px-1 ${isMe ? "text-right" : "text-left"}`}>
+                {format(new Date(msg.created_at), "h:mm a")}
+              </span>
             </div>
           );
         })}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Popovers for GIF/Emoji */}
+      {/* Emoji / GIF Panel — unified, tabbed */}
       <AnimatePresence>
-        {showGifPicker && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-16 left-2 right-2 h-[300px] bg-background border border-border rounded-xl shadow-xl overflow-hidden flex flex-col z-20"
+        {activePanel !== null && (
+          <motion.div
+            key={activePanel}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: activePanel === "emoji" ? 350 : 300, opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="shrink-0 border-t border-border/40 overflow-hidden bg-background/80"
           >
-            <div className="p-2 border-b border-border flex items-center justify-between">
-              <input 
-                type="text" 
-                placeholder="Search GIFs..." 
-                className="w-full bg-transparent text-sm focus:outline-none"
-                value={gifSearch}
-                onChange={e => setGifSearch(e.target.value)}
+            {activePanel === "emoji" && (
+              <EmojiPicker
+                theme={Theme.DARK}
+                width="100%"
+                height={350}
+                onEmojiClick={(data: EmojiClickData) => setInput((prev) => prev + data.emoji)}
+                lazyLoadEmojis
               />
-              <button onClick={() => setShowGifPicker(false)}><X className="size-4 text-muted-foreground hover:text-foreground" /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-1 custom-scrollbar">
-              <Grid 
-                width={330} 
-                columns={3} 
-                fetchGifs={fetchGifs} 
-                key={gifSearch} 
-                onGifClick={handleSendGif} 
-                noLink
-              />
-            </div>
-          </motion.div>
-        )}
-        
-        {showEmojiPicker && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-16 right-2 z-20"
-          >
-            <EmojiPicker 
-              theme={Theme.DARK}
-              onEmojiClick={(emoji: EmojiClickData) => setInput(prev => prev + emoji.emoji)}
-            />
+            )}
+            {activePanel === "gif" && (
+              <div className="flex flex-col h-[300px]">
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-border/40">
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search GIFs..."
+                    value={gifSearch}
+                    onChange={(e) => setGifSearch(e.target.value)}
+                    className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/60"
+                  />
+                  {gifSearch && (
+                    <button onClick={() => setGifSearch("")} className="text-muted-foreground hover:text-foreground">
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 overflow-y-auto p-1">
+                  <Grid
+                    key={gifSearch}
+                    width={340}
+                    columns={3}
+                    fetchGifs={fetchGifs}
+                    onGifClick={sendGif}
+                    noLink
+                  />
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Input Area */}
-      <div className="p-3 border-t border-border/50 bg-foreground/[0.02]">
-        <form onSubmit={handleSendText} className="flex items-center gap-2 relative bg-background/50 border border-input rounded-full px-3 py-2 focus-within:border-primary/50 transition-colors">
-          <button 
-            type="button" 
-            onClick={() => { setShowGifPicker(!showGifPicker); setShowEmojiPicker(false); }}
-            className={`text-muted-foreground hover:text-foreground transition-colors ${showGifPicker ? "text-primary" : ""}`}
+      {/* Input */}
+      <div className="shrink-0 p-3 border-t border-border/40 bg-background/50">
+        <form onSubmit={sendText} className="flex items-center gap-2">
+          {/* GIF button */}
+          <button
+            type="button"
+            onClick={() => togglePanel("gif")}
             title="GIFs"
+            className={[
+              "p-2 rounded-xl transition-colors text-sm font-bold leading-none",
+              activePanel === "gif"
+                ? "bg-primary/20 text-primary"
+                : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
+            ].join(" ")}
           >
-            <ImageIcon className="size-4" />
+            GIF
           </button>
-          
-          <input 
+
+          {/* Text input */}
+          <input
             type="text"
             placeholder="Chat with everyone..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1 bg-transparent text-sm focus:outline-none text-foreground placeholder:text-muted-foreground/70"
-            onClick={() => { setShowGifPicker(false); setShowEmojiPicker(false); }}
+            className="flex-1 bg-foreground/[0.04] border border-border/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors placeholder:text-muted-foreground/60"
           />
 
-          <button 
-            type="button" 
-            onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowGifPicker(false); }}
-            className={`text-muted-foreground hover:text-foreground transition-colors ${showEmojiPicker ? "text-primary" : ""}`}
-            title="Emojis"
+          {/* Emoji button */}
+          <button
+            type="button"
+            onClick={() => togglePanel("emoji")}
+            title="Emoji"
+            className={[
+              "p-2 rounded-xl transition-colors",
+              activePanel === "emoji"
+                ? "bg-primary/20 text-primary"
+                : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
+            ].join(" ")}
           >
             <Smile className="size-4" />
           </button>
-          
-          <button 
+
+          {/* Send button */}
+          <button
             type="submit"
             disabled={!input.trim()}
-            className="bg-primary text-primary-foreground rounded-full p-1.5 disabled:opacity-50 hover:bg-primary/90 transition-colors"
+            className="p-2 rounded-xl bg-primary text-primary-foreground disabled:opacity-40 hover:bg-primary/90 transition-colors"
           >
-            <Send className="size-3" />
+            <Send className="size-4" />
           </button>
         </form>
       </div>
