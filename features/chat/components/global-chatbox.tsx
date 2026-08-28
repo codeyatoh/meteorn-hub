@@ -76,8 +76,10 @@ export function GlobalChatbox() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const isOpenRef = useRef(false);
-  isOpenRef.current = isOpen;
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // Stable supabase client — never recreated on re-render
   const supabase = useMemo(() => createClient(), []);
@@ -364,11 +366,9 @@ export function GlobalChatbox() {
                 onMouseEnter={() => setHoveredMsg(msg.id)}
                 onMouseLeave={() => setHoveredMsg(null)}
               >
-                {!isMe && (
-                  <span className="text-[10px] font-semibold text-muted-foreground ml-1">
-                    {msg.user_accounts?.name ?? "Player"}
-                  </span>
-                )}
+                <span className={`text-[10px] font-semibold text-muted-foreground px-1 ${isMe ? "text-right" : "text-left"}`}>
+                  {msg.user_accounts?.name ?? "Player"}
+                </span>
 
                 <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                   <div
@@ -454,7 +454,7 @@ export function GlobalChatbox() {
           >
             {activePanel === "emoji" && (
               <EmojiPicker
-                theme={"dark" as any}
+                theme={"dark" as "dark" | "light" | "auto"}
                 width="100%"
                 height={350}
                 onEmojiClick={(data: EmojiClickData) => setInput((prev) => prev + data.emoji)}
@@ -504,16 +504,15 @@ export function GlobalChatbox() {
             onClick={() => togglePanel("gif")}
             title="GIFs"
             className={[
-              "p-1.5 rounded-xl transition-colors",
+              "p-1.5 rounded-xl transition-colors flex items-center justify-center",
               activePanel === "gif"
                 ? "bg-primary/20 text-primary"
                 : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
             ].join(" ")}
           >
-            <svg viewBox="0 0 24 24" className="size-5 fill-current" aria-label="GIF">
-              <rect x="2" y="6" width="20" height="12" rx="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              <text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="800" fontFamily="monospace" fill="currentColor" letterSpacing="0.5">GIF</text>
-            </svg>
+            <div className="border-[1.5px] border-current rounded-[4px] px-1 py-0.5 text-[10px] font-black leading-none tracking-wider">
+              GIF
+            </div>
           </button>
 
           <input
