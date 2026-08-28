@@ -63,7 +63,7 @@ function formatCountdown(expiresAt: string) {
 function prepareHtml(html: string) {
   if (!html) return "";
   const baseTag = '<base target="_blank">';
-  const styleTag = '<style>body { overflow-x: hidden !important; word-wrap: break-word !important; overflow-wrap: break-word !important; font-family: system-ui, -apple-system, sans-serif; } img { max-width: 100% !important; height: auto !important; }</style>';
+  const styleTag = '<style>body { overflow-x: hidden !important; word-wrap: break-word !important; overflow-wrap: break-word !important; font-family: system-ui, -apple-system, sans-serif; background-color: transparent !important; color: CanvasText; color-scheme: light dark; } img { max-width: 100% !important; height: auto !important; }</style>';
   
   if (html.toLowerCase().includes('<head>')) {
     return html.replace(/<head>/i, `<head>${baseTag}${styleTag}`);
@@ -413,25 +413,18 @@ export default function TempMailPage() {
                 </div>
 
                 {/* Email body */}
-                <div className="p-4 sm:p-8 bg-black/10 dark:bg-black/30">
-                  <div className="bg-white rounded-xl overflow-hidden shadow-2xl border border-white/20 relative mx-auto w-full max-w-full ring-1 ring-black/5">
-                    {/* Top bar like macOS / Mail window */}
-                    <div className="h-10 bg-[#f4f5f5] border-b border-black/5 flex items-center px-4 gap-2">
-                      <div className="size-3 rounded-full bg-[#ff5f56]" />
-                      <div className="size-3 rounded-full bg-[#ffbd2e]" />
-                      <div className="size-3 rounded-full bg-[#27c93f]" />
-                    </div>
-
+                <div className="p-4 sm:p-8 border-t border-border/40">
+                  <div className="rounded-xl overflow-hidden border border-border/20 relative mx-auto w-full max-w-full bg-background/50">
                     {selectedMsg.html?.length > 0 ? (
                       <iframe
                         srcDoc={prepareHtml(selectedMsg.html[0])}
-                        className="w-full min-h-[500px] bg-white border-0"
+                        className="w-full min-h-[500px] border-0 bg-transparent"
                         sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
                         title="Email content"
                       />
                     ) : (
-                      <div className="p-6 sm:p-10 overflow-auto bg-white min-h-[300px]">
-                        <pre className="text-sm text-zinc-800 whitespace-pre-wrap font-sans leading-relaxed">
+                      <div className="p-6 sm:p-10 overflow-auto bg-transparent min-h-[300px]">
+                        <pre className="text-sm text-foreground whitespace-pre-wrap font-sans leading-relaxed">
                           {selectedMsg.text || "(Empty message)"}
                         </pre>
                       </div>
