@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { MessageCircle, X, Send, Smile, ImageIcon, ChevronDown } from "lucide-react";
+import { MessageCircle, X, Send, Smile, ChevronDown, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -11,6 +11,7 @@ import { Grid } from "@giphy/react-components";
 import type { IGif } from "@giphy/js-types";
 
 const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY ?? "");
+const PAGE_SIZE = 30;
 
 type GlobalChat = {
   id: number;
@@ -33,6 +34,35 @@ type PanelType = "emoji" | "gif" | null;
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "👀"];
 
+// Play a Discord-like ping sound using Web Audio API
+function playPing() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.35);
+  } catch {
+    // AudioContext may be blocked before user interaction — ignore silently
+  }
+}
+
+async function resolveUserName(supabase: ReturnType<typeof createClient>, userId: string) {
+  const { data } = await supabase
+    .from("user_accounts")
+    .select("name, avatar")
+    .eq("user_id", userId)
+    .single();
+  return data;
+}
+
 export function GlobalChatbox() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -42,7 +72,12 @@ export function GlobalChatbox() {
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [gifSearch, setGifSearch] = useState("");
   const [hoveredMsg, setHoveredMsg] = useState<number | null>(null);
+  const [unread, setUnread] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
   // Fetch current user once
@@ -52,41 +87,45 @@ export function GlobalChatbox() {
     });
   }, [supabase]);
 
-  // Load data and subscribe when opened
+  // Subscribe to realtime regardless of whether chat is open (for badge + sound)
   useEffect(() => {
-    if (!isOpen || !currentUserId) return;
-
-    const load = async () => {
-      const { data: chats } = await supabase
-        .from("global_chats")
-        .select("*, user_accounts(name, avatar)")
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (chats) setMessages((chats as GlobalChat[]).reverse());
-
-      const { data: rx } = await supabase.from("chat_reactions").select("*");
-      if (rx) setReactions(rx as Reaction[]);
-    };
-    load();
+    if (!currentUserId) return;
 
     const chatSub = supabase
       .channel("global_chats_realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chats" }, async (payload) => {
-        const newMsg = payload.new as GlobalChat;
-        const { data: ua } = await supabase
-          .from("user_accounts")
-          .select("name, avatar")
-          .eq("user_id", newMsg.user_id)
-          .single();
-        setMessages((prev) => [...prev, { ...newMsg, user_accounts: ua }]);
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "global_chats" },
+        async (payload) => {
+          const newMsg = payload.new as GlobalChat;
+          const ua = await resolveUserName(supabase, newMsg.user_id);
+          const fullMsg = { ...newMsg, user_accounts: ua };
+
+          setMessages((prev) => {
+            // Avoid duplicates
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, fullMsg];
+          });
+
+          // Play sound and increment badge only for messages from others
+          if (newMsg.user_id !== currentUserId) {
+            playPing();
+            setIsOpen((open) => {
+              if (!open) setUnread((u) => u + 1);
+              return open;
+            });
+          }
+        }
+      )
       .subscribe();
 
     const rxSub = supabase
       .channel("chat_reactions_realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_reactions" }, (payload) => {
-        setReactions((prev) => [...prev, payload.new as Reaction]);
+        setReactions((prev) => {
+          if (prev.some((r) => r.id === (payload.new as Reaction).id)) return prev;
+          return [...prev, payload.new as Reaction];
+        });
       })
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "chat_reactions" }, (payload) => {
         setReactions((prev) => prev.filter((r) => r.id !== (payload.old as Reaction).id));
@@ -97,14 +136,89 @@ export function GlobalChatbox() {
       supabase.removeChannel(chatSub);
       supabase.removeChannel(rxSub);
     };
+  }, [currentUserId, supabase]);
+
+  // Load initial messages on first open
+  const initialLoaded = useRef(false);
+  useEffect(() => {
+    if (!isOpen || !currentUserId || initialLoaded.current) return;
+    initialLoaded.current = true;
+
+    const loadInitial = async () => {
+      const { data: chats } = await supabase
+        .from("global_chats")
+        .select("*, user_accounts(name, avatar)")
+        .order("created_at", { ascending: false })
+        .limit(PAGE_SIZE);
+
+      if (chats) {
+        const reversed = (chats as GlobalChat[]).reverse();
+        setMessages(reversed);
+        setHasMore(chats.length === PAGE_SIZE);
+      }
+
+      const { data: rx } = await supabase.from("chat_reactions").select("*");
+      if (rx) setReactions(rx as Reaction[]);
+    };
+
+    loadInitial();
   }, [isOpen, currentUserId, supabase]);
 
-  // Scroll to bottom on new message
+  // Load reactions for new messages as they arrive
+  const loadOlder = useCallback(async () => {
+    if (loadingMore || !hasMore || messages.length === 0) return;
+    setLoadingMore(true);
+
+    const oldestId = messages[0].id;
+    const prevScrollHeight = scrollRef.current?.scrollHeight ?? 0;
+
+    const { data: chats } = await supabase
+      .from("global_chats")
+      .select("*, user_accounts(name, avatar)")
+      .lt("id", oldestId)
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
+
+    if (chats && chats.length > 0) {
+      const older = (chats as GlobalChat[]).reverse();
+      setMessages((prev) => [...older, ...prev]);
+      setHasMore(chats.length === PAGE_SIZE);
+
+      // Restore scroll position so the view doesn't jump
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight - prevScrollHeight;
+        }
+      });
+    } else {
+      setHasMore(false);
+    }
+
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, messages, supabase]);
+
+  // Scroll listener to trigger load-older
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    if (scrollRef.current.scrollTop < 80) {
+      loadOlder();
+    }
+  }, [loadOlder]);
+
+  // Scroll to bottom on initial load and new messages (only if near bottom)
   useEffect(() => {
-    if (messages.length > 0) {
+    if (!scrollRef.current || messages.length === 0) return;
+    const el = scrollRef.current;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (isNearBottom || messages.length <= PAGE_SIZE) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  // Clear unread when chat is opened
+  useEffect(() => {
+    if (isOpen) setUnread(0);
+  }, [isOpen]);
 
   const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,7 +270,7 @@ export function GlobalChatbox() {
 
   if (!currentUserId) return null;
 
-  // — Closed state: floating bubble —
+  // — Closed state: floating bubble with badge —
   if (!isOpen) {
     return (
       <div className="fixed bottom-24 right-4 z-[90] sm:bottom-6 sm:right-6">
@@ -164,9 +278,18 @@ export function GlobalChatbox() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(true)}
-          className="size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
+          className="relative size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
         >
           <MessageCircle className="size-5" />
+          {unread > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -right-1 size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md"
+            >
+              {unread > 9 ? "9+" : unread}
+            </motion.span>
+          )}
         </motion.button>
       </div>
     );
@@ -176,9 +299,7 @@ export function GlobalChatbox() {
     <div
       className={[
         "fixed z-[90] flex flex-col",
-        // Mobile: full-width bottom sheet above nav dock
         "bottom-20 left-2 right-2 max-h-[65vh]",
-        // Desktop: floating panel bottom-right
         "sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-h-[600px] sm:h-[80vh]",
         "bg-background/70 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden",
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
@@ -201,12 +322,27 @@ export function GlobalChatbox() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0">
-        {messages.length === 0 && (
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0"
+      >
+        {/* Load-more indicator at top */}
+        {loadingMore && (
+          <div className="flex items-center justify-center py-2">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {!hasMore && messages.length > 0 && (
+          <p className="text-center text-[10px] text-muted-foreground/50 py-1">— Beginning of chat —</p>
+        )}
+
+        {messages.length === 0 && !loadingMore && (
           <div className="h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center">
             <p>No messages yet.<br />Be the first to say something! 👋</p>
           </div>
         )}
+
         {messages.map((msg) => {
           const isMe = msg.user_id === currentUserId;
           const msgRx = reactions.filter((r) => r.message_id === msg.id);
@@ -302,7 +438,7 @@ export function GlobalChatbox() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Emoji / GIF Panel — unified, tabbed */}
+      {/* Emoji / GIF Panel — tabbed */}
       <AnimatePresence>
         {activePanel !== null && (
           <motion.div
@@ -340,14 +476,7 @@ export function GlobalChatbox() {
                   )}
                 </div>
                 <div className="flex-1 overflow-y-auto p-1">
-                  <Grid
-                    key={gifSearch}
-                    width={340}
-                    columns={3}
-                    fetchGifs={fetchGifs}
-                    onGifClick={sendGif}
-                    noLink
-                  />
+                  <Grid key={gifSearch} width={340} columns={3} fetchGifs={fetchGifs} onGifClick={sendGif} noLink />
                 </div>
               </div>
             )}
