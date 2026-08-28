@@ -162,27 +162,53 @@ export function GlobalChatbox() {
     };
   }, [currentUserId, supabase]);
 
+  // Helper: fetch user names for a list of user_ids
+  const fetchUserNames = useCallback(async (userIds: string[]) => {
+    if (userIds.length === 0) return new Map<string, { name?: string; avatar?: string }>();
+    const { data } = await supabase
+      .from("user_accounts")
+      .select("user_id, name, avatar")
+      .in("user_id", userIds);
+    return new Map((data ?? []).map((u) => [u.user_id, { name: u.name, avatar: u.avatar }]));
+  }, [supabase]);
+
   // Load initial messages as soon as auth resolves — not gated on isOpen
-  // so messages are always ready whether the chat is open or closed
   useEffect(() => {
     if (!currentUserId) return;
 
     const loadInitial = async () => {
       setInitialLoading(true);
-      const { data: chats } = await supabase
+
+      // Step 1: fetch raw chat messages (no join — avoids FK resolution issues)
+      const { data: chats, error } = await supabase
         .from("global_chats")
-        .select("*, user_accounts(name, avatar)")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(PAGE_SIZE);
 
-      if (chats) {
-        const reversed = (chats as GlobalChat[]).reverse();
+      if (error) {
+        console.error("[Chat] Failed to load messages:", error.message);
+        setInitialLoading(false);
+        return;
+      }
+
+      if (chats && chats.length > 0) {
+        // Step 2: fetch names for all unique senders
+        const userIds = [...new Set((chats as GlobalChat[]).map((c) => c.user_id))];
+        const userMap = await fetchUserNames(userIds);
+
+        const enriched = (chats as GlobalChat[])
+          .map((c) => ({ ...c, user_accounts: userMap.get(c.user_id) ?? null }))
+          .reverse();
+
         setMessages((prev) => {
-          const existingIds = new Set(reversed.map((m) => m.id));
+          const existingIds = new Set(enriched.map((m) => m.id));
           const realtimeOnly = prev.filter((m) => !existingIds.has(m.id));
-          return [...reversed, ...realtimeOnly];
+          return [...enriched, ...realtimeOnly];
         });
         setHasMore(chats.length === PAGE_SIZE);
+      } else {
+        setHasMore(false);
       }
 
       const { data: rx } = await supabase.from("chat_reactions").select("*");
@@ -191,7 +217,7 @@ export function GlobalChatbox() {
     };
 
     loadInitial();
-  }, [currentUserId, supabase]);
+  }, [currentUserId, supabase, fetchUserNames]);
 
   // Load older messages on scroll-to-top
   const loadOlder = useCallback(async () => {
@@ -203,13 +229,18 @@ export function GlobalChatbox() {
 
     const { data: chats } = await supabase
       .from("global_chats")
-      .select("*, user_accounts(name, avatar)")
+      .select("*")
       .lt("id", oldestId)
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE);
 
     if (chats && chats.length > 0) {
-      const older = (chats as GlobalChat[]).reverse();
+      const userIds = [...new Set((chats as GlobalChat[]).map((c) => c.user_id))];
+      const userMap = await fetchUserNames(userIds);
+      const older = (chats as GlobalChat[])
+        .map((c) => ({ ...c, user_accounts: userMap.get(c.user_id) ?? null }))
+        .reverse();
+
       setMessages((prev) => [...older, ...prev]);
       setHasMore(chats.length === PAGE_SIZE);
 

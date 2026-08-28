@@ -69,7 +69,7 @@ export function AdminIncomeChart({ data, gmtoPrice, currencySymbol }: AdminIncom
   );
 
   useMotionValueEvent(valueSpring, "change", (latest) => {
-    setSpringValue(latest);
+    requestAnimationFrame(() => setSpringValue(latest));
   });
 
   React.useEffect(() => {
