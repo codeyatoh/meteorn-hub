@@ -7,12 +7,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
-import { Theme as EmojiTheme } from "emoji-picker-react";
 import { GiphyFetch } from "@giphy/js-fetch-api";
 import type { IGif } from "@giphy/js-types";
 
-// Dynamic imports to avoid SSR issues with browser-only libraries
-const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
+// Dynamic imports — both are browser-only; ssr:false prevents SSR crashes on Vercel
+const EmojiPicker = dynamic(
+  () => import("./safe-emoji-picker"),
+  { ssr: false }
+);
 const GiphyGrid = dynamic(
   () => import("@giphy/react-components").then((m) => m.Grid),
   { ssr: false }
@@ -85,11 +87,17 @@ export function GlobalChatbox() {
   // Stable supabase client — never recreated on re-render
   const supabase = useMemo(() => createClient(), []);
 
-  // Fetch current user once
+  // Track auth state changes — works on hard refresh, logout, and re-login
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setCurrentUserId(user.id);
+    // Get current session immediately
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setCurrentUserId(session?.user?.id ?? null);
     });
+    // Subscribe to future auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserId(session?.user?.id ?? null);
+    });
+    return () => subscription.unsubscribe();
   }, [supabase]);
 
   // Always-on realtime subscription (for badge + sound when chat is closed)
@@ -454,13 +462,7 @@ export function GlobalChatbox() {
             className="shrink-0 border-t border-border/40 overflow-hidden bg-background/80"
           >
             {activePanel === "emoji" && (
-              <EmojiPicker
-                theme={EmojiTheme.DARK}
-                width="100%"
-                height={350}
-                onEmojiClick={(data: EmojiClickData) => setInput((prev) => prev + data.emoji)}
-                lazyLoadEmojis
-              />
+              <EmojiPicker onEmojiClick={(data: EmojiClickData) => setInput((prev) => prev + data.emoji)} />
             )}
             {activePanel === "gif" && (
               <div className="flex flex-col h-[300px]">
