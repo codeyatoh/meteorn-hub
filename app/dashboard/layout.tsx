@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { NavigationDock } from "@/components/navigation-dock";
+import { GlobalChatbox } from "@/features/chat/components/global-chatbox";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </main>
 
       <NavigationDock />
+      <GlobalChatbox />
     </div>
   );
 }
