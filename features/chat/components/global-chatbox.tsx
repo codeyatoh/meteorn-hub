@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { MessageCircle, X, Send, Smile, ChevronDown, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Smile, ChevronDown, Loader2, ArrowDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -85,23 +85,33 @@ export function GlobalChatbox() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
 
+  // Track whether user is at the bottom
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  // Count of new messages received while scrolled up
+  const [newWhileAway, setNewWhileAway] = useState(0);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isOpenRef = useRef(isOpen);
-  useEffect(() => {
-    isOpenRef.current = isOpen;
-  }, [isOpen]);
+  const isAtBottomRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
+
+  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
+  useEffect(() => { isAtBottomRef.current = isAtBottom; }, [isAtBottom]);
 
   // Stable supabase client — never recreated on re-render
   const supabase = useMemo(() => createClient(), []);
 
+  // Scroll to bottom
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  }, []);
+
   // Track auth state changes — works on hard refresh, logout, and re-login
   useEffect(() => {
-    // Get current session immediately
     supabase.auth.getSession().then(({ data: { session } }) => {
       setCurrentUserId(session?.user?.id ?? null);
     });
-    // Subscribe to future auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setCurrentUserId(session?.user?.id ?? null);
     });
@@ -132,11 +142,14 @@ export function GlobalChatbox() {
             return [...prev, fullMsg];
           });
 
-          // Only ping + badge if message is from someone else
           if (newMsg.user_id !== currentUserId) {
             playPing();
             if (!isOpenRef.current) {
               setUnread((u) => u + 1);
+            }
+            // If chat is open but user scrolled up, increment new-while-away counter
+            if (isOpenRef.current && !isAtBottomRef.current) {
+              setNewWhileAway((n) => n + 1);
             }
           }
         }
@@ -172,14 +185,13 @@ export function GlobalChatbox() {
     return new Map((data ?? []).map((u) => [u.user_id, { nickname: u.nickname, role: u.role }]));
   }, [supabase]);
 
-  // Load initial messages as soon as auth resolves — not gated on isOpen
+  // Load initial messages as soon as auth resolves
   useEffect(() => {
     if (!currentUserId) return;
 
     const loadInitial = async () => {
       setInitialLoading(true);
 
-      // Step 1: fetch raw chat messages (no join — avoids FK resolution issues)
       const { data: chats, error } = await supabase
         .from("global_chats")
         .select("*")
@@ -193,7 +205,6 @@ export function GlobalChatbox() {
       }
 
       if (chats && chats.length > 0) {
-        // Step 2: fetch names for all unique senders
         const userIds = [...new Set((chats as GlobalChat[]).map((c) => c.user_id))];
         const userMap = await fetchUserNames(userIds);
 
@@ -214,10 +225,13 @@ export function GlobalChatbox() {
       const { data: rx } = await supabase.from("chat_reactions").select("*");
       if (rx) setReactions(rx as Reaction[]);
       setInitialLoading(false);
+
+      // Instant scroll after initial load
+      requestAnimationFrame(() => scrollToBottom("instant" as ScrollBehavior));
     };
 
     loadInitial();
-  }, [currentUserId, supabase, fetchUserNames]);
+  }, [currentUserId, supabase, fetchUserNames, scrollToBottom]);
 
   // Load older messages on scroll-to-top
   const loadOlder = useCallback(async () => {
@@ -256,21 +270,36 @@ export function GlobalChatbox() {
     setLoadingMore(false);
   }, [loadingMore, hasMore, messages, supabase, fetchUserNames]);
 
-  // Scroll listener
+  // Scroll listener — tracks position and triggers load-older
   const handleScroll = useCallback(() => {
-    if (!scrollRef.current) return;
-    if (scrollRef.current.scrollTop < 80) loadOlder();
+    const el = scrollRef.current;
+    if (!el) return;
+
+    if (el.scrollTop < 80) loadOlder();
+
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distFromBottom < 60;
+    setIsAtBottom(atBottom);
+    if (atBottom) setNewWhileAway(0);
   }, [loadOlder]);
 
-  // Auto-scroll to bottom on new messages (only if near bottom)
+  // Auto-scroll to bottom when new message arrives and user is already at bottom
   useEffect(() => {
-    if (!scrollRef.current || messages.length === 0) return;
-    const el = scrollRef.current;
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
-    if (isNearBottom || initialLoading) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length === 0) return;
+    const isNewMessage = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+
+    if (isNewMessage && isAtBottomRef.current) {
+      scrollToBottom("smooth");
     }
-  }, [messages, initialLoading]);
+  }, [messages, scrollToBottom]);
+
+  const jumpToBottom = useCallback(() => {
+    setNewWhileAway(0);
+    setIsAtBottom(true);
+    isAtBottomRef.current = true;
+    scrollToBottom("smooth");
+  }, [scrollToBottom]);
 
   const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,6 +308,8 @@ export function GlobalChatbox() {
     setInput("");
     setActivePanel(null);
     await supabase.from("global_chats").insert({ user_id: currentUserId, message: msg, type: "text" });
+    // Always jump to bottom when user sends
+    setTimeout(() => scrollToBottom("smooth"), 100);
   };
 
   const sendGif = async (gif: IGif, e: React.SyntheticEvent<HTMLElement, Event>) => {
@@ -290,6 +321,7 @@ export function GlobalChatbox() {
       type: "gif",
       gif_url: gif.images.fixed_height.url,
     });
+    setTimeout(() => scrollToBottom("smooth"), 100);
   };
 
   const toggleReaction = async (messageId: number, emoji: string) => {
@@ -324,7 +356,7 @@ export function GlobalChatbox() {
   // Closed state: floating bubble
   if (!isOpen) {
     return (
-      <div className="fixed bottom-24 right-4 z-[90] sm:bottom-6 sm:right-6">
+      <div className="fixed bottom-28 right-4 z-[90] sm:bottom-6 sm:right-6">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -353,7 +385,9 @@ export function GlobalChatbox() {
     <div
       className={[
         "fixed z-[90] flex flex-col",
-        "bottom-20 left-2 right-2 max-h-[65vh]",
+        // Mobile: extra bottom offset so it clears the nav dock
+        "bottom-28 left-2 right-2 max-h-[60vh]",
+        // Desktop: normal positioning
         "sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-h-[600px] sm:h-[80vh]",
         "bg-background/70 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden",
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
@@ -375,125 +409,146 @@ export function GlobalChatbox() {
         </button>
       </div>
 
-      {/* Messages */}
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0"
-      >
-        {loadingMore && (
-          <div className="flex justify-center py-2">
-            <Loader2 className="size-4 animate-spin text-muted-foreground" />
-          </div>
-        )}
-        {!hasMore && messages.length > 0 && (
-          <p className="text-center text-[10px] text-muted-foreground/50 py-1">— Beginning of chat —</p>
-        )}
+      {/* Messages — positioned relative so the jump pill can float inside it */}
+      <div className="relative flex-1 min-h-0">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="h-full overflow-y-auto px-3 py-3 space-y-3"
+        >
+          {loadingMore && (
+            <div className="flex justify-center py-2">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {!hasMore && messages.length > 0 && (
+            <p className="text-center text-[10px] text-muted-foreground/50 py-1">— Beginning of chat —</p>
+          )}
 
-        {initialLoading ? (
-          <div className="h-full flex items-center justify-center">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center">
-            <p>No messages yet.<br />Be the first to say something! 👋</p>
-          </div>
-        ) : (
-          messages.map((msg) => {
-            const isMe = msg.user_id === currentUserId;
-            const msgRx = reactions.filter((r) => r.message_id === msg.id);
-            const grouped = msgRx.reduce((acc, r) => {
-              acc[r.emoji] = (acc[r.emoji] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>);
+          {initialLoading ? (
+            <div className="h-full flex items-center justify-center">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center">
+              <p>No messages yet.<br />Be the first to say something! 👋</p>
+            </div>
+          ) : (
+            messages.map((msg) => {
+              const isMe = msg.user_id === currentUserId;
+              const msgRx = reactions.filter((r) => r.message_id === msg.id);
+              const grouped = msgRx.reduce((acc, r) => {
+                acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>);
 
-            return (
-              <div
-                key={msg.id}
-                className="flex flex-col gap-0.5 group"
-                onMouseEnter={() => setHoveredMsg(msg.id)}
-                onMouseLeave={() => setHoveredMsg(null)}
-              >
-                <div className={`flex items-center gap-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
-                  <span className="text-[10px] font-semibold text-muted-foreground">
-                    {msg.user_profile?.nickname ?? "Player"}
-                  </span>
-                  {msg.user_profile?.role === "admin" && (
-                    <span className="text-[8.5px] font-bold tracking-widest uppercase bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm">
-                      Admin
+              return (
+                <div
+                  key={msg.id}
+                  className="flex flex-col gap-0.5 group"
+                  onMouseEnter={() => setHoveredMsg(msg.id)}
+                  onMouseLeave={() => setHoveredMsg(null)}
+                >
+                  <div className={`flex items-center gap-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                    <span className="text-[10px] font-semibold text-muted-foreground">
+                      {msg.user_profile?.nickname ?? "Player"}
                     </span>
-                  )}
-                </div>
-
-                <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                  <div
-                    className={[
-                      "max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-snug",
-                      isMe
-                        ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
-                        : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
-                    ].join(" ")}
-                  >
-                    {msg.type === "text" && <span>{msg.message}</span>}
-                    {msg.type === "gif" && msg.gif_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={msg.gif_url} alt="GIF" className="max-w-[180px] rounded-lg object-contain" />
+                    {msg.user_profile?.role === "admin" && (
+                      <span className="text-[8.5px] font-bold tracking-widest uppercase bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm">
+                        Admin
+                      </span>
                     )}
                   </div>
 
-                  <AnimatePresence>
-                    {hoveredMsg === msg.id && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg"
-                      >
-                        {QUICK_REACTIONS.map((emoji) => (
+                  <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                    <div
+                      className={[
+                        "max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-snug",
+                        isMe
+                          ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
+                          : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
+                      ].join(" ")}
+                    >
+                      {msg.type === "text" && <span>{msg.message}</span>}
+                      {msg.type === "gif" && msg.gif_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={msg.gif_url} alt="GIF" className="max-w-[180px] rounded-lg object-contain" />
+                      )}
+                    </div>
+
+                    <AnimatePresence>
+                      {hoveredMsg === msg.id && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg"
+                        >
+                          {QUICK_REACTIONS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => toggleReaction(msg.id, emoji)}
+                              className="text-sm hover:scale-125 transition-transform leading-none"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {Object.keys(grouped).length > 0 && (
+                    <div className={`flex flex-wrap gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                      {Object.entries(grouped).map(([emoji, count]) => {
+                        const iReacted = msgRx.some((r) => r.emoji === emoji && r.user_id === currentUserId);
+                        return (
                           <button
                             key={emoji}
                             onClick={() => toggleReaction(msg.id, emoji)}
-                            className="text-sm hover:scale-125 transition-transform leading-none"
+                            className={[
+                              "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border transition-colors",
+                              iReacted
+                                ? "bg-primary/20 border-primary/40 text-primary"
+                                : "bg-foreground/[0.04] border-border/40 text-muted-foreground hover:bg-foreground/[0.08]",
+                            ].join(" ")}
                           >
-                            {emoji}
+                            <span>{emoji}</span>
+                            <span>{count}</span>
                           </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <span className={`text-[9px] text-muted-foreground/50 px-1 ${isMe ? "text-right" : "text-left"}`}>
+                    {format(new Date(msg.created_at), "h:mm a")}
+                  </span>
                 </div>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
 
-                {Object.keys(grouped).length > 0 && (
-                  <div className={`flex flex-wrap gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
-                    {Object.entries(grouped).map(([emoji, count]) => {
-                      const iReacted = msgRx.some((r) => r.emoji === emoji && r.user_id === currentUserId);
-                      return (
-                        <button
-                          key={emoji}
-                          onClick={() => toggleReaction(msg.id, emoji)}
-                          className={[
-                            "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border transition-colors",
-                            iReacted
-                              ? "bg-primary/20 border-primary/40 text-primary"
-                              : "bg-foreground/[0.04] border-border/40 text-muted-foreground hover:bg-foreground/[0.08]",
-                          ].join(" ")}
-                        >
-                          <span>{emoji}</span>
-                          <span>{count}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <span className={`text-[9px] text-muted-foreground/50 px-1 ${isMe ? "text-right" : "text-left"}`}>
-                  {format(new Date(msg.created_at), "h:mm a")}
-                </span>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
+        {/* Jump-to-bottom pill — shown when scrolled up, shows unread count */}
+        <AnimatePresence>
+          {!isAtBottom && (
+            <motion.button
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.15 }}
+              onClick={jumpToBottom}
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold shadow-lg hover:bg-primary/90 transition-colors whitespace-nowrap z-10"
+            >
+              <ArrowDown className="size-3 shrink-0" />
+              {newWhileAway > 0
+                ? `${newWhileAway} new message${newWhileAway > 1 ? "s" : ""}`
+                : "Jump to bottom"}
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Emoji / GIF Panel */}
