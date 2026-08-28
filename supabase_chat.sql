@@ -51,3 +51,13 @@ CREATE POLICY "Users can delete their own reactions"
 -- Enable realtime for both tables
 alter publication supabase_realtime add table public.global_chats;
 alter publication supabase_realtime add table public.chat_reactions;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- FIX: Allow any logged-in user to READ the name + avatar of other users.
+-- Without this, the chat join returns null for other users' names → shows "Player".
+-- Run this in Supabase SQL Editor if nicknames are not showing in global chat.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE POLICY IF NOT EXISTS "Authenticated users can view any user name for chat"
+  ON public.user_accounts FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
