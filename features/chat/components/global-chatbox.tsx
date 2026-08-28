@@ -65,7 +65,15 @@ function playPing() {
 
 export function GlobalChatbox() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
+  // Persist open/closed state across page refreshes
+  const [isOpen, setIsOpenState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("gchat_open") === "1";
+  });
+  const setIsOpen = useCallback((val: boolean) => {
+    setIsOpenState(val);
+    localStorage.setItem("gchat_open", val ? "1" : "0");
+  }, []);
   const [messages, setMessages] = useState<GlobalChat[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [input, setInput] = useState("");
@@ -154,9 +162,10 @@ export function GlobalChatbox() {
     };
   }, [currentUserId, supabase]);
 
-  // Load initial messages every time chat is opened (fresh fetch from DB)
+  // Load initial messages as soon as auth resolves — not gated on isOpen
+  // so messages are always ready whether the chat is open or closed
   useEffect(() => {
-    if (!isOpen || !currentUserId) return;
+    if (!currentUserId) return;
 
     const loadInitial = async () => {
       setInitialLoading(true);
@@ -168,7 +177,6 @@ export function GlobalChatbox() {
 
       if (chats) {
         const reversed = (chats as GlobalChat[]).reverse();
-        // Merge with any realtime messages that arrived before initial load
         setMessages((prev) => {
           const existingIds = new Set(reversed.map((m) => m.id));
           const realtimeOnly = prev.filter((m) => !existingIds.has(m.id));
@@ -183,7 +191,7 @@ export function GlobalChatbox() {
     };
 
     loadInitial();
-  }, [isOpen, currentUserId, supabase]);
+  }, [currentUserId, supabase]);
 
   // Load older messages on scroll-to-top
   const loadOlder = useCallback(async () => {
