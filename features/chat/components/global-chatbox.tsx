@@ -30,7 +30,7 @@ type GlobalChat = {
   type: string;
   gif_url: string | null;
   created_at: string;
-  user_accounts?: { name?: string; avatar?: string } | null;
+  user_profile?: { nickname?: string; role?: string } | null;
 };
 
 type Reaction = {
@@ -120,12 +120,12 @@ export function GlobalChatbox() {
         async (payload) => {
           const newMsg = payload.new as GlobalChat;
           const { data: ua } = await supabase
-            .from("user_accounts")
-            .select("name, avatar")
+            .from("profiles")
+            .select("nickname, role")
             .eq("user_id", newMsg.user_id)
             .single();
 
-          const fullMsg: GlobalChat = { ...newMsg, user_accounts: ua };
+          const fullMsg: GlobalChat = { ...newMsg, user_profile: ua };
 
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
@@ -164,12 +164,12 @@ export function GlobalChatbox() {
 
   // Helper: fetch user names for a list of user_ids
   const fetchUserNames = useCallback(async (userIds: string[]) => {
-    if (userIds.length === 0) return new Map<string, { name?: string; avatar?: string }>();
+    if (userIds.length === 0) return new Map<string, { nickname?: string; role?: string }>();
     const { data } = await supabase
-      .from("user_accounts")
-      .select("user_id, name, avatar")
+      .from("profiles")
+      .select("user_id, nickname, role")
       .in("user_id", userIds);
-    return new Map((data ?? []).map((u) => [u.user_id, { name: u.name, avatar: u.avatar }]));
+    return new Map((data ?? []).map((u) => [u.user_id, { nickname: u.nickname, role: u.role }]));
   }, [supabase]);
 
   // Load initial messages as soon as auth resolves — not gated on isOpen
@@ -198,7 +198,7 @@ export function GlobalChatbox() {
         const userMap = await fetchUserNames(userIds);
 
         const enriched = (chats as GlobalChat[])
-          .map((c) => ({ ...c, user_accounts: userMap.get(c.user_id) ?? null }))
+          .map((c) => ({ ...c, user_profile: userMap.get(c.user_id) ?? null }))
           .reverse();
 
         setMessages((prev) => {
@@ -238,7 +238,7 @@ export function GlobalChatbox() {
       const userIds = [...new Set((chats as GlobalChat[]).map((c) => c.user_id))];
       const userMap = await fetchUserNames(userIds);
       const older = (chats as GlobalChat[])
-        .map((c) => ({ ...c, user_accounts: userMap.get(c.user_id) ?? null }))
+        .map((c) => ({ ...c, user_profile: userMap.get(c.user_id) ?? null }))
         .reverse();
 
       setMessages((prev) => [...older, ...prev]);
@@ -254,7 +254,7 @@ export function GlobalChatbox() {
     }
 
     setLoadingMore(false);
-  }, [loadingMore, hasMore, messages, supabase]);
+  }, [loadingMore, hasMore, messages, supabase, fetchUserNames]);
 
   // Scroll listener
   const handleScroll = useCallback(() => {
@@ -414,9 +414,16 @@ export function GlobalChatbox() {
                 onMouseEnter={() => setHoveredMsg(msg.id)}
                 onMouseLeave={() => setHoveredMsg(null)}
               >
-                <span className={`text-[10px] font-semibold text-muted-foreground px-1 ${isMe ? "text-right" : "text-left"}`}>
-                  {msg.user_accounts?.name ?? "Player"}
-                </span>
+                <div className={`flex items-center gap-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                  <span className="text-[10px] font-semibold text-muted-foreground">
+                    {msg.user_profile?.nickname ?? "Player"}
+                  </span>
+                  {msg.user_profile?.role === "admin" && (
+                    <span className="text-[8.5px] font-bold tracking-widest uppercase bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm">
+                      Admin
+                    </span>
+                  )}
+                </div>
 
                 <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                   <div
