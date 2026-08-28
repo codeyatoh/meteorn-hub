@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import type { EmojiClickData } from "emoji-picker-react";
+import { Theme as EmojiTheme } from "emoji-picker-react";
 import { GiphyFetch } from "@giphy/js-fetch-api";
 import type { IGif } from "@giphy/js-types";
 
@@ -454,7 +455,7 @@ export function GlobalChatbox() {
           >
             {activePanel === "emoji" && (
               <EmojiPicker
-                theme={"dark" as "dark" | "light" | "auto"}
+                theme={EmojiTheme.DARK}
                 width="100%"
                 height={350}
                 onEmojiClick={(data: EmojiClickData) => setInput((prev) => prev + data.emoji)}
