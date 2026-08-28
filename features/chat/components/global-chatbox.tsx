@@ -381,10 +381,10 @@ export function GlobalChatbox() {
     <div
       className={[
         "fixed z-[90] flex flex-col",
-        // Mobile: bottom-24 = 96px from bottom, dock top is ~82px → 14px clearance. Clean gap.
-        "bottom-24 left-2 right-2 max-h-[calc(100svh-7rem)]",
+        // Mobile: explicit height so flex-1 resolves. bottom-24=96px, dock top ~82px = 14px gap.
+        "bottom-24 left-2 right-2 h-[calc(100svh-7rem)]",
         // Desktop: normal float bottom-right
-        "sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-h-[600px] sm:h-[80vh]",
+        "sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:h-[min(600px,80vh)]",
         "bg-background sm:bg-background/80 sm:backdrop-blur-2xl border border-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden",
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
       ].join(" ")}
@@ -410,7 +410,7 @@ export function GlobalChatbox() {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="absolute inset-0 overflow-y-auto px-3 py-3 space-y-3"
+          className="h-full overflow-y-auto px-3 py-3 space-y-3"
         >
           {loadingMore && (
             <div className="flex justify-center py-2">
