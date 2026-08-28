@@ -129,13 +129,11 @@ export function GlobalChatbox() {
         { event: "INSERT", schema: "public", table: "global_chats" },
         async (payload) => {
           const newMsg = payload.new as GlobalChat;
-          // Use RPC to get display name — reads auth.users via SECURITY DEFINER
-          const { data: ua } = await supabase
-            .rpc("get_chat_profiles", { user_ids: [newMsg.user_id] })
-            .single();
+          const { data: profiles } = await supabase
+            .rpc("get_chat_profiles", { user_ids: [newMsg.user_id] });
+          const ua = profiles?.[0] ?? null;
 
-          const fullMsg: GlobalChat = { ...newMsg, user_profile: ua ? { full_name: (ua as {full_name: string; role: string}).full_name, role: (ua as {full_name: string; role: string}).role } : null };
-
+          const fullMsg: GlobalChat = { ...newMsg, user_profile: ua };
 
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
@@ -175,12 +173,11 @@ export function GlobalChatbox() {
     };
   }, [currentUserId, supabase]);
 
-  // Helper: fetch user display names for a list of user_ids via secure RPC
+  // Helper: fetch user names for a list of user_ids via secure RPC
   const fetchUserNames = useCallback(async (userIds: string[]) => {
     if (userIds.length === 0) return new Map<string, { full_name?: string; role?: string }>();
-    const { data, error } = await supabase
+    const { data } = await supabase
       .rpc("get_chat_profiles", { user_ids: userIds });
-    if (error) console.error("[Chat] fetchUserNames RPC error:", error.message);
     return new Map((data ?? []).map((u: { user_id: string; full_name: string; role: string }) => [u.user_id, { full_name: u.full_name, role: u.role }]));
   }, [supabase]);
 
@@ -384,11 +381,11 @@ export function GlobalChatbox() {
     <div
       className={[
         "fixed z-[90] flex flex-col",
-        // Mobile: sits above nav dock (dock = 58px at bottom-6 = 82px total; we use bottom-36 = 144px for breathing room)
+        // Mobile: solid opaque background so it's clearly distinct from the page behind it
         "bottom-36 left-2 right-2 max-h-[55vh]",
-        // Desktop: normal positioning
+        // Desktop: glassmorphism is fine since the panel is smaller and floats cleanly
         "sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-h-[600px] sm:h-[80vh]",
-        "bg-background/85 backdrop-blur-2xl border border-border/60 rounded-2xl shadow-2xl shadow-black/30 overflow-hidden",
+        "bg-background sm:bg-background/80 sm:backdrop-blur-2xl border border-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden",
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
       ].join(" ")}
     >
