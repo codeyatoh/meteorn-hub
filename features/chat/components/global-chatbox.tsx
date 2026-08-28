@@ -352,7 +352,7 @@ export function GlobalChatbox() {
   // Closed state: floating bubble
   if (!isOpen) {
     return (
-      <div className="fixed bottom-36 right-4 z-[90] sm:bottom-6 sm:right-6">
+      <div className="fixed bottom-24 right-4 z-[90] sm:bottom-6 sm:right-6">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -381,9 +381,9 @@ export function GlobalChatbox() {
     <div
       className={[
         "fixed z-[90] flex flex-col",
-        // Mobile: solid opaque background so it's clearly distinct from the page behind it
-        "bottom-36 left-2 right-2 max-h-[55vh]",
-        // Desktop: glassmorphism is fine since the panel is smaller and floats cleanly
+        // Mobile: bottom-24 = 96px from bottom, dock top is ~82px → 14px clearance. Clean gap.
+        "bottom-24 left-2 right-2 max-h-[calc(100svh-7rem)]",
+        // Desktop: normal float bottom-right
         "sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-h-[600px] sm:h-[80vh]",
         "bg-background sm:bg-background/80 sm:backdrop-blur-2xl border border-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden",
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
@@ -405,12 +405,12 @@ export function GlobalChatbox() {
         </button>
       </div>
 
-      {/* Messages — positioned relative so the jump pill can float inside it */}
+      {/* Messages — relative wrapper so the jump pill can float inside */}
       <div className="relative flex-1 min-h-0">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="h-full overflow-y-auto px-3 py-3 space-y-3"
+          className="absolute inset-0 overflow-y-auto px-3 py-3 space-y-3"
         >
           {loadingMore && (
             <div className="flex justify-center py-2">
