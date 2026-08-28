@@ -356,7 +356,7 @@ export function GlobalChatbox() {
   // Closed state: floating bubble
   if (!isOpen) {
     return (
-      <div className="fixed bottom-28 right-4 z-[90] sm:bottom-6 sm:right-6">
+      <div className="fixed bottom-36 right-4 z-[90] sm:bottom-6 sm:right-6">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -385,11 +385,11 @@ export function GlobalChatbox() {
     <div
       className={[
         "fixed z-[90] flex flex-col",
-        // Mobile: extra bottom offset so it clears the nav dock
-        "bottom-28 left-2 right-2 max-h-[60vh]",
+        // Mobile: sits above nav dock (dock = 58px at bottom-6 = 82px total; we use bottom-36 = 144px for breathing room)
+        "bottom-36 left-2 right-2 max-h-[55vh]",
         // Desktop: normal positioning
         "sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-h-[600px] sm:h-[80vh]",
-        "bg-background/70 backdrop-blur-2xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden",
+        "bg-background/85 backdrop-blur-2xl border border-border/60 rounded-2xl shadow-2xl shadow-black/30 overflow-hidden",
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
       ].join(" ")}
     >
