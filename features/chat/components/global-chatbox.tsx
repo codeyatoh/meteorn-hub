@@ -30,7 +30,7 @@ type GlobalChat = {
   type: string;
   gif_url: string | null;
   created_at: string;
-  user_profile?: { nickname?: string; role?: string } | null;
+  user_profile?: { full_name?: string; role?: string } | null;
 };
 
 type Reaction = {
@@ -131,8 +131,8 @@ export function GlobalChatbox() {
           const newMsg = payload.new as GlobalChat;
           const { data: ua } = await supabase
             .from("profiles")
-            .select("nickname, role")
-            .eq("user_id", newMsg.user_id)
+            .select("full_name, role")
+            .eq("id", newMsg.user_id)
             .single();
 
           const fullMsg: GlobalChat = { ...newMsg, user_profile: ua };
@@ -177,12 +177,12 @@ export function GlobalChatbox() {
 
   // Helper: fetch user names for a list of user_ids
   const fetchUserNames = useCallback(async (userIds: string[]) => {
-    if (userIds.length === 0) return new Map<string, { nickname?: string; role?: string }>();
+    if (userIds.length === 0) return new Map<string, { full_name?: string; role?: string }>();
     const { data } = await supabase
       .from("profiles")
-      .select("user_id, nickname, role")
-      .in("user_id", userIds);
-    return new Map((data ?? []).map((u) => [u.user_id, { nickname: u.nickname, role: u.role }]));
+      .select("id, full_name, role")
+      .in("id", userIds);
+    return new Map((data ?? []).map((u) => [u.id, { full_name: u.full_name, role: u.role }]));
   }, [supabase]);
 
   // Load initial messages as soon as auth resolves
@@ -451,7 +451,7 @@ export function GlobalChatbox() {
                 >
                   <div className={`flex items-center gap-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
                     <span className="text-[10px] font-semibold text-muted-foreground">
-                      {msg.user_profile?.nickname ?? "Player"}
+                      {msg.user_profile?.full_name ?? "Player"}
                     </span>
                     {msg.user_profile?.role === "admin" && (
                       <span className="text-[8.5px] font-bold tracking-widest uppercase bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm">
