@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Settings, Save, Mail, Lock, User, DollarSign, Loader2, ChevronDown, Coffee, CheckIcon } from "lucide-react";
+import { Settings, Save, Mail, Lock, User, DollarSign, Loader2, ChevronDown, Coffee, CheckIcon, WalletIcon } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 
 export default function SettingsPage() {
@@ -14,6 +14,7 @@ export default function SettingsPage() {
 
   const [nickname, setNickname] = useState("");
   const [currency, setCurrency] = useState("usd");
+  const [walletAddress, setWalletAddress] = useState("");
   const [email, setEmail] = useState("");
   
   // Password fields (only sent if filled)
@@ -39,6 +40,7 @@ export default function SettingsPage() {
       if (user) {
         setNickname(user.user_metadata?.nickname || "User");
         setCurrency(user.user_metadata?.currency || "usd");
+        setWalletAddress(user.user_metadata?.wallet_address || "");
         setEmail(user.email || "");
       }
       if (settings && settings.donation_wallet_address) {
@@ -58,10 +60,11 @@ export default function SettingsPage() {
     setSaving(true);
     
     try {
-      const updates: { data: { nickname: string, currency: string }, email?: string, password?: string } = {
+      const updates: { data: { nickname: string, currency: string, wallet_address: string }, email?: string, password?: string } = {
         data: {
           nickname: nickname,
-          currency: currency
+          currency: currency,
+          wallet_address: walletAddress
         }
       };
 
@@ -142,6 +145,22 @@ export default function SettingsPage() {
                         className="w-full rounded-md border border-input bg-background/50 pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors hover:border-border"
                         value={nickname}
                         onChange={(e) => setNickname(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Personal Wallet Address</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <WalletIcon className="size-4 text-muted-foreground" />
+                      </div>
+                      <input 
+                        type="text"
+                        className="w-full rounded-md border border-input bg-background/50 pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors hover:border-border"
+                        placeholder="0x..."
+                        value={walletAddress}
+                        onChange={(e) => setWalletAddress(e.target.value)}
                       />
                     </div>
                   </div>

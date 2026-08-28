@@ -25,7 +25,7 @@ const AVATAR_MAP: Record<string, ReactNode> = {
 const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 
 // Types
-type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; walletAddress: string | null; email: string | null; isBanned: boolean; totalAccumulatedTickets: number; repairTicketsUsed: number; };
+type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; email: string | null; isBanned: boolean; totalAccumulatedTickets: number; repairTicketsUsed: number; };
 type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string; is_sold: boolean; fiat_received: number; fiat_currency: string };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
@@ -99,7 +99,6 @@ export default function UserDashboardPage() {
   const [newAccountName, setNewAccountName] = useState("");
   const [newAccountEmail, setNewAccountEmail] = useState("");
   const [newAccountReferralLink, setNewAccountReferralLink] = useState("");
-  const [newAccountWalletAddress, setNewAccountWalletAddress] = useState("");
   const [newAccountAvatar, setNewAccountAvatar] = useState("Avatar1");
 
   // Edit Account State
@@ -108,13 +107,12 @@ export default function UserDashboardPage() {
   const [editAccountName, setEditAccountName] = useState("");
   const [editAccountEmail, setEditAccountEmail] = useState("");
   const [editAccountReferralLink, setEditAccountReferralLink] = useState("");
-  const [editAccountWalletAddress, setEditAccountWalletAddress] = useState("");
   const [editAccountAvatar, setEditAccountAvatar] = useState("Avatar1");
   const [editAccountIsBanned, setEditAccountIsBanned] = useState(false);
 
-  // View Wallet State
+  // Global Wallet State
+  const [globalWalletAddress, setGlobalWalletAddress] = useState("");
   const [isViewWalletModalOpen, setIsViewWalletModalOpen] = useState(false);
-  const [viewWalletAddress, setViewWalletAddress] = useState("");
   const [isWalletCopied, setIsWalletCopied] = useState(false);
 
   // Edit Log State
@@ -176,6 +174,9 @@ export default function UserDashboardPage() {
       if (user.user_metadata?.currency) {
         setCurrency(user.user_metadata.currency);
       }
+      if (user.user_metadata?.wallet_address) {
+        setGlobalWalletAddress(user.user_metadata.wallet_address);
+      }
       
       const { data: accountsData } = await supabase
         .from('user_accounts')
@@ -190,7 +191,6 @@ export default function UserDashboardPage() {
           totalTickets: acc.total_tickets,
           avatar: acc.avatar,
           referralLink: acc.referral_link,
-          walletAddress: acc.wallet_address,
           email: acc.email,
           isBanned: acc.is_banned ?? false,
           totalAccumulatedTickets: acc.total_accumulated_tickets ?? 0,
@@ -520,14 +520,12 @@ export default function UserDashboardPage() {
     setEditAccountName(acc.name);
     setEditAccountEmail(acc.email || "");
     setEditAccountReferralLink(acc.referralLink || "");
-    setEditAccountWalletAddress(acc.walletAddress || "");
     setEditAccountAvatar(acc.avatar || "Avatar1");
     setEditAccountIsBanned(acc.isBanned || false);
     setIsEditAccountModalOpen(true);
   };
 
-  const openViewWalletModal = (walletAddress: string) => {
-    setViewWalletAddress(walletAddress);
+  const openViewWalletModal = () => {
     setIsViewWalletModalOpen(true);
   };
 
@@ -589,7 +587,6 @@ export default function UserDashboardPage() {
           avatar: editAccountAvatar,
           email: editAccountEmail.trim() || null,
           referral_link: editAccountReferralLink.trim() || null,
-          wallet_address: editAccountWalletAddress.trim() || null,
           is_banned: editAccountIsBanned
         })
         .eq('id', editAccountId);
@@ -601,7 +598,6 @@ export default function UserDashboardPage() {
           avatar: editAccountAvatar,
           email: editAccountEmail.trim() || null,
           referralLink: editAccountReferralLink.trim() || null,
-          walletAddress: editAccountWalletAddress.trim() || null,
           isBanned: editAccountIsBanned
         } : acc));
         toast.success("Account updated successfully.");
@@ -713,8 +709,7 @@ export default function UserDashboardPage() {
         total_tickets: 10,
         avatar: newAccountAvatar,
         email: newAccountEmail.trim() || null,
-        referral_link: newAccountReferralLink.trim() || null,
-        wallet_address: newAccountWalletAddress.trim() || null
+        referral_link: newAccountReferralLink.trim() || null
       };
 
       const { data, error } = await supabase
@@ -732,7 +727,6 @@ export default function UserDashboardPage() {
           avatar: data.avatar,
           email: data.email,
           referralLink: data.referral_link,
-          walletAddress: data.wallet_address,
           isBanned: false,
           totalAccumulatedTickets: 0,
           repairTicketsUsed: 0
@@ -746,7 +740,6 @@ export default function UserDashboardPage() {
       setNewAccountName("");
       setNewAccountEmail("");
       setNewAccountReferralLink("");
-      setNewAccountWalletAddress("");
       setNewAccountAvatar("Avatar1");
       setIsAddAccountModalOpen(false);
     } finally {
@@ -801,51 +794,65 @@ export default function UserDashboardPage() {
         </div>
           </div>
           
-          <div className="flex flex-col items-start sm:items-end space-y-1.5 relative">
-            <label className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Currency</label>
-            <div className="relative">
-              <button 
+          <div className="flex items-center gap-2">
+            {/* Global Wallet Button */}
+            {globalWalletAddress && (
+              <button
                 type="button"
-                onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
-                className={`w-28 flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-xs font-medium cursor-pointer transition-colors ${isCurrencyDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
+                onClick={() => openViewWalletModal()}
+                className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                title="View My Wallet"
               >
-                <span className={currency ? "text-foreground" : "text-muted-foreground"}>
-                  {currency.toUpperCase()} ({currencySymbol})
-                </span>
-                <ChevronDownIcon className={`size-3 text-muted-foreground transition-transform ${isCurrencyDropdownOpen ? 'rotate-180' : ''}`} />
+                <WalletIcon className="size-3.5" />
+                <span className="hidden sm:inline">Wallet</span>
               </button>
+            )}
+            <div className="flex flex-col items-start sm:items-end space-y-1.5 relative">
+              <label className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Currency</label>
+              <div className="relative">
+                <button 
+                  type="button"
+                  onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
+                  className={`w-28 flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-xs font-medium cursor-pointer transition-colors ${isCurrencyDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
+                >
+                  <span className={currency ? "text-foreground" : "text-muted-foreground"}>
+                    {currency.toUpperCase()} ({currencySymbol})
+                  </span>
+                  <ChevronDownIcon className={`size-3 text-muted-foreground transition-transform ${isCurrencyDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-              {isCurrencyDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsCurrencyDropdownOpen(false)} />
-                  <div className="absolute z-50 top-full right-0 mt-1.5 w-28 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
-                    {Object.keys(CURRENCY_SYMBOLS).map(key => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={async () => { 
-                          setCurrency(key); 
-                          setIsCurrencyDropdownOpen(false); 
-                          const { error } = await supabase.auth.updateUser({ data: { currency: key } });
-                          if (error) {
-                            toast.error("Failed to update currency.");
-                          } else {
-                            toast.success("Currency updated successfully.");
-                          }
-                        }}
-                        className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors outline-none ${
-                          currency === key 
-                            ? 'bg-primary/10 text-primary border-l-2 border-primary' 
-                            : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
-                        }`}
-                      >
-                        <span className="font-medium">{key.toUpperCase()}</span>
-                        <span className="opacity-80">{CURRENCY_SYMBOLS[key]}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+                {isCurrencyDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsCurrencyDropdownOpen(false)} />
+                    <div className="absolute z-50 top-full right-0 mt-1.5 w-28 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                      {Object.keys(CURRENCY_SYMBOLS).map(key => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={async () => { 
+                            setCurrency(key); 
+                            setIsCurrencyDropdownOpen(false); 
+                            const { error } = await supabase.auth.updateUser({ data: { currency: key } });
+                            if (error) {
+                              toast.error("Failed to update currency.");
+                            } else {
+                              toast.success("Currency updated successfully.");
+                            }
+                          }}
+                          className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors outline-none ${
+                            currency === key 
+                              ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+                              : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
+                          }`}
+                        >
+                          <span className="font-medium">{key.toUpperCase()}</span>
+                          <span className="opacity-80">{CURRENCY_SYMBOLS[key]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1043,16 +1050,7 @@ export default function UserDashboardPage() {
                         </button>
                       </div>
 
-                      {/* Wallet Button */}
-                      {account.walletAddress && (
-                        <button 
-                          onClick={() => openViewWalletModal(account.walletAddress!)} 
-                          className="p-2 text-primary hover:bg-primary/20 bg-primary/10 rounded-md transition-colors inline-flex items-center shadow-sm shrink-0" 
-                          title="View Wallet Address"
-                        >
-                          <WalletIcon className="size-4" />
-                        </button>
-                      )}
+
 
                       {/* Interactive Ticket Logger */}
                       {!account.isBanned && (
@@ -1374,17 +1372,6 @@ export default function UserDashboardPage() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
-            <input 
-              type="text"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder="0x..."
-              value={newAccountWalletAddress}
-              onChange={(e) => setNewAccountWalletAddress(e.target.value)}
-            />
-          </div>
-
           <Button 
             onClick={handleAddAccount}
             className="w-full mt-2"
@@ -1455,16 +1442,6 @@ export default function UserDashboardPage() {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               value={editAccountReferralLink}
               onChange={(e) => setEditAccountReferralLink(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Wallet Address (Optional)</label>
-            <input 
-              type="text"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              value={editAccountWalletAddress}
-              onChange={(e) => setEditAccountWalletAddress(e.target.value)}
             />
           </div>
 
@@ -1674,10 +1651,10 @@ export default function UserDashboardPage() {
       >
         <div className="space-y-4 mt-2 flex flex-col items-center">
           <div className="size-48 bg-white p-2 rounded-md border flex items-center justify-center">
-            {viewWalletAddress ? (
+            {globalWalletAddress ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${viewWalletAddress}`} alt="QR Code" className="size-full object-contain" />
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${globalWalletAddress}`} alt="QR Code" className="size-full object-contain" />
               </>
             ) : (
               <span className="text-muted-foreground text-sm">No wallet address</span>
@@ -1687,7 +1664,7 @@ export default function UserDashboardPage() {
             <input 
               type="text" 
               readOnly 
-              value={viewWalletAddress} 
+              value={globalWalletAddress} 
               className="w-full rounded-md border border-input bg-background pl-3 pr-24 py-2 text-sm text-muted-foreground focus:outline-none truncate"
             />
             <Button 
@@ -1695,7 +1672,7 @@ export default function UserDashboardPage() {
               variant="secondary" 
               className={`absolute right-1 top-1 bottom-1 h-auto text-xs transition-all duration-200 ${isWalletCopied ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/30" : ""}`}
               onClick={() => {
-                navigator.clipboard.writeText(viewWalletAddress);
+                navigator.clipboard.writeText(globalWalletAddress);
                 setIsWalletCopied(true);
                 toast.success("Wallet address copied to clipboard!");
                 setTimeout(() => setIsWalletCopied(false), 2000);
