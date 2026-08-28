@@ -69,7 +69,7 @@ export function AdminIncomeChart({ data, gmtoPrice, currencySymbol }: AdminIncom
   );
 
   useMotionValueEvent(valueSpring, "change", (latest) => {
-    requestAnimationFrame(() => setSpringValue(latest));
+    setSpringValue(latest);
   });
 
   React.useEffect(() => {
@@ -161,6 +161,7 @@ export function AdminIncomeChart({ data, gmtoPrice, currencySymbol }: AdminIncom
               y={springValue}
               stroke="var(--foreground)"
               strokeDasharray="3 3"
+              pointerEvents="none"
               label={<ReferenceLabel value={springValue} exactValue={selectedData.amount} />}
             />
           </BarChart>
@@ -193,6 +194,7 @@ const ReferenceLabel = ({ viewBox, value }: ReferenceLabelProps) => {
         height={18}
         fill="var(--foreground)"
         rx={4}
+        pointerEvents="none"
       />
       <text
         fontFamily="monospace"
@@ -201,10 +203,11 @@ const ReferenceLabel = ({ viewBox, value }: ReferenceLabelProps) => {
         x={x - CHART_MARGIN + 8}
         y={y + 4}
         fill="var(--background)"
+        pointerEvents="none"
       >
         {label}
       </text>
-      <ellipse cx="99%" cy={y} rx={3} ry={3} fill="var(--foreground)" />
+      <ellipse cx="99%" cy={y} rx={3} ry={3} fill="var(--foreground)" pointerEvents="none" />
     </>
   );
 };

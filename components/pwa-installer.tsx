@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { DownloadIcon } from "lucide-react";
 import Image from "next/image";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -19,6 +20,10 @@ export function PwaInstaller() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
 
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
+
   useEffect(() => {
     // Register Service Worker
     if ('serviceWorker' in navigator) {
@@ -34,7 +39,9 @@ export function PwaInstaller() {
       
       // Delay prompt slightly so it's not jarring on load
       setTimeout(() => {
-        setShowPrompt(true);
+        if (pathnameRef.current === '/login') {
+          setShowPrompt(true);
+        }
       }, 3000);
     };
 

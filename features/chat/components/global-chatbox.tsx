@@ -92,12 +92,15 @@ export function GlobalChatbox() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const isOpenRef = useRef(isOpen);
   const isAtBottomRef = useRef(true);
   const prevMessageCountRef = useRef(0);
 
   useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
   useEffect(() => { isAtBottomRef.current = isAtBottom; }, [isAtBottom]);
+
+
 
   // Stable supabase client — never recreated on re-render
   const supabase = useMemo(() => createClient(), []);
@@ -106,6 +109,16 @@ export function GlobalChatbox() {
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
+
+  // When opened, jump to bottom and focus input
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        scrollToBottom("instant");
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen, scrollToBottom]);
 
   // Track auth state changes — works on hard refresh, logout, and re-login
   useEffect(() => {
@@ -295,6 +308,7 @@ export function GlobalChatbox() {
     setIsAtBottom(true);
     isAtBottomRef.current = true;
     scrollToBottom("smooth");
+    inputRef.current?.focus();
   }, [scrollToBottom]);
 
   const sendText = async (e: React.FormEvent) => {
@@ -527,21 +541,19 @@ export function GlobalChatbox() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Jump-to-bottom pill — shown when scrolled up, shows unread count */}
+        {/* Unread messages pill at the top */}
         <AnimatePresence>
-          {!isAtBottom && (
+          {!isAtBottom && newWhileAway > 0 && (
             <motion.button
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
+              exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15 }}
               onClick={jumpToBottom}
-              className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold shadow-lg hover:bg-primary/90 transition-colors whitespace-nowrap z-10"
+              className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors whitespace-nowrap z-20"
             >
-              <ArrowDown className="size-3 shrink-0" />
-              {newWhileAway > 0
-                ? `${newWhileAway} new message${newWhileAway > 1 ? "s" : ""}`
-                : "Jump to bottom"}
+              <ArrowDown className="size-3.5 shrink-0" />
+              {newWhileAway} unread message{newWhileAway > 1 ? "s" : ""}
             </motion.button>
           )}
         </AnimatePresence>
@@ -616,6 +628,7 @@ export function GlobalChatbox() {
           </button>
 
           <input
+            ref={inputRef}
             type="text"
             placeholder="Chat with everyone..."
             value={input}
