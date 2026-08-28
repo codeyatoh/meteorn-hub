@@ -215,10 +215,6 @@ export function GlobalChatbox() {
     }
   }, [messages]);
 
-  // Clear unread when chat is opened
-  useEffect(() => {
-    if (isOpen) setUnread(0);
-  }, [isOpen]);
 
   const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,7 +273,7 @@ export function GlobalChatbox() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setIsOpen(true)}
+          onClick={() => { setIsOpen(true); setUnread(0); }}
           className="relative size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
         >
           <MessageCircle className="size-5" />
