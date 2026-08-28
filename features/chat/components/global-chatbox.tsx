@@ -1,14 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { MessageCircle, X, Send, Smile, ChevronDown, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
+import dynamic from "next/dynamic";
+import type { EmojiClickData } from "emoji-picker-react";
 import { GiphyFetch } from "@giphy/js-fetch-api";
-import { Grid } from "@giphy/react-components";
 import type { IGif } from "@giphy/js-types";
+
+// Dynamic imports to avoid SSR issues with browser-only libraries
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
+const GiphyGrid = dynamic(
+  () => import("@giphy/react-components").then((m) => m.Grid),
+  { ssr: false }
+);
 
 const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY ?? "");
 const PAGE_SIZE = 30;
@@ -34,7 +41,6 @@ type PanelType = "emoji" | "gif" | null;
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "👀"];
 
-// Play a Discord-like ping sound using Web Audio API
 function playPing() {
   try {
     const ctx = new AudioContext();
@@ -50,17 +56,8 @@ function playPing() {
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.35);
   } catch {
-    // AudioContext may be blocked before user interaction — ignore silently
+    // Ignore if AudioContext not available
   }
-}
-
-async function resolveUserName(supabase: ReturnType<typeof createClient>, userId: string) {
-  const { data } = await supabase
-    .from("user_accounts")
-    .select("name, avatar")
-    .eq("user_id", userId)
-    .single();
-  return data;
 }
 
 export function GlobalChatbox() {
@@ -75,10 +72,15 @@ export function GlobalChatbox() {
   const [unread, setUnread] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+  const isOpenRef = useRef(false);
+  isOpenRef.current = isOpen;
+
+  // Stable supabase client — never recreated on re-render
+  const supabase = useMemo(() => createClient(), []);
 
   // Fetch current user once
   useEffect(() => {
@@ -87,40 +89,43 @@ export function GlobalChatbox() {
     });
   }, [supabase]);
 
-  // Subscribe to realtime regardless of whether chat is open (for badge + sound)
+  // Always-on realtime subscription (for badge + sound when chat is closed)
   useEffect(() => {
     if (!currentUserId) return;
 
     const chatSub = supabase
-      .channel("global_chats_realtime")
+      .channel("global_chats_always")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "global_chats" },
         async (payload) => {
           const newMsg = payload.new as GlobalChat;
-          const ua = await resolveUserName(supabase, newMsg.user_id);
-          const fullMsg = { ...newMsg, user_accounts: ua };
+          const { data: ua } = await supabase
+            .from("user_accounts")
+            .select("name, avatar")
+            .eq("user_id", newMsg.user_id)
+            .single();
+
+          const fullMsg: GlobalChat = { ...newMsg, user_accounts: ua };
 
           setMessages((prev) => {
-            // Avoid duplicates
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, fullMsg];
           });
 
-          // Play sound and increment badge only for messages from others
+          // Only ping + badge if message is from someone else
           if (newMsg.user_id !== currentUserId) {
             playPing();
-            setIsOpen((open) => {
-              if (!open) setUnread((u) => u + 1);
-              return open;
-            });
+            if (!isOpenRef.current) {
+              setUnread((u) => u + 1);
+            }
           }
         }
       )
       .subscribe();
 
     const rxSub = supabase
-      .channel("chat_reactions_realtime")
+      .channel("chat_reactions_always")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_reactions" }, (payload) => {
         setReactions((prev) => {
           if (prev.some((r) => r.id === (payload.new as Reaction).id)) return prev;
@@ -138,13 +143,12 @@ export function GlobalChatbox() {
     };
   }, [currentUserId, supabase]);
 
-  // Load initial messages on first open
-  const initialLoaded = useRef(false);
+  // Load initial messages every time chat is opened (fresh fetch from DB)
   useEffect(() => {
-    if (!isOpen || !currentUserId || initialLoaded.current) return;
-    initialLoaded.current = true;
+    if (!isOpen || !currentUserId) return;
 
     const loadInitial = async () => {
+      setInitialLoading(true);
       const { data: chats } = await supabase
         .from("global_chats")
         .select("*, user_accounts(name, avatar)")
@@ -153,18 +157,24 @@ export function GlobalChatbox() {
 
       if (chats) {
         const reversed = (chats as GlobalChat[]).reverse();
-        setMessages(reversed);
+        // Merge with any realtime messages that arrived before initial load
+        setMessages((prev) => {
+          const existingIds = new Set(reversed.map((m) => m.id));
+          const realtimeOnly = prev.filter((m) => !existingIds.has(m.id));
+          return [...reversed, ...realtimeOnly];
+        });
         setHasMore(chats.length === PAGE_SIZE);
       }
 
       const { data: rx } = await supabase.from("chat_reactions").select("*");
       if (rx) setReactions(rx as Reaction[]);
+      setInitialLoading(false);
     };
 
     loadInitial();
   }, [isOpen, currentUserId, supabase]);
 
-  // Load reactions for new messages as they arrive
+  // Load older messages on scroll-to-top
   const loadOlder = useCallback(async () => {
     if (loadingMore || !hasMore || messages.length === 0) return;
     setLoadingMore(true);
@@ -184,7 +194,6 @@ export function GlobalChatbox() {
       setMessages((prev) => [...older, ...prev]);
       setHasMore(chats.length === PAGE_SIZE);
 
-      // Restore scroll position so the view doesn't jump
       requestAnimationFrame(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight - prevScrollHeight;
@@ -197,24 +206,21 @@ export function GlobalChatbox() {
     setLoadingMore(false);
   }, [loadingMore, hasMore, messages, supabase]);
 
-  // Scroll listener to trigger load-older
+  // Scroll listener
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
-    if (scrollRef.current.scrollTop < 80) {
-      loadOlder();
-    }
+    if (scrollRef.current.scrollTop < 80) loadOlder();
   }, [loadOlder]);
 
-  // Scroll to bottom on initial load and new messages (only if near bottom)
+  // Auto-scroll to bottom on new messages (only if near bottom)
   useEffect(() => {
     if (!scrollRef.current || messages.length === 0) return;
     const el = scrollRef.current;
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
-    if (isNearBottom || messages.length <= PAGE_SIZE) {
+    if (isNearBottom || initialLoading) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
-
+  }, [messages, initialLoading]);
 
   const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,9 +260,8 @@ export function GlobalChatbox() {
     }
   };
 
-  const togglePanel = (panel: PanelType) => {
+  const togglePanel = (panel: PanelType) =>
     setActivePanel((prev) => (prev === panel ? null : panel));
-  };
 
   const fetchGifs = useCallback(
     (offset: number) =>
@@ -266,7 +271,7 @@ export function GlobalChatbox() {
 
   if (!currentUserId) return null;
 
-  // — Closed state: floating bubble with badge —
+  // Closed state: floating bubble
   if (!isOpen) {
     return (
       <div className="fixed bottom-24 right-4 z-[90] sm:bottom-6 sm:right-6">
@@ -277,15 +282,18 @@ export function GlobalChatbox() {
           className="relative size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
         >
           <MessageCircle className="size-5" />
-          {unread > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md"
-            >
-              {unread > 9 ? "9+" : unread}
-            </motion.span>
-          )}
+          <AnimatePresence>
+            {unread > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className="absolute -top-1 -right-1 size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md"
+              >
+                {unread > 9 ? "9+" : unread}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </motion.button>
       </div>
     );
@@ -323,9 +331,8 @@ export function GlobalChatbox() {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0"
       >
-        {/* Load-more indicator at top */}
         {loadingMore && (
-          <div className="flex items-center justify-center py-2">
+          <div className="flex justify-center py-2">
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           </div>
         )}
@@ -333,108 +340,108 @@ export function GlobalChatbox() {
           <p className="text-center text-[10px] text-muted-foreground/50 py-1">— Beginning of chat —</p>
         )}
 
-        {messages.length === 0 && !loadingMore && (
+        {initialLoading ? (
+          <div className="h-full flex items-center justify-center">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center">
             <p>No messages yet.<br />Be the first to say something! 👋</p>
           </div>
-        )}
+        ) : (
+          messages.map((msg) => {
+            const isMe = msg.user_id === currentUserId;
+            const msgRx = reactions.filter((r) => r.message_id === msg.id);
+            const grouped = msgRx.reduce((acc, r) => {
+              acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>);
 
-        {messages.map((msg) => {
-          const isMe = msg.user_id === currentUserId;
-          const msgRx = reactions.filter((r) => r.message_id === msg.id);
-          const grouped = msgRx.reduce((acc, r) => {
-            acc[r.emoji] = (acc[r.emoji] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>);
+            return (
+              <div
+                key={msg.id}
+                className="flex flex-col gap-0.5 group"
+                onMouseEnter={() => setHoveredMsg(msg.id)}
+                onMouseLeave={() => setHoveredMsg(null)}
+              >
+                {!isMe && (
+                  <span className="text-[10px] font-semibold text-muted-foreground ml-1">
+                    {msg.user_accounts?.name ?? "Player"}
+                  </span>
+                )}
 
-          return (
-            <div
-              key={msg.id}
-              className="flex flex-col gap-0.5 group"
-              onMouseEnter={() => setHoveredMsg(msg.id)}
-              onMouseLeave={() => setHoveredMsg(null)}
-            >
-              {!isMe && (
-                <span className="text-[10px] font-semibold text-muted-foreground ml-1">
-                  {msg.user_accounts?.name ?? "Player"}
-                </span>
-              )}
+                <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                  <div
+                    className={[
+                      "max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-snug",
+                      isMe
+                        ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
+                        : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
+                    ].join(" ")}
+                  >
+                    {msg.type === "text" && <span>{msg.message}</span>}
+                    {msg.type === "gif" && msg.gif_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={msg.gif_url} alt="GIF" className="max-w-[180px] rounded-lg object-contain" />
+                    )}
+                  </div>
 
-              <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                {/* Bubble */}
-                <div
-                  className={[
-                    "max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-snug",
-                    isMe
-                      ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
-                      : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
-                  ].join(" ")}
-                >
-                  {msg.type === "text" && <span>{msg.message}</span>}
-                  {msg.type === "gif" && msg.gif_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={msg.gif_url} alt="GIF" className="max-w-[180px] rounded-lg object-contain" />
-                  )}
+                  <AnimatePresence>
+                    {hoveredMsg === msg.id && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg"
+                      >
+                        {QUICK_REACTIONS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => toggleReaction(msg.id, emoji)}
+                            className="text-sm hover:scale-125 transition-transform leading-none"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {/* Quick react on hover */}
-                <AnimatePresence>
-                  {hoveredMsg === msg.id && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      className="flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg"
-                    >
-                      {QUICK_REACTIONS.map((emoji) => (
+                {Object.keys(grouped).length > 0 && (
+                  <div className={`flex flex-wrap gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                    {Object.entries(grouped).map(([emoji, count]) => {
+                      const iReacted = msgRx.some((r) => r.emoji === emoji && r.user_id === currentUserId);
+                      return (
                         <button
                           key={emoji}
                           onClick={() => toggleReaction(msg.id, emoji)}
-                          className="text-sm hover:scale-125 transition-transform leading-none"
+                          className={[
+                            "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border transition-colors",
+                            iReacted
+                              ? "bg-primary/20 border-primary/40 text-primary"
+                              : "bg-foreground/[0.04] border-border/40 text-muted-foreground hover:bg-foreground/[0.08]",
+                          ].join(" ")}
                         >
-                          {emoji}
+                          <span>{emoji}</span>
+                          <span>{count}</span>
                         </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <span className={`text-[9px] text-muted-foreground/50 px-1 ${isMe ? "text-right" : "text-left"}`}>
+                  {format(new Date(msg.created_at), "h:mm a")}
+                </span>
               </div>
-
-              {/* Reaction pills */}
-              {Object.keys(grouped).length > 0 && (
-                <div className={`flex flex-wrap gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
-                  {Object.entries(grouped).map(([emoji, count]) => {
-                    const iReacted = msgRx.some((r) => r.emoji === emoji && r.user_id === currentUserId);
-                    return (
-                      <button
-                        key={emoji}
-                        onClick={() => toggleReaction(msg.id, emoji)}
-                        className={[
-                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border transition-colors",
-                          iReacted
-                            ? "bg-primary/20 border-primary/40 text-primary"
-                            : "bg-foreground/[0.04] border-border/40 text-muted-foreground hover:bg-foreground/[0.08]",
-                        ].join(" ")}
-                      >
-                        <span>{emoji}</span>
-                        <span>{count}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Timestamp */}
-              <span className={`text-[9px] text-muted-foreground/50 px-1 ${isMe ? "text-right" : "text-left"}`}>
-                {format(new Date(msg.created_at), "h:mm a")}
-              </span>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Emoji / GIF Panel — tabbed */}
+      {/* Emoji / GIF Panel */}
       <AnimatePresence>
         {activePanel !== null && (
           <motion.div
@@ -447,7 +454,7 @@ export function GlobalChatbox() {
           >
             {activePanel === "emoji" && (
               <EmojiPicker
-                theme={Theme.DARK}
+                theme={"dark" as any}
                 width="100%"
                 height={350}
                 onEmojiClick={(data: EmojiClickData) => setInput((prev) => prev + data.emoji)}
@@ -472,7 +479,16 @@ export function GlobalChatbox() {
                   )}
                 </div>
                 <div className="flex-1 overflow-y-auto p-1">
-                  <Grid key={gifSearch} width={340} columns={3} fetchGifs={fetchGifs} onGifClick={sendGif} noLink />
+                  <GiphyGrid
+                    key={gifSearch}
+                    width={340}
+                    columns={3}
+                    gutter={6}
+                    user={{}}
+                    fetchGifs={fetchGifs}
+                    onGifClick={sendGif}
+                    noLink
+                  />
                 </div>
               </div>
             )}
@@ -483,7 +499,6 @@ export function GlobalChatbox() {
       {/* Input */}
       <div className="shrink-0 p-3 border-t border-border/40 bg-background/50">
         <form onSubmit={sendText} className="flex items-center gap-2">
-          {/* GIF button */}
           <button
             type="button"
             onClick={() => togglePanel("gif")}
@@ -501,7 +516,6 @@ export function GlobalChatbox() {
             </svg>
           </button>
 
-          {/* Text input */}
           <input
             type="text"
             placeholder="Chat with everyone..."
@@ -510,7 +524,6 @@ export function GlobalChatbox() {
             className="flex-1 bg-foreground/[0.04] border border-border/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors placeholder:text-muted-foreground/60"
           />
 
-          {/* Emoji button */}
           <button
             type="button"
             onClick={() => togglePanel("emoji")}
@@ -525,7 +538,6 @@ export function GlobalChatbox() {
             <Smile className="size-4" />
           </button>
 
-          {/* Send button */}
           <button
             type="submit"
             disabled={!input.trim()}
