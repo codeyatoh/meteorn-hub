@@ -97,6 +97,8 @@ function createPing(ctx: AudioContext) {
   }
 }
 
+const supabase = createClient();
+
 export function GlobalChatbox() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // Declared early so setIsOpen (below) can reference the setter without a
@@ -202,7 +204,7 @@ export function GlobalChatbox() {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Unlock AudioContext on user gesture (required by browser autoplay policy)
-  const unlockAudio = () => {
+  const unlockAudio = useCallback(() => {
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new AudioContext();
@@ -213,7 +215,7 @@ export function GlobalChatbox() {
     } catch {
       // AudioContext not available in this environment
     }
-  };
+  }, []);
 
   // Globally listen for the FIRST user interaction anywhere on the page to unlock audio.
   // This ensures background chat pings work even if they haven't opened the chatbox yet.
@@ -234,7 +236,7 @@ export function GlobalChatbox() {
       window.removeEventListener('keydown', handleFirstInteraction);
       window.removeEventListener('touchstart', handleFirstInteraction);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [unlockAudio]);
 
   useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
@@ -242,13 +244,12 @@ export function GlobalChatbox() {
 
 
 
-  // Stable supabase client — never recreated on re-render
-  const supabase = createClient();
+
 
   // Scroll to bottom
-  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
-  };
+  }, []);
 
   // When opened, jump to bottom and focus input
   useEffect(() => {
@@ -258,7 +259,7 @@ export function GlobalChatbox() {
         inputRef.current?.focus();
       }, 100);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [isOpen, scrollToBottom]);
 
   // Track auth state changes — works on hard refresh, logout, and re-login
@@ -340,15 +341,15 @@ export function GlobalChatbox() {
       supabase.removeChannel(chatSub);
       supabase.removeChannel(rxSub);
     };
-  }, [currentUserId, supabase]);
+  }, [currentUserId]);
 
   // Helper: fetch user names for a list of user_ids via secure RPC
-  const fetchUserNames = async (userIds: string[]) => {
+  const fetchUserNames = useCallback(async (userIds: string[]) => {
     if (userIds.length === 0) return new Map<string, { full_name?: string; role?: string }>();
     const { data } = await supabase
       .rpc("get_chat_profiles", { user_ids: userIds });
     return new Map((data ?? []).map((u: { user_id: string; full_name: string; role: string }) => [u.user_id, { full_name: u.full_name, role: u.role }]));
-  };
+  }, []);
 
   // Load initial messages as soon as auth resolves
   useEffect(() => {
@@ -403,8 +404,8 @@ export function GlobalChatbox() {
     };
 
     loadInitial();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId, supabase, fetchUserNames, scrollToBottom]);
+     
+  }, [currentUserId, fetchUserNames, scrollToBottom]);
 
   // Load older messages on scroll-to-top
   // setMessages is a stable useState setter — including it in deps satisfies
@@ -467,7 +468,7 @@ export function GlobalChatbox() {
     if (isNewMessage && isAtBottomRef.current) {
       scrollToBottom("smooth");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [messages, scrollToBottom]);
 
   const jumpToBottom = () => {
