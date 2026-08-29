@@ -924,7 +924,7 @@ export function GlobalChatbox() {
           </div>
         )}
 
-        <form onSubmit={sendText} className="flex items-center gap-2 p-3">
+        <form onSubmit={sendText} className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3">
           <button
             type="button"
             onClick={openReferralPicker}
@@ -961,7 +961,7 @@ export function GlobalChatbox() {
             placeholder="Chat with everyone..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1 bg-foreground/[0.04] border border-border/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors placeholder:text-muted-foreground/60"
+            className="flex-1 min-w-0 bg-foreground/[0.04] border border-border/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors placeholder:text-muted-foreground/60"
           />
 
           <button
