@@ -243,7 +243,7 @@ export default function AdminFaucetPage() {
                 <p>Manage the decentralized Community Faucet and monitor network outflows.</p>
                 <ul className="list-disc pl-4 space-y-2 mt-2">
                   <li><strong>User Monitoring:</strong> Track the total donated vs claimed amounts per user. The system highlights users who are near their maximum claimable limit (70% of donations).</li>
-                  <li><strong>Manual Credit:</strong> If a user donated but their transaction wasn't automatically verified, you can manually credit them here to instantly boost their tier and limits.</li>
+                  <li><strong>Manual Credit:</strong> If a user donated but their transaction wasn&apos;t automatically verified, you can manually credit them here to instantly boost their tier and limits.</li>
                   <li><strong>Adjust Balances:</strong> Use the sliders button next to a user to deduct balance (e.g., if they abused a bug).</li>
                   <li><strong>Dev Cut:</strong> You can see the 30% dev cut available for withdrawal to the maintenance wallet.</li>
                 </ul>
