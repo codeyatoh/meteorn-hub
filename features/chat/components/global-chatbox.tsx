@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { MessageCircle, X, Send, Smile, ChevronDown, Loader2, ArrowDown } from "lucide-react";
+import { MessageCircle, X, Send, Smile, ChevronDown, Loader2, ArrowDown, Handshake, Reply, CheckCircle2, ChevronRight, Plus, Minus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -32,7 +32,38 @@ type GlobalChat = {
   gif_url: string | null;
   created_at: string;
   user_profile?: { full_name?: string; role?: string } | null;
+  reply_to_id?: number | null;
 };
+
+type UserAccount = {
+  id: number;
+  name: string;
+  tickets_done: number;
+  total_tickets: number;
+  avatar: string;
+  referral_link: string | null;
+};
+
+// Mention parser helper
+const parseMentions = (text: string) => {
+  if (!text) return null;
+  const parts = text.split(/(@\w+)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith("@")) {
+          return (
+            <span key={i} className="text-cyan-400 font-semibold bg-cyan-400/10 px-1 rounded-sm">
+              {part}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+};
+
 
 type Reaction = {
   id: number;
@@ -112,6 +143,49 @@ export function GlobalChatbox() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
+
+  const [replyingTo, setReplyingTo] = useState<GlobalChat | null>(null);
+  const [showReferralPicker, setShowReferralPicker] = useState(false);
+  const [myAccounts, setMyAccounts] = useState<UserAccount[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+
+  const openReferralPicker = async () => {
+    if (showReferralPicker) {
+      setShowReferralPicker(false);
+      return;
+    }
+    setShowReferralPicker(true);
+    setLoadingAccounts(true);
+    const { data } = await supabase.from("user_accounts").select("*").eq("user_id", currentUserId);
+    if (data) setMyAccounts(data as UserAccount[]);
+    setLoadingAccounts(false);
+  };
+
+  const sendReferral = async (acc: UserAccount) => {
+    setShowReferralPicker(false);
+    if (!currentUserId) return;
+    const payload = JSON.stringify({ accountId: acc.id, name: acc.name, avatar: acc.avatar, link: acc.referral_link });
+    const { error } = await supabase.from("global_chats").insert({ user_id: currentUserId, message: payload, type: "referral" });
+    if (error) toast.error("Failed to send referral help request.");
+    setTimeout(() => scrollToBottom("smooth"), 100);
+  };
+
+  const handleReferralClick = (url: string) => {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (isAndroid) {
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+          const scheme = parsed.protocol.replace(":", "");
+          const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${scheme};S.browser_fallback_url=${encodeURIComponent(url)};end;`;
+          window.location.href = intentUrl;
+          return;
+        }
+      } catch {}
+    }
+    window.location.href = url;
+  };
+
 
   // Track whether user is at the bottom
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -400,17 +474,21 @@ export function GlobalChatbox() {
     inputRef.current?.focus();
   }, [scrollToBottom]);
 
+
   const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !currentUserId) return;
     const msg = input.trim();
     setInput("");
     setActivePanel(null);
-    const { error } = await supabase.from("global_chats").insert({ user_id: currentUserId, message: msg, type: "text" });
+    const replyId = replyingTo?.id || null;
+    setReplyingTo(null);
+    const { error } = await supabase.from("global_chats").insert({ user_id: currentUserId, message: msg, type: "text", reply_to_id: replyId });
     if (error) toast.error("Failed to send message. Please try again.");
     // Always jump to bottom when user sends
     setTimeout(() => scrollToBottom("smooth"), 100);
   };
+
 
   const sendGif = async (gif: IGif, e: React.SyntheticEvent<HTMLElement, Event>) => {
     e.preventDefault();
@@ -563,19 +641,104 @@ export function GlobalChatbox() {
                   </div>
 
                   <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                    <div
-                      className={[
-                        "max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-snug",
-                        isMe
-                          ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
-                          : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
-                      ].join(" ")}
-                    >
-                      {msg.type === "text" && <span>{msg.message}</span>}
-                      {msg.type === "gif" && msg.gif_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={msg.gif_url} alt="GIF" className="max-w-[180px] rounded-lg object-contain" />
+                    <div className="flex flex-col gap-1 max-w-[80%]">
+                      {msg.reply_to_id && (
+                        <div
+                          onClick={() => {
+                            const el = document.getElementById(`msg-${msg.reply_to_id}`);
+                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            el?.classList.add('bg-primary/20', 'transition-colors', 'duration-500');
+                            setTimeout(() => el?.classList.remove('bg-primary/20'), 1500);
+                          }}
+                          className="text-[10px] bg-foreground/[0.03] border border-border/30 rounded-md px-2 py-1 cursor-pointer hover:bg-foreground/[0.06] transition-colors truncate flex items-center gap-1 text-muted-foreground"
+                        >
+                          <Reply className="size-3" />
+                          <span className="truncate">Replied to message</span>
+                        </div>
                       )}
+                      
+                      <div
+                        id={`msg-${msg.id}`}
+                        className={[
+                          "rounded-2xl px-3 py-2 text-sm leading-snug w-full relative",
+                          isMe
+                            ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
+                            : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
+                          msg.type === "referral" ? "p-0 border-none bg-transparent" : ""
+                        ].join(" ")}
+                      >
+                        {msg.type === "text" && <span className="whitespace-pre-wrap break-words">{parseMentions(msg.message || "")}</span>}
+                        {msg.type === "gif" && msg.gif_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={msg.gif_url} alt="GIF" className="max-w-[180px] rounded-lg object-contain" />
+                        )}
+                        {msg.type === "referral" && msg.message && (
+                          <div className="bg-foreground/[0.03] border border-primary/30 rounded-xl p-3 w-[220px] shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-cyan-400" />
+                            <div className="flex items-center gap-2">
+                              <Handshake className="size-4 text-primary" />
+                              <span className="text-xs font-bold text-foreground">Referral Help</span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-tight">
+                              {(() => {
+                                try {
+                                  const data = JSON.parse(msg.message);
+                                  return (
+                                    <>
+                                      Help <span className="text-foreground font-semibold">{data.name}</span>!
+                                    </>
+                                  );
+                                } catch {
+                                  return "Invalid request";
+                                }
+                              })()}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const data = JSON.parse(msg.message!);
+                                    if (data.link) handleReferralClick(data.link);
+                                  } catch {}
+                                }}
+                                className="flex-1 bg-primary text-primary-foreground text-[10px] font-bold py-1.5 rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                              >
+                                Help <ChevronRight className="size-3" />
+                              </button>
+                            </div>
+                            <div className="flex gap-1">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const data = JSON.parse(msg.message!);
+                                      const { error } = await supabase.rpc("increment_referral_tickets", { target_account_id: data.accountId });
+                                      if (error) toast.error("Error updating account.");
+                                      else toast.success("+1 Help registered!");
+                                    } catch {}
+                                  }}
+                                  title="Increase (Done)"
+                                  className="flex-1 flex justify-center items-center py-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-md transition-colors border border-emerald-500/20"
+                                >
+                                  <Plus className="size-3.5" />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const data = JSON.parse(msg.message!);
+                                      const { error } = await supabase.rpc("decrement_referral_tickets", { target_account_id: data.accountId });
+                                      if (error) toast.error("Only the owner can decrease this.");
+                                      else toast.success("-1 Help removed!");
+                                    } catch {}
+                                  }}
+                                  title="Decrease (Cancel)"
+                                  className="flex-1 flex justify-center items-center py-1 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-md transition-colors border border-destructive/20"
+                                >
+                                  <Minus className="size-3.5" />
+                                </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <AnimatePresence>
@@ -586,6 +749,14 @@ export function GlobalChatbox() {
                           exit={{ opacity: 0, scale: 0.8 }}
                           className="flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg"
                         >
+                          <button
+                            onClick={() => setReplyingTo(msg)}
+                            className="text-muted-foreground hover:text-foreground text-xs hover:bg-foreground/10 transition-colors rounded-full p-1"
+                            title="Reply"
+                          >
+                            <Reply className="size-3.5" />
+                          </button>
+                          <div className="w-px h-3 bg-border/50 self-center mx-0.5" />
                           {QUICK_REACTIONS.map((emoji) => (
                             <button
                               key={emoji}
@@ -700,9 +871,74 @@ export function GlobalChatbox() {
         )}
       </AnimatePresence>
 
+
       {/* Input */}
-      <div className="shrink-0 p-3 border-t border-border/40 bg-background/50">
-        <form onSubmit={sendText} className="flex items-center gap-2">
+      <div className="shrink-0 flex flex-col border-t border-border/40 bg-background/50 relative">
+        <AnimatePresence>
+          {showReferralPicker && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-[100%] left-2 right-2 mb-2 bg-background border border-border rounded-xl shadow-xl overflow-hidden p-2 z-50 flex flex-col gap-2 max-h-[250px]"
+            >
+              <div className="flex justify-between items-center px-2 py-1">
+                <span className="text-xs font-bold">Pick an Account</span>
+                <button onClick={() => setShowReferralPicker(false)} className="text-muted-foreground hover:text-foreground">
+                  <X className="size-3.5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 flex flex-col gap-1">
+                {loadingAccounts ? (
+                  <div className="py-4 flex justify-center"><Loader2 className="size-4 animate-spin" /></div>
+                ) : myAccounts.length === 0 ? (
+                  <div className="py-4 text-center text-xs text-muted-foreground">No active accounts found.</div>
+                ) : (
+                  myAccounts.map(acc => (
+                    <button 
+                      key={acc.id} 
+                      onClick={() => sendReferral(acc)}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-foreground/5 text-left border border-transparent hover:border-border transition-colors"
+                    >
+                      <span className="text-sm font-semibold truncate">{acc.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{acc.tickets_done}/{acc.total_tickets}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {replyingTo && (
+          <div className="flex items-center justify-between px-3 py-2 bg-foreground/[0.02] border-b border-border/20">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <Reply className="size-3.5 text-muted-foreground shrink-0" />
+              <span className="text-[11px] text-muted-foreground truncate">
+                Replying to <span className="font-semibold text-foreground">{replyingTo.user_profile?.full_name ?? "Player"}</span>
+              </span>
+            </div>
+            <button onClick={() => setReplyingTo(null)} className="text-muted-foreground hover:text-foreground shrink-0 p-1 rounded-md hover:bg-foreground/10 transition-colors">
+              <X className="size-3.5" />
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={sendText} className="flex items-center gap-2 p-3">
+          <button
+            type="button"
+            onClick={openReferralPicker}
+            title="Help me Refer"
+            className={[
+              "p-1.5 rounded-xl transition-colors flex items-center justify-center",
+              showReferralPicker
+                ? "bg-primary/20 text-primary"
+                : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
+            ].join(" ")}
+          >
+            <Handshake className="size-4" />
+          </button>
+
           <button
             type="button"
             onClick={() => togglePanel("gif")}
