@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Check, X, Loader2, MailWarning, SearchIcon, ChevronLeft, ChevronDown, ListFilterIcon } from "lucide-react";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { AnimatePresence, motion } from "motion/react";
 
 type TempMailRequest = {
   user_id: string;
@@ -132,10 +133,17 @@ export default function AdminTempMailRequestsPage() {
                 <ChevronDown className="size-3.5 text-muted-foreground ml-1" />
               </button>
               
+              <AnimatePresence>
               {isFilterDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsFilterDropdownOpen(false)} />
-                  <div className="absolute z-50 top-full right-0 mt-2 w-44 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute z-50 top-full right-0 mt-2 w-44 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col"
+                  >
                     <div className="flex flex-col py-1.5">
                       <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-3 py-1.5">Filter by Status</span>
                       {[
@@ -162,9 +170,10 @@ export default function AdminTempMailRequestsPage() {
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </motion.div>
                 </>
               )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

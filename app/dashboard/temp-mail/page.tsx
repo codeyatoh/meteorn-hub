@@ -580,8 +580,25 @@ export default function TempMailPage() {
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       Generate Address
                     </div>
-                    <div className="font-mono text-[10px] uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-0.5 rounded-md">
-                      Daily Limit: {100 - (access?.daily_count || 0)} / 100
+                    <div className="flex flex-col items-end gap-1.5">
+                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                        <span className="relative flex h-2 w-2">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${100 - (access?.daily_count || 0) > 20 ? 'bg-emerald-400' : 'bg-destructive'}`}></span>
+                          <span className={`relative inline-flex rounded-full h-2 w-2 ${100 - (access?.daily_count || 0) > 20 ? 'bg-emerald-500' : 'bg-destructive'}`}></span>
+                        </span>
+                        Daily Limit
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-24 bg-border/50 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${100 - (access?.daily_count || 0) > 20 ? 'bg-emerald-500' : 'bg-destructive'}`} 
+                            style={{ width: `${Math.max(0, Math.min(100, ((100 - (access?.daily_count || 0)) / 100) * 100))}%` }}
+                          />
+                        </div>
+                        <div className="font-mono text-xs font-bold text-foreground w-12 text-right">
+                          {100 - (access?.daily_count || 0)} <span className="text-[9px] text-muted-foreground font-normal">left</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -630,10 +647,17 @@ export default function TempMailPage() {
                           <ChevronDown className={`size-4 text-muted-foreground transition-transform flex-shrink-0 ${domainOpen ? "rotate-180" : ""}`} />
                         </button>
 
+                        <AnimatePresence>
                         {domainOpen && (
                           <>
                             <div className="fixed inset-0 z-40" onClick={() => setDomainOpen(false)} />
-                            <div className="absolute z-50 right-0 top-full mt-1.5 w-full min-w-[220px] rounded-xl border border-border bg-background shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute z-50 right-0 top-full mt-1.5 w-full min-w-[220px] rounded-xl border border-border bg-background shadow-xl overflow-hidden"
+                            >
                               <div className="py-1">
                                 {/* Domain list */}
                                 {domains.map((d) => (
@@ -652,9 +676,10 @@ export default function TempMailPage() {
                                   </button>
                                 ))}
                               </div>
-                            </div>
+                            </motion.div>
                           </>
                         )}
+                        </AnimatePresence>
                       </div>
                     </div>
 
