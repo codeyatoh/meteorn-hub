@@ -44,9 +44,11 @@ type PanelType = "emoji" | "gif" | null;
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "👀"];
 
-function playPing() {
+// Pre-unlocked AudioContext helper
+// AudioContext must be created/resumed during a user gesture.
+// We create it once on first gesture, then reuse it for all pings.
+function createPing(ctx: AudioContext) {
   try {
-    const ctx = new AudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -59,12 +61,15 @@ function playPing() {
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.35);
   } catch {
-    // Ignore if AudioContext not available
+    // Ignore if AudioContext API fails
   }
 }
 
 export function GlobalChatbox() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Declared early so setIsOpen (below) can reference the setter without a
+  // temporal dead-zone error — useState setters are stable references.
+  const [messages, setMessages] = useState<GlobalChat[]>([]);
   // Persist open/closed state across page refreshes
   const [isOpen, setIsOpenState] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -73,8 +78,16 @@ export function GlobalChatbox() {
   const setIsOpen = useCallback((val: boolean) => {
     setIsOpenState(val);
     localStorage.setItem("gchat_open", val ? "1" : "0");
+    // Persist last-seen message ID when chat is opened so the badge resets correctly.
+    // We use setMessages functional form; setter is stable so it's safe here.
+    if (val) {
+      setMessages((prev) => {
+        const latestId = prev.length > 0 ? prev[prev.length - 1].id : 0;
+        if (latestId > 0) localStorage.setItem("gchat_last_seen", String(latestId));
+        return prev;
+      });
+    }
   }, []);
-  const [messages, setMessages] = useState<GlobalChat[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [input, setInput] = useState("");
   const [activePanel, setActivePanel] = useState<PanelType>(null);
@@ -96,6 +109,22 @@ export function GlobalChatbox() {
   const isOpenRef = useRef(isOpen);
   const isAtBottomRef = useRef(true);
   const prevMessageCountRef = useRef(0);
+  // Persisted AudioContext — unlocked on first user gesture
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Unlock AudioContext on user gesture (required by browser autoplay policy)
+  const unlockAudio = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      if (audioCtxRef.current.state === "suspended") {
+        audioCtxRef.current.resume();
+      }
+    } catch {
+      // AudioContext not available in this environment
+    }
+  }, []);
 
   useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
   useEffect(() => { isAtBottomRef.current = isAtBottom; }, [isAtBottom]);
@@ -154,7 +183,10 @@ export function GlobalChatbox() {
           });
 
           if (newMsg.user_id !== currentUserId) {
-            playPing();
+            // Play ping only if AudioContext has been unlocked by a user gesture
+            if (audioCtxRef.current && audioCtxRef.current.state === "running") {
+              createPing(audioCtxRef.current);
+            }
             if (!isOpenRef.current) {
               setUnread((u) => u + 1);
             }
@@ -227,6 +259,13 @@ export function GlobalChatbox() {
           return [...enriched, ...realtimeOnly];
         });
         setHasMore(chats.length === PAGE_SIZE);
+
+        // Compute initial unread count from last-seen message ID persisted in localStorage
+        const lastSeenId = Number(localStorage.getItem("gchat_last_seen") ?? 0);
+        const initialUnread = (enriched as GlobalChat[]).filter(
+          (m) => m.id > lastSeenId && m.user_id !== currentUserId
+        ).length;
+        setUnread(initialUnread);
       } else {
         setHasMore(false);
       }
@@ -243,6 +282,8 @@ export function GlobalChatbox() {
   }, [currentUserId, supabase, fetchUserNames, scrollToBottom]);
 
   // Load older messages on scroll-to-top
+  // setMessages is a stable useState setter — including it in deps satisfies
+  // React Compiler's inferred dependency analysis without causing extra re-renders.
   const loadOlder = useCallback(async () => {
     if (loadingMore || !hasMore || messages.length === 0) return;
     setLoadingMore(true);
@@ -277,7 +318,7 @@ export function GlobalChatbox() {
     }
 
     setLoadingMore(false);
-  }, [loadingMore, hasMore, messages, supabase, fetchUserNames]);
+  }, [loadingMore, hasMore, messages, supabase, fetchUserNames, setMessages]);
 
   // Scroll listener — tracks position and triggers load-older
   const handleScroll = useCallback(() => {
@@ -370,7 +411,7 @@ export function GlobalChatbox() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => { setIsOpen(true); setUnread(0); }}
+          onClick={() => { unlockAudio(); setIsOpen(true); setUnread(0); }}
           className="relative size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
         >
           <MessageCircle className="size-5" />
@@ -393,6 +434,7 @@ export function GlobalChatbox() {
 
   return (
     <div
+      onClick={unlockAudio}
       className={[
         "fixed z-[90] flex flex-col",
         // Mobile: explicit height so flex-1 resolves. bottom-24=96px, dock top ~82px = 14px gap.

@@ -63,8 +63,24 @@ function formatCountdown(expiresAt: string) {
 function prepareHtml(html: string) {
   if (!html) return "";
   const baseTag = '<base target="_blank">';
-  const styleTag = '<style>body { overflow-x: hidden !important; word-wrap: break-word !important; overflow-wrap: break-word !important; font-family: system-ui, -apple-system, sans-serif; background-color: transparent !important; color: CanvasText; color-scheme: light dark; } img { max-width: 100% !important; height: auto !important; }</style>';
-  
+  // Explicit dark-mode colors — CanvasText is unreliable on Android WebView
+  // because the iframe does not inherit the parent page's color-scheme.
+  const styleTag = [
+    '<style>',
+    'html, body {',
+    '  overflow-x: hidden !important;',
+    '  word-wrap: break-word !important;',
+    '  overflow-wrap: break-word !important;',
+    '  font-family: system-ui, -apple-system, sans-serif;',
+    '  background-color: transparent !important;',
+    '  color: #e2e8f0 !important;',
+    '  color-scheme: dark;',
+    '}',
+    'img { max-width: 100% !important; height: auto !important; }',
+    'a { color: #818cf8 !important; }',
+    '</style>',
+  ].join('');
+
   if (html.toLowerCase().includes('<head>')) {
     return html.replace(/<head>/i, `<head>${baseTag}${styleTag}`);
   }
@@ -419,6 +435,7 @@ export default function TempMailPage() {
                       <iframe
                         srcDoc={prepareHtml(selectedMsg.html[0])}
                         className="w-full min-h-[500px] border-0 bg-transparent"
+                        style={{ colorScheme: 'dark' }}
                         sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
                         title="Email content"
                       />
