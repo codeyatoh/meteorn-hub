@@ -13,8 +13,8 @@ import {
   Handshake,
   Reply,
   ChevronRight,
-  Plus,
-  Minus,
+  Heart,
+  HandHeart,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -555,14 +555,12 @@ export function GlobalChatbox() {
     setActivePanel(null);
     const replyId = replyingTo?.id || null;
     setReplyingTo(null);
-    const { error } = await supabase
-      .from("global_chats")
-      .insert({
-        user_id: currentUserId,
-        message: msg,
-        type: "text",
-        reply_to_id: replyId,
-      });
+    const { error } = await supabase.from("global_chats").insert({
+      user_id: currentUserId,
+      message: msg,
+      type: "text",
+      reply_to_id: replyId,
+    });
     if (error) toast.error("Failed to send message. Please try again.");
     // Always jump to bottom when user sends
     setTimeout(() => scrollToBottom("smooth"), 100);
@@ -798,25 +796,24 @@ export function GlobalChatbox() {
                           />
                         )}
                         {msg.type === "referral" && msg.message && (
-                          <div className="bg-foreground/[0.03] border border-primary/30 rounded-xl p-3 w-[220px] shadow-sm flex flex-col gap-2 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-cyan-400" />
-                            <div className="flex items-center gap-2">
-                              <Handshake className="size-4 text-primary" />
-                              <span className="text-xs font-bold text-foreground">
-                                Referral Help
+                          <div className="bg-background/95 backdrop-blur border border-border/50 rounded-xl p-3 w-[220px] shadow-sm flex flex-col gap-2.5">
+                            <div className="flex items-center gap-1.5 border-b border-border/50 pb-1.5">
+                              <HandHeart className="size-3.5 text-primary" />
+                              <span className="text-[11px] font-semibold text-foreground/90 uppercase tracking-wider">
+                                Help Needed
                               </span>
                             </div>
-                            <p className="text-[11px] text-muted-foreground leading-tight">
+                            <p className="text-[11px] text-muted-foreground leading-snug">
                               {(() => {
                                 try {
                                   const data = JSON.parse(msg.message);
                                   return (
                                     <>
                                       Help{" "}
-                                      <span className="text-foreground font-semibold">
+                                      <span className="text-primary font-semibold">
                                         {data.name}
-                                      </span>
-                                      !
+                                      </span>{" "}
+                                      by using their referral link!
                                     </>
                                   );
                                 } catch {
@@ -824,7 +821,7 @@ export function GlobalChatbox() {
                                 }
                               })()}
                             </p>
-                            <div className="flex items-center gap-1.5 mt-1">
+                            <div className="flex items-center gap-1.5 mt-0.5">
                               <button
                                 onClick={async () => {
                                   try {
@@ -833,12 +830,10 @@ export function GlobalChatbox() {
                                       handleReferralClick(data.link);
                                   } catch {}
                                 }}
-                                className="flex-1 bg-primary text-primary-foreground text-[10px] font-bold py-1.5 rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                className="flex-[2] bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1 border border-primary/20"
                               >
-                                Help <ChevronRight className="size-3" />
+                                Go to Link <ChevronRight className="size-3" />
                               </button>
-                            </div>
-                            <div className="flex gap-1">
                               <button
                                 onClick={async () => {
                                   try {
@@ -849,33 +844,14 @@ export function GlobalChatbox() {
                                     );
                                     if (error)
                                       toast.error("Error updating account.");
-                                    else toast.success("+1 Help registered!");
+                                    else
+                                      toast.success("Help marked as Done! 💖");
                                   } catch {}
                                 }}
-                                title="Increase (Done)"
-                                className="flex-1 flex justify-center items-center py-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-md transition-colors border border-emerald-500/20"
+                                title="Mark as Done"
+                                className="flex-1 flex justify-center items-center py-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 rounded-md transition-all border border-rose-500/20"
                               >
-                                <Plus className="size-3.5" />
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const data = JSON.parse(msg.message!);
-                                    const { error } = await supabase.rpc(
-                                      "decrement_referral_tickets",
-                                      { target_account_id: data.accountId },
-                                    );
-                                    if (error)
-                                      toast.error(
-                                        "Only the owner can decrease this.",
-                                      );
-                                    else toast.success("-1 Help removed!");
-                                  } catch {}
-                                }}
-                                title="Decrease (Cancel)"
-                                className="flex-1 flex justify-center items-center py-1 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-md transition-colors border border-destructive/20"
-                              >
-                                <Minus className="size-3.5" />
+                                <Heart className="size-3.5 fill-current" />
                               </button>
                             </div>
                           </div>
