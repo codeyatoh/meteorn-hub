@@ -34,8 +34,8 @@ const donutChartConfig = {
     label: "Dev Cut (30%)",
     color: "#64748b", // slate-500
   },
-  unused: {
-    label: "Unclaimed",
+  claimed: {
+    label: "Claimed",
     color: "#312e81", // dim primary
   },
 } satisfies ChartConfig;
@@ -56,7 +56,7 @@ function DonutChart({ claimable, devCut, total }: { claimable: number; devCut: n
   const data = [
     { name: "claimable", value: parseFloat(claimable.toFixed(4)) },
     { name: "devcut",    value: parseFloat(devCut.toFixed(4)) },
-    { name: "unused",    value: parseFloat(claimed.toFixed(4)) },
+    { name: "claimed",   value: parseFloat(claimed.toFixed(4)) },
   ].filter((d) => d.value > 0);
 
   return (
@@ -361,11 +361,15 @@ export default function FaucetPage() {
               <div className="flex flex-col gap-1.5 text-[10px] font-mono">
                 <div className="flex items-center gap-1.5">
                   <span className="size-2 rounded-sm bg-primary inline-block" />
-                  <span className="text-muted-foreground">Claimable (70%)</span>
+                  <span className="text-muted-foreground">Claimable</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="size-2 rounded-sm bg-foreground/30 inline-block" />
                   <span className="text-muted-foreground">Dev Cut (30%)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-sm bg-indigo-900 inline-block" />
+                  <span className="text-muted-foreground">Claimed</span>
                 </div>
               </div>
             </div>
