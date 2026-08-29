@@ -513,7 +513,7 @@ export function GlobalChatbox() {
     loadInitial();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId]);
+  }, [currentUserId, fetchUserNames, checkIsMentioned]);
 
   // Load older messages on scroll-to-top
   // setMessages is a stable useState setter — including it in deps satisfies
