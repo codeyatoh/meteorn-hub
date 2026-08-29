@@ -533,41 +533,20 @@ export default function FaucetPage() {
               <div className="overflow-x-auto">
                 <div className="min-w-[520px]">
                   {/* Header */}
-                  <div className="grid grid-cols-[120px_90px_minmax(140px,1.5fr)_minmax(120px,2fr)] gap-4 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
+                  <div className="grid grid-cols-[120px_minmax(140px,1.5fr)_minmax(120px,2fr)_90px] gap-4 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                     <span>Time</span>
-                    <span>Status</span>
                     <span>Address Funded</span>
                     <span>TxHash</span>
+                    <span>Status</span>
                   </div>
 
                   <div className="divide-y divide-border/30">
                     {pagedHistory.map((c) => {
                       const status = c.status ?? 'success';
                       return (
-                        <div key={c.id} className="grid grid-cols-[120px_90px_minmax(140px,1.5fr)_minmax(120px,2fr)] gap-4 px-4 py-3 items-center hover:bg-foreground/[0.02] transition-colors">
+                        <div key={c.id} className="grid grid-cols-[120px_minmax(140px,1.5fr)_minmax(120px,2fr)_90px] gap-4 px-4 py-3 items-center hover:bg-foreground/[0.02] transition-colors">
                           <div className="text-xs text-muted-foreground">
                             {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                          </div>
-                          {/* Status Badge */}
-                          <div>
-                            {status === 'processing' && (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
-                                <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
-                                Processing
-                              </span>
-                            )}
-                            {status === 'success' && (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                                <span className="size-1.5 rounded-full bg-emerald-400" />
-                                Success
-                              </span>
-                            )}
-                            {status === 'failed' && (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-500/15 text-red-400 border border-red-500/20" title={c.error_message}>
-                                <span className="size-1.5 rounded-full bg-red-400" />
-                                Failed
-                              </span>
-                            )}
                           </div>
                           <div className="font-mono text-[11px] text-primary truncate" title={c.wallet_address}>
                             {c.wallet_address}
@@ -586,6 +565,27 @@ export default function FaucetPage() {
                               </a>
                             ) : (
                               <span className="text-[10px] text-muted-foreground/50 font-mono">—</span>
+                            )}
+                          </div>
+                          {/* Status Badge - last column */}
+                          <div>
+                            {status === 'processing' && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                                <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                Processing
+                              </span>
+                            )}
+                            {status === 'success' && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                                <span className="size-1.5 rounded-full bg-emerald-400" />
+                                Success
+                              </span>
+                            )}
+                            {status === 'failed' && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-500/15 text-red-400 border border-red-500/20" title={c.error_message}>
+                                <span className="size-1.5 rounded-full bg-red-400" />
+                                Failed
+                              </span>
                             )}
                           </div>
                         </div>
