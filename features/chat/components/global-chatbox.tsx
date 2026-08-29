@@ -168,9 +168,24 @@ export function GlobalChatbox() {
   const [gifSearch, setGifSearch] = useState("");
   const [hoveredMsg, setHoveredMsg] = useState<number | null>(null);
   const [unread, setUnread] = useState(0);
+  const [hasUnreadMention, setHasUnreadMention] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
+
+  const mySafeName = currentUserProfileName?.replace(/\s+/g, "") ?? "";
+  const checkIsMentioned = useCallback(
+    (msgText: string | null) => {
+      if (!msgText) return false;
+      const text = msgText.toLowerCase();
+      return (
+        text.includes("@everyone") ||
+        text.includes("@highlight") ||
+        (mySafeName !== "" && text.includes(`@${mySafeName.toLowerCase()}`))
+      );
+    },
+    [mySafeName],
+  );
 
   const [replyingTo, setReplyingTo] = useState<GlobalChat | null>(null);
   const [showReferralPicker, setShowReferralPicker] = useState(false);
@@ -331,6 +346,7 @@ export function GlobalChatbox() {
     ) {
       setMessages([]);
       setUnread(0);
+      setHasUnreadMention(false);
       setIsOpenState(false);
       setHasMore(true);
     }
@@ -370,6 +386,9 @@ export function GlobalChatbox() {
             }
             if (!isOpenRef.current) {
               setUnread((u) => u + 1);
+              if (checkIsMentioned(newMsg.message)) {
+                setHasUnreadMention(true);
+              }
             }
             // If chat is open but user scrolled up, increment new-while-away counter
             if (isOpenRef.current && !isAtBottomRef.current) {
@@ -471,6 +490,14 @@ export function GlobalChatbox() {
           (m) => m.id > lastSeenId && m.user_id !== currentUserId,
         ).length;
         setUnread(initialUnread);
+        const unreadMentions =
+          (enriched as GlobalChat[]).filter(
+            (m) =>
+              m.id > lastSeenId &&
+              m.user_id !== currentUserId &&
+              checkIsMentioned(m.message),
+          ).length > 0;
+        setHasUnreadMention(unreadMentions);
       } else {
         setHasMore(false);
       }
@@ -705,6 +732,7 @@ export function GlobalChatbox() {
             unlockAudio();
             setIsOpen(true);
             setUnread(0);
+            setHasUnreadMention(false);
           }}
           className="relative size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
         >
@@ -719,6 +747,18 @@ export function GlobalChatbox() {
               >
                 {unread > 9 ? "9+" : unread}
               </motion.span>
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {hasUnreadMention && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                className="absolute -top-2 -left-2 size-6 rounded-full bg-amber-500 text-amber-950 flex items-center justify-center shadow-lg shadow-amber-500/20 border-2 border-background animate-bounce"
+              >
+                <AtSign className="size-3.5" strokeWidth={3} />
+              </motion.div>
             )}
           </AnimatePresence>
         </motion.button>
@@ -789,15 +829,7 @@ export function GlobalChatbox() {
             messages.map((msg) => {
               const isMe = msg.user_id === currentUserId;
 
-              const mySafeName =
-                currentUserProfileName?.replace(/\s+/g, "") ?? "";
-              const msgText = msg.message?.toLowerCase() || "";
-              const isMentioned =
-                !isMe &&
-                (msgText.includes("@everyone") ||
-                  msgText.includes("@highlight") ||
-                  (mySafeName &&
-                    msgText.includes(`@${mySafeName.toLowerCase()}`)));
+              const isMentioned = !isMe && checkIsMentioned(msg.message);
 
               const msgRx = reactions.filter((r) => r.message_id === msg.id);
               const grouped = msgRx.reduce(
