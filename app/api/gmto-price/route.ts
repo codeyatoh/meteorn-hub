@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
  * Server-side proxy for CoinGecko simple price endpoint.
  * Avoids CORS by making the request from the server, not the browser.
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   // No longer extracting single currency from query as we fetch usd,php,eur simultaneously
 
   try {
