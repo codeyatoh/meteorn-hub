@@ -405,7 +405,8 @@ export function GlobalChatbox() {
 
     loadInitial();
      
-  }, [currentUserId, fetchUserNames, scrollToBottom]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
 
   // Load older messages on scroll-to-top
   // setMessages is a stable useState setter — including it in deps satisfies
@@ -469,7 +470,8 @@ export function GlobalChatbox() {
       scrollToBottom("smooth");
     }
      
-  }, [messages, scrollToBottom]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   const jumpToBottom = () => {
     setNewWhileAway(0);
