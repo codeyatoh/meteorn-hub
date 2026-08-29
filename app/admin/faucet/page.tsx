@@ -212,6 +212,16 @@ export default function AdminFaucetPage() {
     );
   });
 
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div style={{ width: 180, height: 80 }}>
+          <WanderingEyes className="h-full w-full [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-6 py-10">
       <div className="mx-auto max-w-5xl space-y-10">
@@ -305,13 +315,7 @@ export default function AdminFaucetPage() {
                 </div>
               </div>
 
-              {isLoading ? (
-                <div className="flex h-[30vh] items-center justify-center">
-                  <div style={{ width: 180, height: 80 }}>
-                    <WanderingEyes className="h-full w-full [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
-                  </div>
-                </div>
-              ) : filteredUsers.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <div className="flex h-[30vh] items-center justify-center text-sm text-muted-foreground">No matching users found.</div>
               ) : (
                 <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden pb-4">
@@ -376,13 +380,7 @@ export default function AdminFaucetPage() {
                 />
               </div>
 
-              {isLoading ? (
-                <div className="flex h-[30vh] items-center justify-center">
-                  <div style={{ width: 180, height: 80 }}>
-                    <WanderingEyes className="h-full w-full [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
-                  </div>
-                </div>
-              ) : filteredClaims.length === 0 ? (
+              {filteredClaims.length === 0 ? (
                 <div className="flex h-[30vh] items-center justify-center text-sm text-muted-foreground">No claims found.</div>
               ) : (
                 <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden pb-4">
