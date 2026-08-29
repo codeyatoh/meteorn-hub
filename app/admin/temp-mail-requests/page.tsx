@@ -148,7 +148,7 @@ export default function AdminTempMailRequestsPage() {
                           key={opt.value}
                           type="button"
                           onClick={() => {
-                            setStatusFilter(opt.value as any);
+                            setStatusFilter(opt.value as "all" | "pending" | "approved" | "rejected");
                             setPage(1);
                             setIsFilterDropdownOpen(false);
                           }}
