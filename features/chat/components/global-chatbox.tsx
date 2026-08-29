@@ -829,7 +829,14 @@ export function GlobalChatbox() {
             messages.map((msg) => {
               const isMe = msg.user_id === currentUserId;
 
-              const isMentioned = !isMe && checkIsMentioned(msg.message);
+              let mentionType: "none" | "direct" | "highlight" | "everyone" = "none";
+              if (!isMe && msg.message) {
+                const text = msg.message.toLowerCase();
+                const mySafeName = currentUserProfileName?.replace(/\s+/g, "") ?? "";
+                if (text.includes("@everyone")) mentionType = "everyone";
+                else if (text.includes("@highlight")) mentionType = "highlight";
+                else if (mySafeName && text.includes(`@${mySafeName.toLowerCase()}`)) mentionType = "direct";
+              }
 
               const msgRx = reactions.filter((r) => r.message_id === msg.id);
               const grouped = msgRx.reduce(
@@ -857,11 +864,6 @@ export function GlobalChatbox() {
                       <span className="text-[8.5px] font-bold tracking-widest uppercase bg-primary/20 text-primary px-1.5 py-0.5 rounded-sm">
                         Admin
                       </span>
-                    )}
-                    {isMentioned && (
-                      <div className="flex items-center gap-0.5 ml-auto bg-amber-500/20 text-amber-500 px-1.5 py-[1px] rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm animate-pulse">
-                        <AtSign className="size-2.5" /> Mentioned
-                      </div>
                     )}
                   </div>
 
@@ -902,9 +904,13 @@ export function GlobalChatbox() {
                           "rounded-2xl px-3 py-2 text-sm leading-snug w-full relative",
                           isMe
                             ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
-                            : isMentioned
-                              ? "bg-amber-500/10 border border-amber-500/40 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(245,158,11,0.1)]"
-                              : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
+                            : mentionType === "everyone"
+                              ? "bg-cyan-500/10 border border-cyan-500/40 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(6,182,212,0.1)]"
+                              : mentionType === "highlight"
+                                ? "bg-rose-500/10 border border-rose-500/40 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(243,24,113,0.1)]"
+                                : mentionType === "direct"
+                                  ? "bg-amber-500/10 border border-amber-500/40 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(245,158,11,0.1)]"
+                                  : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
                           msg.type === "referral"
                             ? "p-0 border-none bg-transparent"
                             : "",
