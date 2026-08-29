@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Settings, Save, Mail, Lock, User, DollarSign, Loader2, ChevronDown, Coffee, CheckIcon, WalletIcon } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { GuideModal } from "@/components/ui/guide-modal";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -118,9 +119,19 @@ export default function SettingsPage() {
             <Settings className="size-3 mr-2" />
             Preferences
           </div>
-          <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
-            Account Settings
-          </h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+              Account Settings
+            </h1>
+            <GuideModal title="Account Settings">
+              <p>Manage your Meteorn Hub account preferences and security.</p>
+              <ul className="list-disc pl-4 space-y-2 mt-2">
+                <li><strong>Profile:</strong> Update your nickname and display currency for the analytics dashboard.</li>
+                <li><strong>Security:</strong> Change your login email or update your password.</li>
+                <li><strong>API Key:</strong> Generate or refresh your API key for accessing the game client integrations.</li>
+              </ul>
+            </GuideModal>
+          </div>
           <p className="mt-2 text-muted-foreground text-sm">
             Update your profile, currency, and security details.
           </p>

@@ -1,9 +1,10 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon, CopyIcon, ListFilterIcon, WrenchIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon, CopyIcon, ListFilterIcon, WrenchIcon, HelpCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
+import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 
 import { GmtoChartConverter } from "@/features/dashboard/components/gmto-chart-converter";
@@ -784,9 +785,19 @@ export default function UserDashboardPage() {
             </div>
                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
-              Welcome back, <span className="text-primary">{nickname}</span>
-            </h1>
+            <div className="flex items-center gap-4">
+              <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+                Welcome back, <span className="text-primary">{nickname}</span>
+              </h1>
+              <GuideModal title="Dashboard Overview">
+                <p>Welcome to Meteorn Hub! This is your central dashboard for managing game accounts, tickets, and income.</p>
+                <ul className="list-disc pl-4 space-y-2 mt-2">
+                  <li><strong>Accounts:</strong> Add your game accounts to easily track their progress and manage their individual tickets.</li>
+                  <li><strong>Daily Tickets:</strong> Quickly log the number of tickets you use each day per account.</li>
+                  <li><strong>Income & Cashouts:</strong> Record the GMTO you earn. You can easily mark income as sold and convert it to your local fiat currency in real-time.</li>
+                </ul>
+              </GuideModal>
+            </div>
             <p className="mt-2 text-muted-foreground text-sm">
               Here&apos;s an overview of your game accounts today.
             </p>

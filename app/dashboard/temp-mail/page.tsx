@@ -17,8 +17,10 @@ import {
   AtSign,
   Shuffle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
+import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
 import { getTierLimits, TIER_TABLE } from "@/lib/utils/tiers";
@@ -388,9 +390,20 @@ export default function TempMailPage() {
             <Mail className="size-3 mr-2" />
             Temp Mail
           </div>
-          <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
-            Temporary Email
-          </h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+              Temporary Email
+            </h1>
+            <GuideModal title="How Temp Mail Works">
+              <p>Generate a disposable email address to receive verification codes without exposing your real email.</p>
+              <ul className="list-disc pl-4 space-y-2 mt-2">
+                <li><strong>Privacy:</strong> All emails expire after 10 minutes and messages are permanently deleted.</li>
+                <li><strong>Limits:</strong> By default, users have a limited number of active temp mail addresses.</li>
+                <li><strong>Upgrading:</strong> Donating POL to the community Faucet increases your active address limit.</li>
+              </ul>
+              <p className="mt-2 text-primary font-medium">💡 Tip: Avoid refreshing the page, as it will reset the 10-minute timer for your active addresses if you re-generate.</p>
+            </GuideModal>
+          </div>
           <p className="mt-2 text-muted-foreground text-sm">
             Generate a disposable email address to receive codes and verifications.
           </p>

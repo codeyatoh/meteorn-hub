@@ -5,6 +5,7 @@ import { GamepadIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, ListFilterI
 import Image from "next/image";
 import { toast } from "sonner";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { GuideModal } from "@/components/ui/guide-modal";
 
 type AdminAccount = {
   id: number;
@@ -54,7 +55,17 @@ export default function AdminAccountsPage() {
               <GamepadIcon className="size-3 mr-2" />
               Accounts
             </div>
-            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">All Game Accounts</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="font-heading text-3xl sm:text-4xl text-foreground">All Game Accounts</h1>
+              <GuideModal title="Admin: Accounts">
+                <p>Manage all player game accounts registered across the platform.</p>
+                <ul className="list-disc pl-4 space-y-2 mt-2">
+                  <li><strong>Account Overview:</strong> View ticket usage, total earnings, and the linked Meteorn Hub user.</li>
+                  <li><strong>Status & Bans:</strong> Filter by Active or Banned accounts. You can also ban specific game accounts from being used.</li>
+                  <li><strong>Search:</strong> Quickly find a specific game account by searching its in-game name.</li>
+                </ul>
+              </GuideModal>
+            </div>
             <p className="mt-2 text-muted-foreground text-sm">
               Platform-wide view of every game account. Edit quotas or manually reset tickets.
             </p>

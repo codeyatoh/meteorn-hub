@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnimatedModal } from "@/components/ui/animated-modal";
+import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -234,7 +235,18 @@ export default function AdminFaucetPage() {
               <span>•</span>
               <span className="text-primary font-bold">FAUCET ADMIN</span>
             </div>
-            <h1 className="mt-1 font-heading text-4xl tracking-tight text-foreground">Faucet Control Center</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="mt-1 font-heading text-4xl tracking-tight text-foreground">Faucet Control Center</h1>
+              <GuideModal title="Admin: Faucet Control">
+                <p>Manage the decentralized Community Faucet and monitor network outflows.</p>
+                <ul className="list-disc pl-4 space-y-2 mt-2">
+                  <li><strong>User Monitoring:</strong> Track the total donated vs claimed amounts per user. The system highlights users who are near their maximum claimable limit (70% of donations).</li>
+                  <li><strong>Manual Credit:</strong> If a user donated but their transaction wasn't automatically verified, you can manually credit them here to instantly boost their tier and limits.</li>
+                  <li><strong>Adjust Balances:</strong> Use the sliders button next to a user to deduct balance (e.g., if they abused a bug).</li>
+                  <li><strong>Dev Cut:</strong> You can see the 30% dev cut available for withdrawal to the maintenance wallet.</li>
+                </ul>
+              </GuideModal>
+            </div>
             <p className="mt-2 max-w-xl text-muted-foreground text-sm">
               Manage the Hot Wallet, adjust user balances, and monitor global outflows.
             </p>

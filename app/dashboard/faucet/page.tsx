@@ -8,6 +8,7 @@ import { Loader2, Droplets, CopyIcon, CheckIcon, Activity, ArrowRight, ShieldChe
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
+import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { getTierLimits, TIER_TABLE } from "@/lib/utils/tiers";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
@@ -307,7 +308,18 @@ export default function FaucetPage() {
             <Droplets className="size-3 mr-2" />
             POL FAUCET
           </div>
-          <h1 className="font-heading text-3xl sm:text-4xl text-foreground">Community Faucet</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">Community Faucet</h1>
+            <GuideModal title="How the Faucet Works">
+              <p>The Faucet is a decentralized community pool that allows users to instantly fund their wallets with POL.</p>
+              <ul className="list-disc pl-4 space-y-2 mt-2">
+                <li><strong>Claiming:</strong> You can claim a base of 0.05 POL per day without donating.</li>
+                <li><strong>Tiers & Limits:</strong> Contributing to the Hot Wallet pool increases your daily claim limit and unlocks higher Temp Mail active address allowances.</li>
+                <li><strong>Claimable Balance:</strong> You can claim back up to 70% of your total lifetime donations to the pool.</li>
+              </ul>
+              <p className="mt-2 text-primary font-medium">💡 Tip: Make sure to verify your donation by submitting the transaction hash below.</p>
+            </GuideModal>
+          </div>
           <p className="mt-2 text-muted-foreground text-sm max-w-2xl">
             Fund your wallets instantly using the decentralized community pool.
             Contribute to the pool to unlock higher claims and exclusive Temp Mail limits.

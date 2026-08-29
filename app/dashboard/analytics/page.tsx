@@ -4,6 +4,7 @@ import { useEffect, useState, ReactNode, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BarChart2 } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { GuideModal } from "@/components/ui/guide-modal";
 import Image from "next/image";
 import { AnalyticsIncomeChart } from "@/features/dashboard/components/analytics-income-chart";
 
@@ -222,9 +223,19 @@ export default function AnalyticsPage() {
               <BarChart2 className="size-3 mr-2" />
               Analytics
             </div>
-            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
-              History & Reports
-            </h1>
+            <div className="flex items-center gap-4">
+              <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+                History & Reports
+              </h1>
+              <GuideModal title="Understanding Analytics">
+                <p>The Analytics dashboard helps you track your Meteorn Hub activity and earnings over time.</p>
+                <ul className="list-disc pl-4 space-y-2 mt-2">
+                  <li><strong>Tickets:</strong> View your daily, weekly, or monthly ticket usage across all your registered game accounts.</li>
+                  <li><strong>Income & Cashouts:</strong> Track the GMTO you earn and cash out, converted to your preferred local fiat currency in real-time.</li>
+                  <li><strong>Time Filters:</strong> Use the filters to drill down into specific timeframes to spot trends.</li>
+                </ul>
+              </GuideModal>
+            </div>
             <p className="mt-2 text-muted-foreground text-sm">
               Track your tickets and income over time.
             </p>

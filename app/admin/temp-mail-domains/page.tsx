@@ -10,6 +10,7 @@ import {
   ToggleRight,
 } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { GuideModal } from "@/components/ui/guide-modal";
 
 type Domain = {
   id: number;
@@ -93,7 +94,17 @@ export default function TempMailDomainsPage() {
             <GlobeIcon className="size-3 mr-2" />
             Temp Mail
           </div>
-          <h1 className="font-heading text-3xl sm:text-4xl text-foreground">Domain Management</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">Domain Management</h1>
+            <GuideModal title="Admin: Domain Management">
+              <p>Manage the list of domains available for the Temporary Email service.</p>
+              <ul className="list-disc pl-4 space-y-2 mt-2">
+                <li><strong>Auto-sync:</strong> The system automatically pulls domains configured in the database.</li>
+                <li><strong>Active Status:</strong> You can toggle domains on or off. Inactive domains will not be assigned to new temp mail sessions.</li>
+                <li><strong>Deletion:</strong> Deleting a domain permanently removes it from the service.</li>
+              </ul>
+            </GuideModal>
+          </div>
           <p className="mt-2 text-muted-foreground text-sm">
             Domains are automatically synced from your custom domains list. You can manage which ones are active.
           </p>

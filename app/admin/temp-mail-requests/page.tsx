@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Check, X, Loader2, MailWarning, SearchIcon, ChevronLeft, ChevronDown, ListFilterIcon } from "lucide-react";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { GuideModal } from "@/components/ui/guide-modal";
 import { AnimatePresence, motion } from "motion/react";
 import { getTierLimits } from "@/lib/utils/tiers";
 
@@ -100,9 +101,19 @@ export default function AdminTempMailRequestsPage() {
               <MailWarning className="size-3" />
               <span>Temp Mail Access</span>
             </div>
-            <h1 className="mt-1 font-heading text-3xl sm:text-4xl tracking-tight text-foreground">
-              Access Requests
-            </h1>
+            <div className="flex items-center gap-4">
+              <h1 className="mt-1 font-heading text-3xl sm:text-4xl tracking-tight text-foreground">
+                Access Requests
+              </h1>
+              <GuideModal title="Admin: Access Requests">
+                <p>Manage which users are allowed to use the Temporary Email generator.</p>
+                <ul className="list-disc pl-4 space-y-2 mt-2">
+                  <li><strong>Gating:</strong> New users cannot use the Temp Mail service until an admin approves them here.</li>
+                  <li><strong>Limits:</strong> The table shows how many addresses a user generates daily. Limits are strictly enforced based on their Faucet donation tier.</li>
+                  <li><strong>Revoking:</strong> If a user abuses the service, you can change their status back to Rejected at any time.</li>
+                </ul>
+              </GuideModal>
+            </div>
             <p className="mt-2 max-w-xl text-muted-foreground text-sm">
               Approve or reject user requests for the Temp Mail generator feature.
             </p>
