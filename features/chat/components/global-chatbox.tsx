@@ -70,20 +70,32 @@ export function GlobalChatbox() {
   // Declared early so setIsOpen (below) can reference the setter without a
   // temporal dead-zone error — useState setters are stable references.
   const [messages, setMessages] = useState<GlobalChat[]>([]);
-  // Persist open/closed state across page refreshes
-  const [isOpen, setIsOpenState] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("gchat_open") === "1";
-  });
+  const [isOpen, setIsOpenState] = useState<boolean>(false);
+  const currentUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
+
+  // Restore open state once we know the user
+  useEffect(() => {
+    if (!currentUserId) return;
+    const saved = localStorage.getItem(`gchat_open_${currentUserId}`);
+    if (saved === "1") setIsOpenState(true);
+  }, [currentUserId]);
   const setIsOpen = useCallback((val: boolean) => {
     setIsOpenState(val);
-    localStorage.setItem("gchat_open", val ? "1" : "0");
+    if (currentUserIdRef.current) {
+      localStorage.setItem(`gchat_open_${currentUserIdRef.current}`, val ? "1" : "0");
+    }
     // Persist last-seen message ID when chat is opened so the badge resets correctly.
     // We use setMessages functional form; setter is stable so it's safe here.
     if (val) {
       setMessages((prev) => {
         const latestId = prev.length > 0 ? prev[prev.length - 1].id : 0;
-        if (latestId > 0) localStorage.setItem("gchat_last_seen", String(latestId));
+        if (latestId > 0 && currentUserIdRef.current) {
+          localStorage.setItem(`gchat_last_seen_${currentUserIdRef.current}`, String(latestId));
+        }
         return prev;
       });
     }
@@ -159,6 +171,18 @@ export function GlobalChatbox() {
     });
     return () => subscription.unsubscribe();
   }, [supabase]);
+
+  // Reset component state when user logs out or switches accounts
+  const previousUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (previousUserIdRef.current !== null && currentUserId !== previousUserIdRef.current) {
+      setMessages([]);
+      setUnread(0);
+      setIsOpenState(false);
+      setHasMore(true);
+    }
+    previousUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   // Always-on realtime subscription (for badge + sound when chat is closed)
   useEffect(() => {
@@ -261,7 +285,7 @@ export function GlobalChatbox() {
         setHasMore(chats.length === PAGE_SIZE);
 
         // Compute initial unread count from last-seen message ID persisted in localStorage
-        const lastSeenId = Number(localStorage.getItem("gchat_last_seen") ?? 0);
+        const lastSeenId = Number(localStorage.getItem(`gchat_last_seen_${currentUserId}`) ?? 0);
         const initialUnread = (enriched as GlobalChat[]).filter(
           (m) => m.id > lastSeenId && m.user_id !== currentUserId
         ).length;
