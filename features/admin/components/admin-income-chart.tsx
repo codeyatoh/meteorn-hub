@@ -11,7 +11,7 @@ import {
   type CartesianViewBox,
 } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { useMotionValueEvent, useSpring, useMotionValue } from "motion/react";
+
 import NumberFlow from "@number-flow/react";
 import * as React from "react";
 import Image from "next/image";
@@ -53,24 +53,12 @@ export function AdminIncomeChart({ data, gmtoPrice, currencySymbol }: AdminIncom
       ? { index: activeIndex, date: data[activeIndex].date, amount: data[activeIndex].amount }
       : maxData;
 
-  const motionValue = useMotionValue(selectedData.amount);
-  const valueSpring = useSpring(motionValue, { stiffness: 110, damping: 20 });
-  const [springValue, setSpringValue] = React.useState(selectedData.amount);
-
-  React.useEffect(() => {
-    motionValue.set(selectedData.amount);
-  }, [selectedData.amount, motionValue]);
-
   const handleBarHover = React.useCallback(
     (index: number) => {
       setActiveIndex(index);
     },
     [],
   );
-
-  useMotionValueEvent(valueSpring, "change", (latest) => {
-    setSpringValue(latest);
-  });
 
   React.useEffect(() => {
     const t = setTimeout(() => setActiveIndex(null), 0);
@@ -158,11 +146,11 @@ export function AdminIncomeChart({ data, gmtoPrice, currencySymbol }: AdminIncom
             />
 
             <ReferenceLine
-              y={springValue}
+              y={selectedData.amount}
               stroke="var(--foreground)"
               strokeDasharray="3 3"
               pointerEvents="none"
-              label={<ReferenceLabel value={springValue} exactValue={selectedData.amount} />}
+              label={<ReferenceLabel value={selectedData.amount} exactValue={selectedData.amount} />}
             />
           </BarChart>
         </ChartContainer>
