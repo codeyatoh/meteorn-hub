@@ -140,6 +140,27 @@ export function GlobalChatbox() {
     }
   }, []);
 
+  // Globally listen for the FIRST user interaction anywhere on the page to unlock audio.
+  // This ensures background chat pings work even if they haven't opened the chatbox yet.
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      unlockAudio();
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+    };
+
+    window.addEventListener('click', handleFirstInteraction, { once: true });
+    window.addEventListener('keydown', handleFirstInteraction, { once: true });
+    window.addEventListener('touchstart', handleFirstInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+    };
+  }, [unlockAudio]);
+
   useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
   useEffect(() => { isAtBottomRef.current = isAtBottom; }, [isAtBottom]);
 
