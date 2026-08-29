@@ -585,30 +585,22 @@ export default function TempMailPage() {
                         Daily Limit
                       </div>
                       <div className="flex items-center gap-2">
-                        {/* Segmented bar: 10 blocks, each = 10 emails */}
-                        <div className="flex items-center gap-0.5">
-                          {Array.from({ length: 10 }).map((_, i) => {
-                            const remaining = 100 - (access?.daily_count || 0);
-                            const blocksFilled = Math.ceil(remaining / 10);
-                            const isFilled = i < blocksFilled;
-                            const isLow = remaining <= 20;
-                            return (
-                              <div
-                                key={i}
-                                className={`h-2 w-3.5 rounded-[2px] transition-colors ${
-                                  isFilled
-                                    ? isLow ? 'bg-destructive' : 'bg-emerald-500'
-                                    : 'bg-border/60'
-                                }`}
-                              />
-                            );
-                          })}
-                        </div>
-                        <div className={`font-mono text-xs font-bold ${
-                          (100 - (access?.daily_count || 0)) <= 20 ? 'text-destructive' : 'text-emerald-500'
-                        }`}>
-                          {100 - (access?.daily_count || 0)}
-                          <span className="text-[9px] text-muted-foreground font-normal"> / 100</span>
+                        {/* Fill bar matching accounts page style */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                (100 - (access?.daily_count || 0)) <= 20 ? 'bg-destructive' : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${Math.max(0, 100 - (access?.daily_count || 0))}%` }}
+                            />
+                          </div>
+                          <div className={`font-mono text-xs font-bold ${
+                            (100 - (access?.daily_count || 0)) <= 20 ? 'text-destructive' : 'text-emerald-500'
+                          }`}>
+                            {100 - (access?.daily_count || 0)}
+                            <span className="text-[9px] text-muted-foreground font-normal"> / 100</span>
+                          </div>
                         </div>
                       </div>
                     </div>
