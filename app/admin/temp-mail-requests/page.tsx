@@ -231,7 +231,7 @@ export default function AdminTempMailRequestsPage() {
                               <span className={`font-mono text-[10px] font-bold ${
                                 (100 - req.daily_count) <= 20 ? 'text-destructive' : 'text-emerald-500'
                               }`}>
-                                {req.daily_count} <span className="text-muted-foreground font-normal">/ 100</span>
+                                {100 - req.daily_count}
                               </span>
                             </div>
                           </>

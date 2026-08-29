@@ -8,11 +8,11 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-    today_pht TEXT;
+    today_pht DATE;
     v_access RECORD;
 BEGIN
-    -- Get today's date in Philippine Time (PHT) formatted as YYYY-MM-DD
-    today_pht := to_char(timezone('Asia/Manila', now()), 'YYYY-MM-DD');
+    -- Get today's date in Philippine Time (PHT) as a proper DATE type
+    today_pht := (timezone('Asia/Manila', now()))::DATE;
 
     -- Lock the user's row for update to prevent concurrent race conditions
     SELECT * INTO v_access

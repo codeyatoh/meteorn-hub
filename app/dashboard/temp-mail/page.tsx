@@ -599,7 +599,6 @@ export default function TempMailPage() {
                             (100 - (access?.daily_count || 0)) <= 20 ? 'text-destructive' : 'text-emerald-500'
                           }`}>
                             {100 - (access?.daily_count || 0)}
-                            <span className="text-[9px] text-muted-foreground font-normal"> / 100</span>
                           </div>
                         </div>
                       </div>
