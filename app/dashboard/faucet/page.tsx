@@ -12,6 +12,14 @@ import { getTierLimits, TIER_TABLE } from "@/lib/utils/tiers";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, Label } from "recharts";
 
+interface FaucetClaim {
+  id: string;
+  user_id: string;
+  wallet_address: string;
+  tx_hash?: string;
+  created_at: string;
+}
+
 // ── Recharts Donut Chart ─────────────────────────────────────────────────────
 const donutChartConfig = {
   claimable: {
@@ -124,7 +132,7 @@ export default function FaucetPage() {
 
   // State
   const [stats, setStats] = useState<{ total_donated: number; total_claimed: number; claims_today: number } | null>(null);
-  const [claimHistory, setClaimHistory] = useState<any[]>([]);
+  const [claimHistory, setClaimHistory] = useState<FaucetClaim[]>([]);
   const [addressInput, setAddressInput] = useState("");
   const [txHashInput, setTxHashInput] = useState("");
   const [isClaiming, setIsClaiming] = useState(false);
@@ -571,7 +579,7 @@ export default function FaucetPage() {
                   const isCurrentTier = totalDonated >= tier.min && (i === TIER_TABLE.length - 1 || totalDonated < TIER_TABLE[i + 1].min);
                   return (
                     <tr key={tier.min} className={`hover:bg-foreground/5 transition-colors ${isCurrentTier ? 'bg-primary/5' : ''}`}>
-                      <td className={`py-3 pr-4 font-medium ${isCurrentTier ? 'text-primary' : i === 0 ? 'text-foreground' : 'text-foreground/70'}`}>
+                      <td className={`py-3 pr-4 font-medium whitespace-nowrap ${isCurrentTier ? 'text-primary' : i === 0 ? 'text-foreground' : 'text-foreground/70'}`}>
                         {tier.min}+ POL {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded ml-1">YOUR TIER</span>}
                       </td>
                       <td className="py-3 px-4">{tier.faucetLimit} / day</td>

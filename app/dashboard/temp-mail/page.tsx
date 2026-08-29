@@ -21,7 +21,7 @@ import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
-import { getTierLimits } from "@/lib/utils/tiers";
+import { getTierLimits, TIER_TABLE } from "@/lib/utils/tiers";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Message = {
@@ -855,36 +855,19 @@ export default function TempMailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/20 text-muted-foreground">
-                <tr className="hover:bg-foreground/5 transition-colors">
-                  <td className="py-3 pr-4 text-foreground font-medium">0 POL</td>
-                  <td className="py-3 px-4">0 / day</td>
-                  <td className="py-3 px-4">100 / day</td>
-                </tr>
-                <tr className="hover:bg-foreground/5 transition-colors">
-                  <td className="py-3 pr-4 text-primary font-medium">1+ POL</td>
-                  <td className="py-3 px-4">6 / day</td>
-                  <td className="py-3 px-4">250 / day</td>
-                </tr>
-                <tr className="hover:bg-foreground/5 transition-colors">
-                  <td className="py-3 pr-4 text-primary font-medium">2+ POL</td>
-                  <td className="py-3 px-4">12 / day</td>
-                  <td className="py-3 px-4">500 / day</td>
-                </tr>
-                <tr className="hover:bg-foreground/5 transition-colors">
-                  <td className="py-3 pr-4 text-primary font-medium">3+ POL</td>
-                  <td className="py-3 px-4">18 / day</td>
-                  <td className="py-3 px-4">1,000 / day</td>
-                </tr>
-                <tr className="hover:bg-foreground/5 transition-colors">
-                  <td className="py-3 pr-4 text-primary font-medium">5+ POL</td>
-                  <td className="py-3 px-4">30 / day</td>
-                  <td className="py-3 px-4">2,500 / day</td>
-                </tr>
-                <tr className="hover:bg-foreground/5 transition-colors">
-                  <td className="py-3 pr-4 text-primary font-medium">10+ POL</td>
-                  <td className="py-3 px-4">60 / day</td>
-                  <td className="py-3 px-4">10,000 / day</td>
-                </tr>
+                {TIER_TABLE.map((tier, i) => {
+                  const totalDonated = access?.total_donated ?? 0;
+                  const isCurrentTier = totalDonated >= tier.min && (i === TIER_TABLE.length - 1 || totalDonated < TIER_TABLE[i + 1].min);
+                  return (
+                    <tr key={tier.min} className={`hover:bg-foreground/5 transition-colors ${isCurrentTier ? 'bg-primary/5' : ''}`}>
+                      <td className={`py-3 pr-4 font-medium whitespace-nowrap ${isCurrentTier ? 'text-primary' : i === 0 ? 'text-foreground' : 'text-foreground/70'}`}>
+                        {tier.min}+ POL {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded ml-1">YOUR TIER</span>}
+                      </td>
+                      <td className="py-3 px-4">{tier.faucetLimit} / day</td>
+                      <td className="py-3 px-4">{tier.tempMailLimit.toLocaleString()} / day</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
