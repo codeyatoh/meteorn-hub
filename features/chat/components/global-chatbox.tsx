@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { toast } from "sonner";
 import { MessageCircle, X, Send, Smile, ChevronDown, Loader2, ArrowDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -405,7 +406,8 @@ export function GlobalChatbox() {
     const msg = input.trim();
     setInput("");
     setActivePanel(null);
-    await supabase.from("global_chats").insert({ user_id: currentUserId, message: msg, type: "text" });
+    const { error } = await supabase.from("global_chats").insert({ user_id: currentUserId, message: msg, type: "text" });
+    if (error) toast.error("Failed to send message. Please try again.");
     // Always jump to bottom when user sends
     setTimeout(() => scrollToBottom("smooth"), 100);
   };
@@ -414,11 +416,12 @@ export function GlobalChatbox() {
     e.preventDefault();
     if (!currentUserId) return;
     setActivePanel(null);
-    await supabase.from("global_chats").insert({
+    const { error } = await supabase.from("global_chats").insert({
       user_id: currentUserId,
       type: "gif",
       gif_url: gif.images.fixed_height.url,
     });
+    if (error) toast.error("Failed to send GIF. Please try again.");
     setTimeout(() => scrollToBottom("smooth"), 100);
   };
 

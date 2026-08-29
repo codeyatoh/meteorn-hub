@@ -362,6 +362,7 @@ export default function TempMailPage() {
     if (!session) return;
     navigator.clipboard.writeText(session.address);
     setCopied(true);
+    toast.success("Email address copied!");
     setTimeout(() => setCopied(false), 2000);
   };
 

@@ -10,6 +10,7 @@ import { Dock, DockIcon } from "@/components/ui/dock";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export function NavigationDock() {
   const pathname = usePathname();
@@ -25,6 +26,7 @@ export function NavigationDock() {
       router.refresh();
     } catch (error) {
       console.error("Logout failed:", error);
+      toast.error("Failed to sign out. Please try again.");
       setIsLoggingOut(false);
     }
   };
