@@ -8,6 +8,7 @@ import { Loader2, Droplets, CopyIcon, Activity, ArrowRight, ShieldCheck, Chevron
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
+import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { getTierLimits, TIER_TABLE } from "@/lib/utils/tiers";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, Label } from "recharts";
@@ -131,6 +132,7 @@ export default function FaucetPage() {
   }, [supabase.auth]);
 
   // State
+  const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<{ total_donated: number; total_claimed: number; claims_today: number } | null>(null);
   const [claimHistory, setClaimHistory] = useState<FaucetClaim[]>([]);
   const [addressInput, setAddressInput] = useState("");
@@ -181,6 +183,8 @@ export default function FaucetPage() {
     } catch (error) {
       console.error("Failed to load stats:", error);
       toast.error("Failed to load faucet stats.");
+    } finally {
+      setIsLoading(false);
     }
   }, [user, supabase]);
 
@@ -279,6 +283,16 @@ export default function FaucetPage() {
   // Paginated history
   const totalHistoryPages = Math.ceil(claimHistory.length / historyPerPage);
   const pagedHistory = claimHistory.slice((historyPage - 1) * historyPerPage, historyPage * historyPerPage);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div style={{ width: 180, height: 80 }}>
+          <WanderingEyes className="h-full w-full [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 sm:px-6 py-10 relative min-h-screen">
