@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: "/admin/members", label: "Members", icon: UsersIcon, matchExact: false },
   { href: "/admin/accounts", label: "Accounts", icon: GamepadIcon, matchExact: false },
   { href: "/admin/temp-mail-domains", label: "Temp Mail", icon: MailIcon, matchExact: false },
+  { href: "/admin/temp-mail-requests", label: "Requests", icon: MailIcon, matchExact: false },
   { href: "/admin/settings", label: "Settings", icon: SlidersIcon, matchExact: false },
 ];
 

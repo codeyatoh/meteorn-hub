@@ -141,6 +141,8 @@ function generateRandomUsername(): string {
 export default function TempMailPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
+  const [access, setAccess] = useState<{ status: string; daily_count: number } | null>(null);
+  const [requestingAccess, setRequestingAccess] = useState(false);
 
   // Generator form
   const [username, setUsername] = useState("");
@@ -165,13 +167,18 @@ export default function TempMailPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Load existing session + domains on mount ──
+  // ── Load existing session + domains + access on mount ──
   useEffect(() => {
     Promise.all([
       fetch("/api/temp-mail/session").then((r) => r.json()),
       fetch("/api/temp-mail/domains").then((r) => r.json()),
+      fetch("/api/temp-mail/access").then((r) => r.json()),
       new Promise((res) => setTimeout(res, 800)),
-    ]).then(([sessionData, domainData]) => {
+    ]).then(([sessionData, domainData, accessData]) => {
+      if (accessData && accessData.status) {
+        setAccess({ status: accessData.status, daily_count: accessData.daily_count });
+      }
+      
       if (sessionData.session) {
         setSession(sessionData.session);
         // Pre-fill username from existing active session
@@ -274,6 +281,7 @@ export default function TempMailPage() {
       setSession({ address: data.address, expires_at: data.expires_at });
       setMessages([]);
       setSelectedMsg(null);
+      setAccess((prev) => prev ? { ...prev, daily_count: prev.daily_count + 1 } : null);
       toast.success(`Inbox ready: ${data.address}`, { classNames: { icon: "text-green-500" } });
     } catch {
       toast.error("Network error. Please try again.", { classNames: { icon: "text-destructive" } });
@@ -299,12 +307,31 @@ export default function TempMailPage() {
       if (u) setUsername(u);
       if (d) setDomain(d);
       
+      if (pollRef.current) clearInterval(pollRef.current);
+      
       toast.success("Temp email destroyed.", { classNames: { icon: "text-green-500" } });
     } catch {
       destroyingRef.current = false;
       toast.error("Failed to destroy session.", { classNames: { icon: "text-destructive" } });
     } finally {
       setDestroying(false);
+    }
+  };
+
+  const requestAccess = async () => {
+    setRequestingAccess(true);
+    try {
+      const res = await fetch("/api/temp-mail/access", { method: "POST" });
+      if (res.ok) {
+        setAccess({ status: "pending", daily_count: 0 });
+        toast.success("Access requested successfully. Please wait for admin approval.");
+      } else {
+        throw new Error();
+      }
+    } catch {
+      toast.error("Failed to request access.");
+    } finally {
+      setRequestingAccess(false);
     }
   };
 
@@ -364,7 +391,40 @@ export default function TempMailPage() {
           </p>
         </div>
 
+        {/* ── Access Gating ── */}
+        {access?.status !== "approved" && (
+          <div className="rounded-xl border border-border/60 bg-background/40 p-10 flex flex-col items-center justify-center text-center space-y-4">
+            <Mail className="size-12 text-muted-foreground/30 mb-2" />
+            <h2 className="font-heading text-xl text-foreground">Temp Mail Access Required</h2>
+            {(!access || access.status === "none") && (
+              <>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  You need to request access from an administrator to use the temporary email feature.
+                </p>
+                <button
+                  onClick={requestAccess}
+                  disabled={requestingAccess}
+                  className="mt-4 flex items-center justify-center h-10 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {requestingAccess ? <Loader2 className="size-4 animate-spin" /> : "Request Access"}
+                </button>
+              </>
+            )}
+            {access?.status === "pending" && (
+              <p className="text-sm text-amber-500 max-w-md font-medium">
+                Your request is pending admin approval. Please check back later.
+              </p>
+            )}
+            {access?.status === "rejected" && (
+              <p className="text-sm text-destructive max-w-md font-medium">
+                Your request to use Temp Mail was denied by an administrator.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* ── Message Detail View ── */}
+        {access?.status === "approved" && (
         <AnimatePresence mode="wait">
           {selectedMsg && (
             <motion.div
@@ -516,8 +576,13 @@ export default function TempMailPage() {
               ) : (
                 /* ── Generator Form ── */
                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                    Generate Address
+                  <div className="flex items-center justify-between">
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Generate Address
+                    </div>
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-0.5 rounded-md">
+                      Daily Limit: {100 - (access?.daily_count || 0)} / 100
+                    </div>
                   </div>
 
                   <form onSubmit={handleGenerate} className="space-y-4">
@@ -724,6 +789,7 @@ export default function TempMailPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        )}
       </div>
     </div>
   );
