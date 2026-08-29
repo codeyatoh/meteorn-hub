@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { MessageCircle, X, Send, Smile, ChevronDown, Loader2, ArrowDown, Handshake, Reply, CheckCircle2, ChevronRight, Plus, Minus } from "lucide-react";
+import { MessageCircle, X, Send, Smile, ChevronDown, Loader2, ArrowDown, Handshake, Reply, ChevronRight, Plus, Minus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -178,12 +178,12 @@ export function GlobalChatbox() {
         if (parsed.protocol === "http:" || parsed.protocol === "https:") {
           const scheme = parsed.protocol.replace(":", "");
           const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${scheme};S.browser_fallback_url=${encodeURIComponent(url)};end;`;
-          window.location.href = intentUrl;
+          window.location.assign(intentUrl);
           return;
         }
       } catch {}
     }
-    window.location.href = url;
+    window.location.assign(url);
   };
 
 
@@ -202,7 +202,7 @@ export function GlobalChatbox() {
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Unlock AudioContext on user gesture (required by browser autoplay policy)
-  const unlockAudio = useCallback(() => {
+  const unlockAudio = () => {
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new AudioContext();
@@ -213,7 +213,7 @@ export function GlobalChatbox() {
     } catch {
       // AudioContext not available in this environment
     }
-  }, []);
+  };
 
   // Globally listen for the FIRST user interaction anywhere on the page to unlock audio.
   // This ensures background chat pings work even if they haven't opened the chatbox yet.
@@ -242,12 +242,12 @@ export function GlobalChatbox() {
 
 
   // Stable supabase client — never recreated on re-render
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = createClient();
 
   // Scroll to bottom
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
-  }, []);
+  };
 
   // When opened, jump to bottom and focus input
   useEffect(() => {
@@ -341,12 +341,12 @@ export function GlobalChatbox() {
   }, [currentUserId, supabase]);
 
   // Helper: fetch user names for a list of user_ids via secure RPC
-  const fetchUserNames = useCallback(async (userIds: string[]) => {
+  const fetchUserNames = async (userIds: string[]) => {
     if (userIds.length === 0) return new Map<string, { full_name?: string; role?: string }>();
     const { data } = await supabase
       .rpc("get_chat_profiles", { user_ids: userIds });
     return new Map((data ?? []).map((u: { user_id: string; full_name: string; role: string }) => [u.user_id, { full_name: u.full_name, role: u.role }]));
-  }, [supabase]);
+  };
 
   // Load initial messages as soon as auth resolves
   useEffect(() => {
@@ -406,7 +406,7 @@ export function GlobalChatbox() {
   // Load older messages on scroll-to-top
   // setMessages is a stable useState setter — including it in deps satisfies
   // React Compiler's inferred dependency analysis without causing extra re-renders.
-  const loadOlder = useCallback(async () => {
+  const loadOlder = async () => {
     if (loadingMore || !hasMore || messages.length === 0) return;
     setLoadingMore(true);
 
@@ -440,10 +440,10 @@ export function GlobalChatbox() {
     }
 
     setLoadingMore(false);
-  }, [loadingMore, hasMore, messages, supabase, fetchUserNames, setMessages]);
+  };
 
   // Scroll listener — tracks position and triggers load-older
-  const handleScroll = useCallback(() => {
+  const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
 
@@ -453,7 +453,7 @@ export function GlobalChatbox() {
     const atBottom = distFromBottom < 60;
     setIsAtBottom(atBottom);
     if (atBottom) setNewWhileAway(0);
-  }, [loadOlder]);
+  };
 
   // Auto-scroll to bottom when new message arrives and user is already at bottom
   useEffect(() => {
@@ -466,13 +466,13 @@ export function GlobalChatbox() {
     }
   }, [messages, scrollToBottom]);
 
-  const jumpToBottom = useCallback(() => {
+  const jumpToBottom = () => {
     setNewWhileAway(0);
     setIsAtBottom(true);
     isAtBottomRef.current = true;
     scrollToBottom("smooth");
     inputRef.current?.focus();
-  }, [scrollToBottom]);
+  };
 
 
   const sendText = async (e: React.FormEvent) => {
