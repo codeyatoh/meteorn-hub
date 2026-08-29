@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Heart,
   HandHeart,
+  AtSign,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -59,7 +60,7 @@ type UserAccount = {
 // Mention parser helper
 const parseMentions = (text: string) => {
   if (!text) return null;
-  const parts = text.split(/(@\w+)/g);
+  const parts = text.split(/(@[\w.-]+)/g);
   return (
     <>
       {parts.map((part, i) => {
@@ -158,6 +159,11 @@ export function GlobalChatbox() {
   }, []);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [input, setInput] = useState("");
+  const [currentUserProfileName, setCurrentUserProfileName] = useState<
+    string | null
+  >(null);
+  const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [gifSearch, setGifSearch] = useState("");
   const [hoveredMsg, setHoveredMsg] = useState<number | null>(null);
@@ -547,6 +553,67 @@ export function GlobalChatbox() {
     inputRef.current?.focus();
   };
 
+  const uniqueNames = React.useMemo(() => {
+    const names = new Set<string>();
+    messages.forEach((m) => {
+      if (m.user_profile?.full_name && m.user_id !== currentUserId) {
+        names.add(m.user_profile.full_name);
+      }
+    });
+    return Array.from(names);
+  }, [messages, currentUserId]);
+
+  const mentionOptions = React.useMemo(() => {
+    if (mentionSearch === null) return [];
+    const search = mentionSearch.toLowerCase();
+    const allOptions = [
+      "everyone",
+      "highlight",
+      ...uniqueNames.map((n) => n.replace(/\s+/g, "")),
+    ];
+    return allOptions.filter((opt) => opt.toLowerCase().includes(search));
+  }, [mentionSearch, uniqueNames]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+    const match = val.match(/(?:^|\s)@([\w.-]*)$/);
+    if (match) {
+      setMentionSearch(match[1]);
+      setMentionIndex(0);
+    } else {
+      setMentionSearch(null);
+    }
+  };
+
+  const insertMention = (name: string) => {
+    setInput((prev) =>
+      prev.replace(/(?:^|\s)@([\w.-]*)$/, ` @${name} `).trimStart(),
+    );
+    setMentionSearch(null);
+    inputRef.current?.focus();
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (mentionSearch !== null && mentionOptions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % mentionOptions.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex(
+          (prev) => (prev - 1 + mentionOptions.length) % mentionOptions.length,
+        );
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertMention(mentionOptions[mentionIndex]);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionSearch(null);
+      }
+    }
+  };
+
   const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !currentUserId) return;
@@ -710,6 +777,17 @@ export function GlobalChatbox() {
           ) : (
             messages.map((msg) => {
               const isMe = msg.user_id === currentUserId;
+
+              const mySafeName =
+                currentUserProfileName?.replace(/\s+/g, "") ?? "";
+              const msgText = msg.message?.toLowerCase() || "";
+              const isMentioned =
+                !isMe &&
+                (msgText.includes("@everyone") ||
+                  msgText.includes("@highlight") ||
+                  (mySafeName &&
+                    msgText.includes(`@${mySafeName.toLowerCase()}`)));
+
               const msgRx = reactions.filter((r) => r.message_id === msg.id);
               const grouped = msgRx.reduce(
                 (acc, r) => {
@@ -1055,6 +1133,36 @@ export function GlobalChatbox() {
           )}
         </AnimatePresence>
 
+        {/* Mention Picker */}
+        <AnimatePresence>
+          {mentionSearch !== null && mentionOptions.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-full mb-2 left-4 z-50 bg-background/95 backdrop-blur-xl border border-border/50 rounded-lg shadow-xl overflow-hidden min-w-[200px]"
+            >
+              <div className="max-h-[160px] overflow-y-auto py-1">
+                {mentionOptions.map((opt, idx) => (
+                  <button
+                    key={opt}
+                    onClick={() => insertMention(opt)}
+                    onMouseEnter={() => setMentionIndex(idx)}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors ${
+                      idx === mentionIndex
+                        ? "bg-primary/20 text-primary"
+                        : "text-foreground hover:bg-foreground/5"
+                    }`}
+                  >
+                    <AtSign className="size-3 opacity-50" />
+                    <span className="font-semibold">{opt}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {replyingTo && (
           <div className="flex items-center justify-between px-3 py-2 bg-foreground/[0.02] border-b border-border/20">
             <div className="flex items-center gap-2 overflow-hidden">
@@ -1114,7 +1222,8 @@ export function GlobalChatbox() {
             type="text"
             placeholder="Chat with everyone..."
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
+            onKeyDown={handleInputKeyDown}
             className="flex-1 min-w-0 bg-foreground/[0.04] border border-border/40 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/40 transition-colors placeholder:text-muted-foreground/60"
           />
 
