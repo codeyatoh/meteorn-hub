@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, ShieldAlertIcon, UsersIcon, GamepadIcon, SlidersIcon, Loader2, MailIcon } from "lucide-react";
+import { LogOut, ShieldAlertIcon, UsersIcon, GamepadIcon, SlidersIcon, Loader2, AtSign, MailQuestion } from "lucide-react";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
@@ -14,8 +14,8 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Overview", icon: ShieldAlertIcon, matchExact: true },
   { href: "/admin/members", label: "Members", icon: UsersIcon, matchExact: false },
   { href: "/admin/accounts", label: "Accounts", icon: GamepadIcon, matchExact: false },
-  { href: "/admin/temp-mail-domains", label: "Temp Mail", icon: MailIcon, matchExact: false },
-  { href: "/admin/temp-mail-requests", label: "Requests", icon: MailIcon, matchExact: false },
+  { href: "/admin/temp-mail-domains", label: "Temp Mail", icon: AtSign, matchExact: false },
+  { href: "/admin/temp-mail-requests", label: "Requests", icon: MailQuestion, matchExact: false },
   { href: "/admin/settings", label: "Settings", icon: SlidersIcon, matchExact: false },
 ];
 
