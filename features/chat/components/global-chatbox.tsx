@@ -2,7 +2,20 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { MessageCircle, X, Send, Smile, ChevronDown, Loader2, ArrowDown, Handshake, Reply, ChevronRight, Plus, Minus } from "lucide-react";
+import {
+  MessageCircle,
+  X,
+  Send,
+  Smile,
+  ChevronDown,
+  Loader2,
+  ArrowDown,
+  Handshake,
+  Reply,
+  ChevronRight,
+  Plus,
+  Minus,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -12,13 +25,12 @@ import { GiphyFetch } from "@giphy/js-fetch-api";
 import type { IGif } from "@giphy/js-types";
 
 // Dynamic imports — both are browser-only; ssr:false prevents SSR crashes on Vercel
-const EmojiPicker = dynamic(
-  () => import("./safe-emoji-picker"),
-  { ssr: false }
-);
+const EmojiPicker = dynamic(() => import("./safe-emoji-picker"), {
+  ssr: false,
+});
 const GiphyGrid = dynamic(
   () => import("@giphy/react-components").then((m) => m.Grid),
-  { ssr: false }
+  { ssr: false },
 );
 
 const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY ?? "");
@@ -53,7 +65,10 @@ const parseMentions = (text: string) => {
       {parts.map((part, i) => {
         if (part.startsWith("@")) {
           return (
-            <span key={i} className="text-cyan-400 font-semibold bg-cyan-400/10 px-1 rounded-sm">
+            <span
+              key={i}
+              className="text-cyan-400 font-semibold bg-cyan-400/10 px-1 rounded-sm"
+            >
               {part}
             </span>
           );
@@ -63,7 +78,6 @@ const parseMentions = (text: string) => {
     </>
   );
 };
-
 
 type Reaction = {
   id: number;
@@ -122,7 +136,10 @@ export function GlobalChatbox() {
   const setIsOpen = useCallback((val: boolean) => {
     setIsOpenState(val);
     if (currentUserIdRef.current) {
-      localStorage.setItem(`gchat_open_${currentUserIdRef.current}`, val ? "1" : "0");
+      localStorage.setItem(
+        `gchat_open_${currentUserIdRef.current}`,
+        val ? "1" : "0",
+      );
     }
     // Persist last-seen message ID when chat is opened so the badge resets correctly.
     // We use setMessages functional form; setter is stable so it's safe here.
@@ -130,7 +147,10 @@ export function GlobalChatbox() {
       setMessages((prev) => {
         const latestId = prev.length > 0 ? prev[prev.length - 1].id : 0;
         if (latestId > 0 && currentUserIdRef.current) {
-          localStorage.setItem(`gchat_last_seen_${currentUserIdRef.current}`, String(latestId));
+          localStorage.setItem(
+            `gchat_last_seen_${currentUserIdRef.current}`,
+            String(latestId),
+          );
         }
         return prev;
       });
@@ -158,7 +178,11 @@ export function GlobalChatbox() {
     }
     setShowReferralPicker(true);
     setLoadingAccounts(true);
-    const { data } = await supabase.from("user_accounts").select("*").eq("user_id", currentUserId);
+    const { data } = await supabase
+      .from("user_accounts")
+      .select("*")
+      .eq("user_id", currentUserId)
+      .neq("is_banned", true);
     if (data) setMyAccounts(data as UserAccount[]);
     setLoadingAccounts(false);
   };
@@ -166,8 +190,15 @@ export function GlobalChatbox() {
   const sendReferral = async (acc: UserAccount) => {
     setShowReferralPicker(false);
     if (!currentUserId) return;
-    const payload = JSON.stringify({ accountId: acc.id, name: acc.name, avatar: acc.avatar, link: acc.referral_link });
-    const { error } = await supabase.from("global_chats").insert({ user_id: currentUserId, message: payload, type: "referral" });
+    const payload = JSON.stringify({
+      accountId: acc.id,
+      name: acc.name,
+      avatar: acc.avatar,
+      link: acc.referral_link,
+    });
+    const { error } = await supabase
+      .from("global_chats")
+      .insert({ user_id: currentUserId, message: payload, type: "referral" });
     if (error) toast.error("Failed to send referral help request.");
     setTimeout(() => scrollToBottom("smooth"), 100);
   };
@@ -187,7 +218,6 @@ export function GlobalChatbox() {
     }
     window.location.assign(url);
   };
-
 
   // Track whether user is at the bottom
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -222,29 +252,30 @@ export function GlobalChatbox() {
   useEffect(() => {
     const handleFirstInteraction = () => {
       unlockAudio();
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('keydown', handleFirstInteraction);
-      window.removeEventListener('touchstart', handleFirstInteraction);
+      window.removeEventListener("click", handleFirstInteraction);
+      window.removeEventListener("keydown", handleFirstInteraction);
+      window.removeEventListener("touchstart", handleFirstInteraction);
     };
 
-    window.addEventListener('click', handleFirstInteraction, { once: true });
-    window.addEventListener('keydown', handleFirstInteraction, { once: true });
-    window.addEventListener('touchstart', handleFirstInteraction, { once: true });
+    window.addEventListener("click", handleFirstInteraction, { once: true });
+    window.addEventListener("keydown", handleFirstInteraction, { once: true });
+    window.addEventListener("touchstart", handleFirstInteraction, {
+      once: true,
+    });
 
     return () => {
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('keydown', handleFirstInteraction);
-      window.removeEventListener('touchstart', handleFirstInteraction);
+      window.removeEventListener("click", handleFirstInteraction);
+      window.removeEventListener("keydown", handleFirstInteraction);
+      window.removeEventListener("touchstart", handleFirstInteraction);
     };
-     
   }, [unlockAudio]);
 
-  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
-  useEffect(() => { isAtBottomRef.current = isAtBottom; }, [isAtBottom]);
-
-
-
-
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+  useEffect(() => {
+    isAtBottomRef.current = isAtBottom;
+  }, [isAtBottom]);
 
   // Scroll to bottom
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -259,7 +290,6 @@ export function GlobalChatbox() {
         inputRef.current?.focus();
       }, 100);
     }
-     
   }, [isOpen, scrollToBottom]);
 
   // Track auth state changes — works on hard refresh, logout, and re-login
@@ -267,7 +297,9 @@ export function GlobalChatbox() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setCurrentUserId(session?.user?.id ?? null);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setCurrentUserId(session?.user?.id ?? null);
     });
     return () => subscription.unsubscribe();
@@ -276,7 +308,10 @@ export function GlobalChatbox() {
   // Reset component state when user logs out or switches accounts
   const previousUserIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (previousUserIdRef.current !== null && currentUserId !== previousUserIdRef.current) {
+    if (
+      previousUserIdRef.current !== null &&
+      currentUserId !== previousUserIdRef.current
+    ) {
       setMessages([]);
       setUnread(0);
       setIsOpenState(false);
@@ -296,8 +331,9 @@ export function GlobalChatbox() {
         { event: "INSERT", schema: "public", table: "global_chats" },
         async (payload) => {
           const newMsg = payload.new as GlobalChat;
-          const { data: profiles } = await supabase
-            .rpc("get_chat_profiles", { user_ids: [newMsg.user_id] });
+          const { data: profiles } = await supabase.rpc("get_chat_profiles", {
+            user_ids: [newMsg.user_id],
+          });
           const ua = profiles?.[0] ?? null;
 
           const fullMsg: GlobalChat = { ...newMsg, user_profile: ua };
@@ -309,7 +345,10 @@ export function GlobalChatbox() {
 
           if (newMsg.user_id !== currentUserId) {
             // Play ping only if AudioContext has been unlocked by a user gesture
-            if (audioCtxRef.current && audioCtxRef.current.state === "running") {
+            if (
+              audioCtxRef.current &&
+              audioCtxRef.current.state === "running"
+            ) {
               createPing(audioCtxRef.current);
             }
             if (!isOpenRef.current) {
@@ -320,21 +359,32 @@ export function GlobalChatbox() {
               setNewWhileAway((n) => n + 1);
             }
           }
-        }
+        },
       )
       .subscribe();
 
     const rxSub = supabase
       .channel("chat_reactions_always")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_reactions" }, (payload) => {
-        setReactions((prev) => {
-          if (prev.some((r) => r.id === (payload.new as Reaction).id)) return prev;
-          return [...prev, payload.new as Reaction];
-        });
-      })
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "chat_reactions" }, (payload) => {
-        setReactions((prev) => prev.filter((r) => r.id !== (payload.old as Reaction).id));
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_reactions" },
+        (payload) => {
+          setReactions((prev) => {
+            if (prev.some((r) => r.id === (payload.new as Reaction).id))
+              return prev;
+            return [...prev, payload.new as Reaction];
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "chat_reactions" },
+        (payload) => {
+          setReactions((prev) =>
+            prev.filter((r) => r.id !== (payload.old as Reaction).id),
+          );
+        },
+      )
       .subscribe();
 
     return () => {
@@ -345,10 +395,19 @@ export function GlobalChatbox() {
 
   // Helper: fetch user names for a list of user_ids via secure RPC
   const fetchUserNames = useCallback(async (userIds: string[]) => {
-    if (userIds.length === 0) return new Map<string, { full_name?: string; role?: string }>();
-    const { data } = await supabase
-      .rpc("get_chat_profiles", { user_ids: userIds });
-    return new Map((data ?? []).map((u: { user_id: string; full_name: string; role: string }) => [u.user_id, { full_name: u.full_name, role: u.role }]));
+    if (userIds.length === 0)
+      return new Map<string, { full_name?: string; role?: string }>();
+    const { data } = await supabase.rpc("get_chat_profiles", {
+      user_ids: userIds,
+    });
+    return new Map(
+      (data ?? []).map(
+        (u: { user_id: string; full_name: string; role: string }) => [
+          u.user_id,
+          { full_name: u.full_name, role: u.role },
+        ],
+      ),
+    );
   }, []);
 
   // Load initial messages as soon as auth resolves
@@ -371,7 +430,9 @@ export function GlobalChatbox() {
       }
 
       if (chats && chats.length > 0) {
-        const userIds = [...new Set((chats as GlobalChat[]).map((c) => c.user_id))];
+        const userIds = [
+          ...new Set((chats as GlobalChat[]).map((c) => c.user_id)),
+        ];
         const userMap = await fetchUserNames(userIds);
 
         const enriched = (chats as GlobalChat[])
@@ -386,9 +447,11 @@ export function GlobalChatbox() {
         setHasMore(chats.length === PAGE_SIZE);
 
         // Compute initial unread count from last-seen message ID persisted in localStorage
-        const lastSeenId = Number(localStorage.getItem(`gchat_last_seen_${currentUserId}`) ?? 0);
+        const lastSeenId = Number(
+          localStorage.getItem(`gchat_last_seen_${currentUserId}`) ?? 0,
+        );
         const initialUnread = (enriched as GlobalChat[]).filter(
-          (m) => m.id > lastSeenId && m.user_id !== currentUserId
+          (m) => m.id > lastSeenId && m.user_id !== currentUserId,
         ).length;
         setUnread(initialUnread);
       } else {
@@ -404,7 +467,7 @@ export function GlobalChatbox() {
     };
 
     loadInitial();
-     
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId]);
 
@@ -426,7 +489,9 @@ export function GlobalChatbox() {
       .limit(PAGE_SIZE);
 
     if (chats && chats.length > 0) {
-      const userIds = [...new Set((chats as GlobalChat[]).map((c) => c.user_id))];
+      const userIds = [
+        ...new Set((chats as GlobalChat[]).map((c) => c.user_id)),
+      ];
       const userMap = await fetchUserNames(userIds);
       const older = (chats as GlobalChat[])
         .map((c) => ({ ...c, user_profile: userMap.get(c.user_id) ?? null }))
@@ -437,7 +502,8 @@ export function GlobalChatbox() {
 
       requestAnimationFrame(() => {
         if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight - prevScrollHeight;
+          scrollRef.current.scrollTop =
+            scrollRef.current.scrollHeight - prevScrollHeight;
         }
       });
     } else {
@@ -469,7 +535,7 @@ export function GlobalChatbox() {
     if (isNewMessage && isAtBottomRef.current) {
       scrollToBottom("smooth");
     }
-     
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
@@ -481,7 +547,6 @@ export function GlobalChatbox() {
     inputRef.current?.focus();
   };
 
-
   const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !currentUserId) return;
@@ -490,14 +555,23 @@ export function GlobalChatbox() {
     setActivePanel(null);
     const replyId = replyingTo?.id || null;
     setReplyingTo(null);
-    const { error } = await supabase.from("global_chats").insert({ user_id: currentUserId, message: msg, type: "text", reply_to_id: replyId });
+    const { error } = await supabase
+      .from("global_chats")
+      .insert({
+        user_id: currentUserId,
+        message: msg,
+        type: "text",
+        reply_to_id: replyId,
+      });
     if (error) toast.error("Failed to send message. Please try again.");
     // Always jump to bottom when user sends
     setTimeout(() => scrollToBottom("smooth"), 100);
   };
 
-
-  const sendGif = async (gif: IGif, e: React.SyntheticEvent<HTMLElement, Event>) => {
+  const sendGif = async (
+    gif: IGif,
+    e: React.SyntheticEvent<HTMLElement, Event>,
+  ) => {
     e.preventDefault();
     if (!currentUserId) return;
     setActivePanel(null);
@@ -513,7 +587,10 @@ export function GlobalChatbox() {
   const toggleReaction = async (messageId: number, emoji: string) => {
     if (!currentUserId) return;
     const existing = reactions.find(
-      (r) => r.message_id === messageId && r.user_id === currentUserId && r.emoji === emoji
+      (r) =>
+        r.message_id === messageId &&
+        r.user_id === currentUserId &&
+        r.emoji === emoji,
     );
     if (existing) {
       setReactions((prev) => prev.filter((r) => r.id !== existing.id));
@@ -533,8 +610,10 @@ export function GlobalChatbox() {
 
   const fetchGifs = useCallback(
     (offset: number) =>
-      gifSearch ? gf.search(gifSearch, { offset, limit: 12 }) : gf.trending({ offset, limit: 12 }),
-    [gifSearch]
+      gifSearch
+        ? gf.search(gifSearch, { offset, limit: 12 })
+        : gf.trending({ offset, limit: 12 }),
+    [gifSearch],
   );
 
   if (!currentUserId) return null;
@@ -546,7 +625,11 @@ export function GlobalChatbox() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => { unlockAudio(); setIsOpen(true); setUnread(0); }}
+          onClick={() => {
+            unlockAudio();
+            setIsOpen(true);
+            setUnread(0);
+          }}
           className="relative size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
         >
           <MessageCircle className="size-5" />
@@ -609,7 +692,9 @@ export function GlobalChatbox() {
             </div>
           )}
           {!hasMore && messages.length > 0 && (
-            <p className="text-center text-[10px] text-muted-foreground/50 py-1">— Beginning of chat —</p>
+            <p className="text-center text-[10px] text-muted-foreground/50 py-1">
+              — Beginning of chat —
+            </p>
           )}
 
           {initialLoading ? (
@@ -618,16 +703,23 @@ export function GlobalChatbox() {
             </div>
           ) : messages.length === 0 ? (
             <div className="h-full flex items-center justify-center text-muted-foreground/50 text-xs text-center">
-              <p>No messages yet.<br />Be the first to say something! 👋</p>
+              <p>
+                No messages yet.
+                <br />
+                Be the first to say something! 👋
+              </p>
             </div>
           ) : (
             messages.map((msg) => {
               const isMe = msg.user_id === currentUserId;
               const msgRx = reactions.filter((r) => r.message_id === msg.id);
-              const grouped = msgRx.reduce((acc, r) => {
-                acc[r.emoji] = (acc[r.emoji] || 0) + 1;
-                return acc;
-              }, {} as Record<string, number>);
+              const grouped = msgRx.reduce(
+                (acc, r) => {
+                  acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                  return acc;
+                },
+                {} as Record<string, number>,
+              );
 
               return (
                 <div
@@ -636,7 +728,9 @@ export function GlobalChatbox() {
                   onMouseEnter={() => setHoveredMsg(msg.id)}
                   onMouseLeave={() => setHoveredMsg(null)}
                 >
-                  <div className={`flex items-center gap-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`flex items-center gap-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`}
+                  >
                     <span className="text-[10px] font-semibold text-muted-foreground">
                       {msg.user_profile?.full_name ?? "Player"}
                     </span>
@@ -647,15 +741,29 @@ export function GlobalChatbox() {
                     )}
                   </div>
 
-                  <div className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                  <div
+                    className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+                  >
                     <div className="flex flex-col gap-1 max-w-[80%]">
                       {msg.reply_to_id && (
                         <div
                           onClick={() => {
-                            const el = document.getElementById(`msg-${msg.reply_to_id}`);
-                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            el?.classList.add('bg-primary/20', 'transition-colors', 'duration-500');
-                            setTimeout(() => el?.classList.remove('bg-primary/20'), 1500);
+                            const el = document.getElementById(
+                              `msg-${msg.reply_to_id}`,
+                            );
+                            el?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center",
+                            });
+                            el?.classList.add(
+                              "bg-primary/20",
+                              "transition-colors",
+                              "duration-500",
+                            );
+                            setTimeout(
+                              () => el?.classList.remove("bg-primary/20"),
+                              1500,
+                            );
                           }}
                           className="text-[10px] bg-foreground/[0.03] border border-border/30 rounded-md px-2 py-1 cursor-pointer hover:bg-foreground/[0.06] transition-colors truncate flex items-center gap-1 text-muted-foreground"
                         >
@@ -663,7 +771,7 @@ export function GlobalChatbox() {
                           <span className="truncate">Replied to message</span>
                         </div>
                       )}
-                      
+
                       <div
                         id={`msg-${msg.id}`}
                         className={[
@@ -671,20 +779,32 @@ export function GlobalChatbox() {
                           isMe
                             ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
                             : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
-                          msg.type === "referral" ? "p-0 border-none bg-transparent" : ""
+                          msg.type === "referral"
+                            ? "p-0 border-none bg-transparent"
+                            : "",
                         ].join(" ")}
                       >
-                        {msg.type === "text" && <span className="whitespace-pre-wrap break-words">{parseMentions(msg.message || "")}</span>}
+                        {msg.type === "text" && (
+                          <span className="whitespace-pre-wrap break-words">
+                            {parseMentions(msg.message || "")}
+                          </span>
+                        )}
                         {msg.type === "gif" && msg.gif_url && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={msg.gif_url} alt="GIF" className="max-w-[180px] rounded-lg object-contain" />
+                          <img
+                            src={msg.gif_url}
+                            alt="GIF"
+                            className="max-w-[180px] rounded-lg object-contain"
+                          />
                         )}
                         {msg.type === "referral" && msg.message && (
                           <div className="bg-foreground/[0.03] border border-primary/30 rounded-xl p-3 w-[220px] shadow-sm flex flex-col gap-2 relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-cyan-400" />
                             <div className="flex items-center gap-2">
                               <Handshake className="size-4 text-primary" />
-                              <span className="text-xs font-bold text-foreground">Referral Help</span>
+                              <span className="text-xs font-bold text-foreground">
+                                Referral Help
+                              </span>
                             </div>
                             <p className="text-[11px] text-muted-foreground leading-tight">
                               {(() => {
@@ -692,7 +812,11 @@ export function GlobalChatbox() {
                                   const data = JSON.parse(msg.message);
                                   return (
                                     <>
-                                      Help <span className="text-foreground font-semibold">{data.name}</span>!
+                                      Help{" "}
+                                      <span className="text-foreground font-semibold">
+                                        {data.name}
+                                      </span>
+                                      !
                                     </>
                                   );
                                 } catch {
@@ -705,7 +829,8 @@ export function GlobalChatbox() {
                                 onClick={async () => {
                                   try {
                                     const data = JSON.parse(msg.message!);
-                                    if (data.link) handleReferralClick(data.link);
+                                    if (data.link)
+                                      handleReferralClick(data.link);
                                   } catch {}
                                 }}
                                 className="flex-1 bg-primary text-primary-foreground text-[10px] font-bold py-1.5 rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 shadow-sm"
@@ -714,34 +839,44 @@ export function GlobalChatbox() {
                               </button>
                             </div>
                             <div className="flex gap-1">
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      const data = JSON.parse(msg.message!);
-                                      const { error } = await supabase.rpc("increment_referral_tickets", { target_account_id: data.accountId });
-                                      if (error) toast.error("Error updating account.");
-                                      else toast.success("+1 Help registered!");
-                                    } catch {}
-                                  }}
-                                  title="Increase (Done)"
-                                  className="flex-1 flex justify-center items-center py-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-md transition-colors border border-emerald-500/20"
-                                >
-                                  <Plus className="size-3.5" />
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      const data = JSON.parse(msg.message!);
-                                      const { error } = await supabase.rpc("decrement_referral_tickets", { target_account_id: data.accountId });
-                                      if (error) toast.error("Only the owner can decrease this.");
-                                      else toast.success("-1 Help removed!");
-                                    } catch {}
-                                  }}
-                                  title="Decrease (Cancel)"
-                                  className="flex-1 flex justify-center items-center py-1 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-md transition-colors border border-destructive/20"
-                                >
-                                  <Minus className="size-3.5" />
-                                </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const data = JSON.parse(msg.message!);
+                                    const { error } = await supabase.rpc(
+                                      "increment_referral_tickets",
+                                      { target_account_id: data.accountId },
+                                    );
+                                    if (error)
+                                      toast.error("Error updating account.");
+                                    else toast.success("+1 Help registered!");
+                                  } catch {}
+                                }}
+                                title="Increase (Done)"
+                                className="flex-1 flex justify-center items-center py-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-md transition-colors border border-emerald-500/20"
+                              >
+                                <Plus className="size-3.5" />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const data = JSON.parse(msg.message!);
+                                    const { error } = await supabase.rpc(
+                                      "decrement_referral_tickets",
+                                      { target_account_id: data.accountId },
+                                    );
+                                    if (error)
+                                      toast.error(
+                                        "Only the owner can decrease this.",
+                                      );
+                                    else toast.success("-1 Help removed!");
+                                  } catch {}
+                                }}
+                                title="Decrease (Cancel)"
+                                className="flex-1 flex justify-center items-center py-1 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-md transition-colors border border-destructive/20"
+                              >
+                                <Minus className="size-3.5" />
+                              </button>
                             </div>
                           </div>
                         )}
@@ -779,9 +914,14 @@ export function GlobalChatbox() {
                   </div>
 
                   {Object.keys(grouped).length > 0 && (
-                    <div className={`flex flex-wrap gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`flex flex-wrap gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}
+                    >
                       {Object.entries(grouped).map(([emoji, count]) => {
-                        const iReacted = msgRx.some((r) => r.emoji === emoji && r.user_id === currentUserId);
+                        const iReacted = msgRx.some(
+                          (r) =>
+                            r.emoji === emoji && r.user_id === currentUserId,
+                        );
                         return (
                           <button
                             key={emoji}
@@ -801,7 +941,9 @@ export function GlobalChatbox() {
                     </div>
                   )}
 
-                  <span className={`text-[9px] text-muted-foreground/50 px-1 ${isMe ? "text-right" : "text-left"}`}>
+                  <span
+                    className={`text-[9px] text-muted-foreground/50 px-1 ${isMe ? "text-right" : "text-left"}`}
+                  >
                     {format(new Date(msg.created_at), "h:mm a")}
                   </span>
                 </div>
@@ -835,13 +977,20 @@ export function GlobalChatbox() {
           <motion.div
             key={activePanel}
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: activePanel === "emoji" ? 350 : 300, opacity: 1 }}
+            animate={{
+              height: activePanel === "emoji" ? 350 : 300,
+              opacity: 1,
+            }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="shrink-0 border-t border-border/40 overflow-hidden bg-background/80"
           >
             {activePanel === "emoji" && (
-              <EmojiPicker onEmojiClick={(data: EmojiClickData) => setInput((prev) => prev + data.emoji)} />
+              <EmojiPicker
+                onEmojiClick={(data: EmojiClickData) =>
+                  setInput((prev) => prev + data.emoji)
+                }
+              />
             )}
             {activePanel === "gif" && (
               <div className="flex flex-col h-[300px]">
@@ -855,7 +1004,10 @@ export function GlobalChatbox() {
                     className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/60"
                   />
                   {gifSearch && (
-                    <button onClick={() => setGifSearch("")} className="text-muted-foreground hover:text-foreground">
+                    <button
+                      onClick={() => setGifSearch("")}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
                       <X className="size-3.5" />
                     </button>
                   )}
@@ -878,12 +1030,11 @@ export function GlobalChatbox() {
         )}
       </AnimatePresence>
 
-
       {/* Input */}
       <div className="shrink-0 flex flex-col border-t border-border/40 bg-background/50 relative">
         <AnimatePresence>
           {showReferralPicker && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
@@ -891,24 +1042,35 @@ export function GlobalChatbox() {
             >
               <div className="flex justify-between items-center px-2 py-1">
                 <span className="text-xs font-bold">Pick an Account</span>
-                <button onClick={() => setShowReferralPicker(false)} className="text-muted-foreground hover:text-foreground">
+                <button
+                  onClick={() => setShowReferralPicker(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   <X className="size-3.5" />
                 </button>
               </div>
               <div className="overflow-y-auto flex-1 flex flex-col gap-1">
                 {loadingAccounts ? (
-                  <div className="py-4 flex justify-center"><Loader2 className="size-4 animate-spin" /></div>
+                  <div className="py-4 flex justify-center">
+                    <Loader2 className="size-4 animate-spin" />
+                  </div>
                 ) : myAccounts.length === 0 ? (
-                  <div className="py-4 text-center text-xs text-muted-foreground">No active accounts found.</div>
+                  <div className="py-4 text-center text-xs text-muted-foreground">
+                    No active accounts found.
+                  </div>
                 ) : (
-                  myAccounts.map(acc => (
-                    <button 
-                      key={acc.id} 
+                  myAccounts.map((acc) => (
+                    <button
+                      key={acc.id}
                       onClick={() => sendReferral(acc)}
                       className="flex items-center justify-between p-2 rounded-lg hover:bg-foreground/5 text-left border border-transparent hover:border-border transition-colors"
                     >
-                      <span className="text-sm font-semibold truncate">{acc.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{acc.tickets_done}/{acc.total_tickets}</span>
+                      <span className="text-sm font-semibold truncate">
+                        {acc.name}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {acc.tickets_done}/{acc.total_tickets}
+                      </span>
                     </button>
                   ))
                 )}
@@ -922,16 +1084,25 @@ export function GlobalChatbox() {
             <div className="flex items-center gap-2 overflow-hidden">
               <Reply className="size-3.5 text-muted-foreground shrink-0" />
               <span className="text-[11px] text-muted-foreground truncate">
-                Replying to <span className="font-semibold text-foreground">{replyingTo.user_profile?.full_name ?? "Player"}</span>
+                Replying to{" "}
+                <span className="font-semibold text-foreground">
+                  {replyingTo.user_profile?.full_name ?? "Player"}
+                </span>
               </span>
             </div>
-            <button onClick={() => setReplyingTo(null)} className="text-muted-foreground hover:text-foreground shrink-0 p-1 rounded-md hover:bg-foreground/10 transition-colors">
+            <button
+              onClick={() => setReplyingTo(null)}
+              className="text-muted-foreground hover:text-foreground shrink-0 p-1 rounded-md hover:bg-foreground/10 transition-colors"
+            >
               <X className="size-3.5" />
             </button>
           </div>
         )}
 
-        <form onSubmit={sendText} className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3">
+        <form
+          onSubmit={sendText}
+          className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3"
+        >
           <button
             type="button"
             onClick={openReferralPicker}
