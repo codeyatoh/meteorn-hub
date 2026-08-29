@@ -76,16 +76,42 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // 5. Execute Transactions
+    // 5. Insert "processing" records FIRST (one per address)
+    const processingPayload = lowerAddresses.map((address: string) => ({
+      user_id: userId,
+      wallet_address: address,
+      amount: CLAIM_AMOUNT,
+      tx_hash: "pending",
+      status: "processing",
+    }));
+
+    const { data: insertedRows, error: insertError } = await supabaseAdmin
+      .from("faucet_claims")
+      .insert(processingPayload)
+      .select("id, wallet_address");
+
+    if (insertError || !insertedRows) {
+      console.error("[Claim API] Failed to insert processing records:", insertError);
+      return NextResponse.json({ error: "Failed to initialize claim records." }, { status: 500 });
+    }
+
+    // Map address -> row id for later updates
+    const addressToId: Record<string, string> = {};
+    for (const row of insertedRows) {
+      addressToId[row.wallet_address] = row.id;
+    }
+
+    // 6. Execute Transactions
     const provider = new ethers.JsonRpcProvider(rpcUrl);
     const wallet = new ethers.Wallet(privateKey, provider);
     
     let nonce = await wallet.getNonce();
     const results = [];
-    const dbPayload = [];
+    const successAddresses: string[] = [];
 
     // Process sequentially to avoid nonce clashes or RPC rate limits
     for (const address of lowerAddresses) {
+      const rowId = addressToId[address];
       try {
         const tx = await wallet.sendTransaction({
           to: address,
@@ -94,29 +120,33 @@ export async function POST(req: NextRequest) {
         });
         
         results.push({ address, txHash: tx.hash, status: "success" });
-        dbPayload.push({
-          user_id: userId,
-          wallet_address: address,
-          amount: CLAIM_AMOUNT,
-          tx_hash: tx.hash,
-        });
+        successAddresses.push(address);
+
+        // Update DB record to success with tx_hash
+        await supabaseAdmin
+          .from("faucet_claims")
+          .update({ status: "success", tx_hash: tx.hash })
+          .eq("id", rowId);
+
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : "Tx Failed";
         console.error(`Failed to send to ${address}:`, err);
         results.push({ address, error: errorMessage, status: "failed" });
+
+        // Update DB record to failed
+        await supabaseAdmin
+          .from("faucet_claims")
+          .update({ status: "failed", tx_hash: null, error_message: errorMessage })
+          .eq("id", rowId);
+
         // Stop batch if a transaction fails to prevent missing nonces
         break; 
       }
     }
 
-    // 6. Save successful records to Database
-    if (dbPayload.length > 0) {
-      await supabaseAdmin.from("faucet_claims").insert(dbPayload);
-    }
-
     return NextResponse.json({
       success: true,
-      message: `Processed ${dbPayload.length} claims.`,
+      message: `Processed ${successAddresses.length} claim(s) successfully.`,
       results,
     });
 
