@@ -51,7 +51,7 @@ export default async function AdminOverviewPage(props: { searchParams: Promise<{
   try {
     const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=game-meteor-coin&vs_currencies=${currency}`, {
       headers: { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY || '' },
-      next: { revalidate: 60 }
+      next: { revalidate: 10 }
     });
     if (res.ok) {
       const data = await res.json();

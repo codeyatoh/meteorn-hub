@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/gmto-chart?currency=usd&days=1
  * Server-side proxy for CoinGecko market_chart endpoint.
@@ -17,7 +19,7 @@ export async function GET(request: NextRequest) {
         headers: {
           'x-cg-demo-api-key': process.env.COINGECKO_API_KEY || '',
         },
-        next: { revalidate: 60 }, // cache for 60 seconds
+        next: { revalidate: 10 }, // cache for 10 seconds (near real-time)
       }
     );
 
