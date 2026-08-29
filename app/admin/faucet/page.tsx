@@ -214,7 +214,7 @@ export default function AdminFaucetPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center">
         <div style={{ width: 180, height: 80 }}>
           <WanderingEyes className="h-full w-full [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
         </div>
