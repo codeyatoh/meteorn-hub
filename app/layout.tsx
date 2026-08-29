@@ -47,7 +47,7 @@ export default function RootLayout({
           {children}
         </TooltipProvider>
         <PwaInstaller />
-        <Toaster position="top-center" />
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );
