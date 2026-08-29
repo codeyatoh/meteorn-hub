@@ -33,7 +33,7 @@ export default function AdminTempMailRequestsPage() {
   };
 
   useEffect(() => {
-    fetchRequests();
+    setTimeout(() => fetchRequests(), 0);
   }, []);
 
   const handleUpdateStatus = async (userId: string, newStatus: "approved" | "rejected") => {
