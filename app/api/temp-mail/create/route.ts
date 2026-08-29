@@ -23,36 +23,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { username, domain } = body as { username: string; domain: string };
 
-    // --- Access & Rate Limit Check ---
-    const { data: access, error: accessError } = await supabase
-      .from('temp_mail_access')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (accessError || !access || access.status !== 'approved') {
-      return NextResponse.json({ error: 'You do not have access to generate Temp Mails.' }, { status: 403 });
-    }
-
-    const phtDateStr = new Intl.DateTimeFormat('en-CA', { 
-      timeZone: 'Asia/Manila', 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
-    }).format(new Date());
-
-    let currentCount = access.daily_count;
-    
-    // Reset if it's a new day in PHT
-    if (access.last_reset_date < phtDateStr) {
-      currentCount = 0;
-    }
-
-    if (currentCount >= 100) {
-      return NextResponse.json({ error: 'Daily limit reached. You can only generate 100 Temp Mails per day.' }, { status: 429 });
-    }
-    // ---------------------------------
-
     // Validate username
     if (!username || !/^[a-z0-9._-]{3,30}$/.test(username)) {
       return NextResponse.json(
@@ -64,6 +34,18 @@ export async function POST(request: NextRequest) {
     if (!domain) {
       return NextResponse.json({ error: 'Domain is required.' }, { status: 400 });
     }
+
+    // --- Atomic Access & Rate Limit Check ---
+    const { data: allowed, error: rpcError } = await supabase
+      .rpc('increment_temp_mail_count', { target_user_id: user.id });
+
+    if (rpcError || !allowed) {
+      return NextResponse.json(
+        { error: 'Access denied or daily limit (100) reached.' }, 
+        { status: 429 }
+      );
+    }
+    // ---------------------------------
 
     const address = `${username}@${domain}`;
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // +10 min
@@ -86,16 +68,6 @@ export async function POST(request: NextRequest) {
       console.error('Supabase upsert error:', upsertError);
       return NextResponse.json({ error: 'Failed to save session.' }, { status: 500 });
     }
-
-    // Update access count and last reset date
-    await supabase
-      .from('temp_mail_access')
-      .update({
-        daily_count: currentCount + 1,
-        last_reset_date: phtDateStr,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id);
 
     return NextResponse.json({ address, expires_at: expiresAt });
   } catch (err) {
