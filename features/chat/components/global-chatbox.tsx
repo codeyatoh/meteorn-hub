@@ -81,7 +81,9 @@ export function GlobalChatbox() {
   useEffect(() => {
     if (!currentUserId) return;
     const saved = localStorage.getItem(`gchat_open_${currentUserId}`);
-    if (saved === "1") setIsOpenState(true);
+    if (saved === "1") {
+      setTimeout(() => setIsOpenState(true), 0);
+    }
   }, [currentUserId]);
   const setIsOpen = useCallback((val: boolean) => {
     setIsOpenState(val);
