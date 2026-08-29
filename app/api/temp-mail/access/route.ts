@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
       day: '2-digit' 
     }).format(new Date());
 
-    let { daily_count, last_reset_date } = access;
+    let { daily_count } = access;
+    const { last_reset_date } = access;
 
     if (last_reset_date < phtDateStr) {
       daily_count = 0;
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();

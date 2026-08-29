@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -36,10 +36,21 @@ export async function GET(request: NextRequest) {
     const userIds = accessRows.map((r) => r.user_id);
     const { data: profilesData } = await adminClient.rpc('get_chat_profiles', { user_ids: userIds });
 
+    // Compute today in PHT
+    const todayPht = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Manila',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+
     const requests = accessRows.map((row) => {
-      const profile = profilesData?.find((p: any) => p.user_id === row.user_id);
+      const profile = profilesData?.find((p: { user_id: string; full_name: string }) => p.user_id === row.user_id);
+      // If last_reset_date is older than today PHT, the count is 0 for today
+      const effectiveDailyCount = (row.last_reset_date < todayPht) ? 0 : row.daily_count;
       return {
         ...row,
+        daily_count: effectiveDailyCount,
         user_name: profile?.full_name || 'Unknown User',
       };
     });
