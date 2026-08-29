@@ -126,7 +126,10 @@ export default function AdminFaucetPage() {
   }, [supabase]);
 
   useEffect(() => {
-    void fetchData();
+    const timer = setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchData]);
 
   const handleManualCredit = async () => {
