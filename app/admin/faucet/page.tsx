@@ -307,7 +307,9 @@ export default function AdminFaucetPage() {
 
               {isLoading ? (
                 <div className="flex h-[30vh] items-center justify-center">
-                  <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
+                  <div style={{ width: 180, height: 80 }}>
+                    <WanderingEyes className="h-full w-full [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
+                  </div>
                 </div>
               ) : filteredUsers.length === 0 ? (
                 <div className="flex h-[30vh] items-center justify-center text-sm text-muted-foreground">No matching users found.</div>
@@ -376,7 +378,9 @@ export default function AdminFaucetPage() {
 
               {isLoading ? (
                 <div className="flex h-[30vh] items-center justify-center">
-                  <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
+                  <div style={{ width: 180, height: 80 }}>
+                    <WanderingEyes className="h-full w-full [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
+                  </div>
                 </div>
               ) : filteredClaims.length === 0 ? (
                 <div className="flex h-[30vh] items-center justify-center text-sm text-muted-foreground">No claims found.</div>

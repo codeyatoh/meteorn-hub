@@ -98,18 +98,18 @@ function WanderingEyes({
           }
         }
       `}</style>
-      <span
+      <div
         role="status"
         className={cn(
-          "@container-[size] relative inline-flex aspect-9/4 items-center justify-center align-middle [--eye-color:color-mix(in_srgb,currentColor_16%,transparent)] [--pupil-color:currentColor]",
+          "@container-[size] relative inline-block aspect-9/4 [--eye-color:color-mix(in_srgb,currentColor_16%,transparent)] [--pupil-color:currentColor]",
           className,
         )}
         style={eyesStyle}
-        {...props}
+        {...(props as React.ComponentProps<"div">)}
       >
-        <span
+        <div
           aria-hidden="true"
-          className="inline-flex items-center justify-center gap-(--loading-ui-wandering-eyes-gap)"
+          className="flex h-full w-full items-center justify-center gap-(--loading-ui-wandering-eyes-gap)"
         >
           {Array.from({ length: 2 }, (_, index) => (
             <span
@@ -127,9 +127,9 @@ function WanderingEyes({
               }}
             />
           ))}
-        </span>
+        </div>
         <span className="sr-only">Loading</span>
-      </span>
+      </div>
     </>
   );
 }
