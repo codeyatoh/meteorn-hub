@@ -17,7 +17,6 @@ import {
   AtSign,
   Shuffle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { GuideModal } from "@/components/ui/guide-modal";

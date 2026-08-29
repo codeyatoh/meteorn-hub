@@ -27,7 +27,7 @@ export function GuideModal({ title, children }: GuideModalProps) {
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         title={title}
-        icon={<BookOpen className="size-5 text-primary" />}
+        icon={<BookOpen className="size-5" />}
       >
         <div className="space-y-4 text-sm text-muted-foreground p-1">
           {children}

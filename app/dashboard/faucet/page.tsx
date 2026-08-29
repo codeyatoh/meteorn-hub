@@ -313,8 +313,8 @@ export default function FaucetPage() {
             <GuideModal title="How the Faucet Works">
               <p>The Faucet is a decentralized community pool that allows users to instantly fund their wallets with POL.</p>
               <ul className="list-disc pl-4 space-y-2 mt-2">
-                <li><strong>Claiming:</strong> You can claim a base of 0.05 POL per day without donating.</li>
-                <li><strong>Tiers & Limits:</strong> Contributing to the Hot Wallet pool increases your daily claim limit and unlocks higher Temp Mail active address allowances.</li>
+                <li><strong>Claiming:</strong> Each wallet address can receive 0.05 POL. Your daily claim count depends on your Tier.</li>
+                <li><strong>Tiers & Limits:</strong> Contributing to the Hot Wallet pool upgrades your Tier, increasing how many addresses you can fund per day.</li>
                 <li><strong>Claimable Balance:</strong> You can claim back up to 70% of your total lifetime donations to the pool.</li>
               </ul>
               <p className="mt-2 text-primary font-medium">💡 Tip: Make sure to verify your donation by submitting the transaction hash below.</p>
