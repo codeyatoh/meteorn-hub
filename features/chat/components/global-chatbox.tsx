@@ -303,7 +303,7 @@ export function GlobalChatbox() {
       setCurrentUserId(session?.user?.id ?? null);
     });
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   // Reset component state when user logs out or switches accounts
   const previousUserIdRef = useRef<string | null>(null);
