@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { MessageCircle, X, Send, Smile, ChevronDown, Loader2, ArrowDown, Handshake, Reply, ChevronRight, Plus, Minus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -234,6 +234,7 @@ export function GlobalChatbox() {
       window.removeEventListener('keydown', handleFirstInteraction);
       window.removeEventListener('touchstart', handleFirstInteraction);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlockAudio]);
 
   useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
@@ -257,6 +258,7 @@ export function GlobalChatbox() {
         inputRef.current?.focus();
       }, 100);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, scrollToBottom]);
 
   // Track auth state changes — works on hard refresh, logout, and re-login
@@ -401,6 +403,7 @@ export function GlobalChatbox() {
     };
 
     loadInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, supabase, fetchUserNames, scrollToBottom]);
 
   // Load older messages on scroll-to-top
@@ -464,6 +467,7 @@ export function GlobalChatbox() {
     if (isNewMessage && isAtBottomRef.current) {
       scrollToBottom("smooth");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, scrollToBottom]);
 
   const jumpToBottom = () => {
