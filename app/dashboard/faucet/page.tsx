@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Droplets, CopyIcon, Activity, ArrowRight, ShieldCheck, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { Loader2, Droplets, CopyIcon, CheckIcon, Activity, ArrowRight, ShieldCheck, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -141,6 +141,7 @@ export default function FaucetPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [hotWalletAddress, setHotWalletAddress] = useState("Loading...");
   const [isTiersModalOpen, setIsTiersModalOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Live POL price
   const [polPrices, setPolPrices] = useState<{ usd: number; php: number; eur: number }>({ usd: 0.45, php: 25, eur: 0.41 });
@@ -261,7 +262,9 @@ export default function FaucetPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+    setIsCopied(true);
     toast.success("Wallet address copied!");
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const totalDonated = stats?.total_donated || 0;
@@ -445,10 +448,15 @@ export default function FaucetPage() {
                     {hotWalletAddress}
                   </code>
                   <button
-                    className="p-2 bg-background hover:bg-foreground/5 border border-border/40 rounded-md transition-colors"
+                    className="p-2 bg-background hover:bg-foreground/5 border border-border/40 rounded-md transition-colors relative"
                     onClick={() => copyToClipboard(hotWalletAddress)}
                   >
-                    <CopyIcon className="size-4 text-muted-foreground hover:text-foreground" />
+                    <span className="sr-only">Copy address</span>
+                    {isCopied ? (
+                      <CheckIcon className="size-4 text-emerald-500 animate-in zoom-in spin-in-12 duration-300" />
+                    ) : (
+                      <CopyIcon className="size-4 text-muted-foreground hover:text-foreground animate-in zoom-in duration-300" />
+                    )}
                   </button>
                 </div>
                 <p className="text-[11px] text-amber-500/90 leading-tight">
