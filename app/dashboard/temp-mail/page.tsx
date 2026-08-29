@@ -595,7 +595,7 @@ export default function TempMailPage() {
                             return (
                               <div
                                 key={i}
-                                className={`h-2.5 w-2.5 rounded-sm transition-colors ${
+                                className={`h-2 w-3.5 rounded-[2px] transition-colors ${
                                   isFilled
                                     ? isLow ? 'bg-destructive' : 'bg-emerald-500'
                                     : 'bg-border/60'

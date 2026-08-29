@@ -216,14 +216,31 @@ export default function AdminTempMailRequestsPage() {
                       </div>
 
                       {/* Daily Usage */}
-                      <div className="text-right flex flex-col items-end justify-center">
+                      <div className="text-right flex flex-col items-end justify-center gap-1">
                         {req.status === 'approved' ? (
                           <>
-                            <div className="font-mono text-sm text-foreground">
-                              {req.daily_count} / 100
+                            <div className="flex items-center gap-0.5">
+                              {Array.from({ length: 10 }).map((_, i) => {
+                                const remaining = 100 - req.daily_count;
+                                const blocksFilled = Math.ceil(remaining / 10);
+                                const isFilled = i < blocksFilled;
+                                const isLow = remaining <= 20;
+                                return (
+                                  <div
+                                    key={i}
+                                    className={`h-2 w-2.5 rounded-[2px] transition-colors ${
+                                      isFilled
+                                        ? isLow ? 'bg-destructive' : 'bg-emerald-500'
+                                        : 'bg-border/60'
+                                    }`}
+                                  />
+                                );
+                              })}
                             </div>
-                            <div className="text-[10px] text-muted-foreground mt-0.5">
-                              Emails Gen.
+                            <div className={`font-mono text-[10px] font-bold ${
+                              (100 - req.daily_count) <= 20 ? 'text-destructive' : 'text-emerald-500'
+                            }`}>
+                              {req.daily_count} <span className="text-muted-foreground font-normal">/ 100</span>
                             </div>
                           </>
                         ) : (
