@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [nickname, setNickname] = useState("");
   const [currency, setCurrency] = useState("usd");
   const [walletAddress, setWalletAddress] = useState("");
+  const [lbankAddress, setLbankAddress] = useState("");
   const [email, setEmail] = useState("");
   
   // Password fields (only sent if filled)
@@ -41,6 +42,7 @@ export default function SettingsPage() {
         setNickname(user.user_metadata?.nickname || "User");
         setCurrency(user.user_metadata?.currency || "usd");
         setWalletAddress(user.user_metadata?.wallet_address || "");
+          setLbankAddress(user.user_metadata?.lbank_address || "");
         setEmail(user.email || "");
       }
       if (settings && settings.donation_wallet_address) {
@@ -60,11 +62,12 @@ export default function SettingsPage() {
     setSaving(true);
     
     try {
-      const updates: { data: { nickname: string, currency: string, wallet_address: string }, email?: string, password?: string } = {
+      const updates: { data: { nickname: string, currency: string, wallet_address: string, lbank_address: string }, email?: string, password?: string } = {
         data: {
           nickname: nickname,
           currency: currency,
-          wallet_address: walletAddress
+          wallet_address: walletAddress,
+          lbank_address: lbankAddress
         }
       };
 
@@ -161,6 +164,22 @@ export default function SettingsPage() {
                         placeholder="0x..."
                         value={walletAddress}
                         onChange={(e) => setWalletAddress(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">LBank Wallet Address</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <WalletIcon className="size-4 text-muted-foreground" />
+                      </div>
+                      <input 
+                        type="text"
+                        className="w-full rounded-md border border-input bg-background/50 pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors hover:border-border"
+                        placeholder="0x..."
+                        value={lbankAddress}
+                        onChange={(e) => setLbankAddress(e.target.value)}
                       />
                     </div>
                   </div>

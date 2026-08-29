@@ -111,7 +111,7 @@ export default function UserDashboardPage() {
   const [editAccountIsBanned, setEditAccountIsBanned] = useState(false);
 
   // Global Wallet State
-  const [globalWalletAddress, setGlobalWalletAddress] = useState("");
+  const [globalWalletAddress, setGlobalWalletAddress] = useState(""); // Now used for LBank
   const [isViewWalletModalOpen, setIsViewWalletModalOpen] = useState(false);
   const [isWalletCopied, setIsWalletCopied] = useState(false);
 
@@ -174,8 +174,8 @@ export default function UserDashboardPage() {
       if (user.user_metadata?.currency) {
         setCurrency(user.user_metadata.currency);
       }
-      if (user.user_metadata?.wallet_address) {
-        setGlobalWalletAddress(user.user_metadata.wallet_address);
+      if (user.user_metadata?.lbank_address) {
+        setGlobalWalletAddress(user.user_metadata.lbank_address);
       }
       
       const { data: accountsData } = await supabase
@@ -851,7 +851,7 @@ export default function UserDashboardPage() {
                   type="button"
                   onClick={() => openViewWalletModal()}
                   className="flex items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/20 transition-colors h-[34px]"
-                  title="View My Wallet"
+                  title="View LBank Wallet"
                 >
                   <WalletIcon className="size-3.5" />
                 </button>
@@ -1648,7 +1648,7 @@ export default function UserDashboardPage() {
       <AnimatedModal
         isOpen={isViewWalletModalOpen}
         onClose={() => setIsViewWalletModalOpen(false)}
-        title="Wallet Address"
+        title="LBank Wallet Address"
         icon={<WalletIcon size={18} strokeWidth={1.5} />}
         maxWidth="sm"
       >

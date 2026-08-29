@@ -141,7 +141,7 @@ export default function AdminAccountsPage() {
 
             {/* Rows */}
             <div className="divide-y divide-border/30 overflow-x-auto">
-              <div className="min-w-[600px] sm:min-w-0">
+              <div className="min-w-[800px]">
               {(() => {
                 const filteredAccounts = accounts.filter(acc => {
                   const matchesSearch = acc.name.toLowerCase().includes(search.toLowerCase()) || 

@@ -44,6 +44,19 @@ export async function GET() {
       day: '2-digit',
     }).format(new Date());
 
+    // Fetch faucet stats to get total_donated for each user (for dynamic tier limits)
+    const { data: faucetStats } = await adminClient
+      .from('faucet_user_stats')
+      .select('user_id, total_donated')
+      .in('user_id', userIds);
+
+    const faucetMap: Record<string, number> = {};
+    if (faucetStats) {
+      faucetStats.forEach((f: { user_id: string; total_donated: number }) => {
+        faucetMap[f.user_id] = f.total_donated || 0;
+      });
+    }
+
     const requests = accessRows.map((row) => {
       const profile = profilesData?.find((p: { user_id: string; full_name: string }) => p.user_id === row.user_id);
       // If last_reset_date is older than today PHT, the count is 0 for today
@@ -52,6 +65,7 @@ export async function GET() {
         ...row,
         daily_count: effectiveDailyCount,
         user_name: profile?.full_name || 'Unknown User',
+        total_donated: faucetMap[row.user_id] ?? 0,
       };
     });
 

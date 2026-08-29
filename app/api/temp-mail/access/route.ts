@@ -42,10 +42,18 @@ export async function GET() {
       daily_count = 0;
     }
 
+    // Also fetch total_donated from faucet so the UI can compute the correct tier limit
+    const { data: faucetStats } = await supabase
+      .from('faucet_user_stats')
+      .select('total_donated')
+      .eq('user_id', user.id)
+      .single();
+
     return NextResponse.json({
       status: access.status,
       daily_count,
-      last_reset_date
+      last_reset_date,
+      total_donated: faucetStats?.total_donated ?? 0,
     });
   } catch (err) {
     console.error('temp_mail_access GET error:', err);

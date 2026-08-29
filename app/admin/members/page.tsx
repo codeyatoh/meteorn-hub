@@ -196,7 +196,7 @@ export default function MembersPage() {
           <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden">
             {/* Header */}
             <div className="overflow-x-auto">
-              <div className="min-w-[500px] sm:min-w-0">
+              <div className="min-w-[600px]">
                 <div className="grid grid-cols-[minmax(150px,2fr)_minmax(100px,1.2fr)_minmax(100px,1.2fr)_80px_100px_130px_80px_50px] gap-6 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                   <span>User</span>
                   <span className="text-right">Income</span>

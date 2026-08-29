@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Mail,
+  Activity,
   Copy,
   CheckIcon,
   RefreshCw,
@@ -17,8 +18,10 @@ import {
   Shuffle,
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
+import { AnimatedModal } from "@/components/ui/animated-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
+import { getTierLimits } from "@/lib/utils/tiers";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Message = {
@@ -141,8 +144,9 @@ function generateRandomUsername(): string {
 export default function TempMailPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  const [access, setAccess] = useState<{ status: string; daily_count: number } | null>(null);
+  const [access, setAccess] = useState<{ status: string; daily_count: number; total_donated?: number } | null>(null);
   const [requestingAccess, setRequestingAccess] = useState(false);
+  const [isTiersModalOpen, setIsTiersModalOpen] = useState(false);
 
   // Generator form
   const [username, setUsername] = useState("");
@@ -176,7 +180,7 @@ export default function TempMailPage() {
       new Promise((res) => setTimeout(res, 800)),
     ]).then(([sessionData, domainData, accessData]) => {
       if (accessData && accessData.status) {
-        setAccess({ status: accessData.status, daily_count: accessData.daily_count });
+        setAccess({ status: accessData.status, daily_count: accessData.daily_count, total_donated: accessData.total_donated ?? 0 });
       }
       
       if (sessionData.session) {
@@ -390,6 +394,7 @@ export default function TempMailPage() {
           <p className="mt-2 text-muted-foreground text-sm">
             Generate a disposable email address to receive codes and verifications.
           </p>
+          <button onClick={() => setIsTiersModalOpen(true)} className="mt-4 text-xs font-medium text-primary hover:underline flex items-center gap-1"><Activity className="size-3" /> View Donation Tiers & Limits</button>
         </div>
 
         {/* ── Access Gating ── */}
@@ -589,18 +594,34 @@ export default function TempMailPage() {
                         {/* Fill bar matching accounts page style */}
                         <div className="flex items-center gap-2">
                           <div className="w-24 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                (100 - (access?.daily_count || 0)) <= 20 ? 'bg-destructive' : 'bg-emerald-500'
-                              }`}
-                              style={{ width: `${Math.max(0, 100 - (access?.daily_count || 0))}%` }}
-                            />
+                            {(() => {
+                              const tempMailLimit = getTierLimits(access?.total_donated ?? 0).tempMailLimit;
+                              const used = access?.daily_count || 0;
+                              const remaining = Math.max(0, tempMailLimit - used);
+                              const fillPct = Math.max(0, (remaining / tempMailLimit) * 100);
+                              const isLow = fillPct <= 20;
+                              return (
+                                <>
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-500 ${isLow ? 'bg-destructive' : 'bg-emerald-500'}`}
+                                    style={{ width: `${fillPct}%` }}
+                                  />
+                                </>
+                              );
+                            })()}
                           </div>
-                          <div className={`font-mono text-xs font-bold ${
-                            (100 - (access?.daily_count || 0)) <= 20 ? 'text-destructive' : 'text-emerald-500'
-                          }`}>
-                            {100 - (access?.daily_count || 0)}
-                          </div>
+                          {(() => {
+                            const tempMailLimit = getTierLimits(access?.total_donated ?? 0).tempMailLimit;
+                            const used = access?.daily_count || 0;
+                            const remaining = Math.max(0, tempMailLimit - used);
+                            const fillPct = Math.max(0, (remaining / tempMailLimit) * 100);
+                            const isLow = fillPct <= 20;
+                            return (
+                              <div className={`font-mono text-xs font-bold ${isLow ? 'text-destructive' : 'text-emerald-500'}`}>
+                                {remaining} / {tempMailLimit.toLocaleString()}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -819,7 +840,59 @@ export default function TempMailPage() {
           )}
         </AnimatePresence>
         )}
+
       </div>
+
+      <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Mail size={18} strokeWidth={1.5} />} maxWidth="md">
+        <div className="p-6">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border/40 text-muted-foreground font-mono uppercase tracking-wider text-[10px]">
+                  <th className="py-3 pr-4 font-medium">Lifetime Donated</th>
+                  <th className="py-3 px-4 font-medium">Faucet Claims</th>
+                  <th className="py-3 px-4 font-medium">Temp Mail Quota</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20 text-muted-foreground">
+                <tr className="hover:bg-foreground/5 transition-colors">
+                  <td className="py-3 pr-4 text-foreground font-medium">0 POL</td>
+                  <td className="py-3 px-4">0 / day</td>
+                  <td className="py-3 px-4">100 / day</td>
+                </tr>
+                <tr className="hover:bg-foreground/5 transition-colors">
+                  <td className="py-3 pr-4 text-primary font-medium">1+ POL</td>
+                  <td className="py-3 px-4">6 / day</td>
+                  <td className="py-3 px-4">250 / day</td>
+                </tr>
+                <tr className="hover:bg-foreground/5 transition-colors">
+                  <td className="py-3 pr-4 text-primary font-medium">2+ POL</td>
+                  <td className="py-3 px-4">12 / day</td>
+                  <td className="py-3 px-4">500 / day</td>
+                </tr>
+                <tr className="hover:bg-foreground/5 transition-colors">
+                  <td className="py-3 pr-4 text-primary font-medium">3+ POL</td>
+                  <td className="py-3 px-4">18 / day</td>
+                  <td className="py-3 px-4">1,000 / day</td>
+                </tr>
+                <tr className="hover:bg-foreground/5 transition-colors">
+                  <td className="py-3 pr-4 text-primary font-medium">5+ POL</td>
+                  <td className="py-3 px-4">30 / day</td>
+                  <td className="py-3 px-4">2,500 / day</td>
+                </tr>
+                <tr className="hover:bg-foreground/5 transition-colors">
+                  <td className="py-3 pr-4 text-primary font-medium">10+ POL</td>
+                  <td className="py-3 px-4">60 / day</td>
+                  <td className="py-3 px-4">10,000 / day</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-6 font-mono uppercase tracking-widest text-center">
+            Donations are cumulative. Upgrade your tier anytime.
+          </p>
+        </div>
+      </AnimatedModal>
     </div>
   );
 }

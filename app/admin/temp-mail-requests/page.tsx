@@ -6,6 +6,7 @@ import { Check, X, Loader2, MailWarning, SearchIcon, ChevronLeft, ChevronDown, L
 import { AutoRefresh } from "@/components/auto-refresh";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
+import { getTierLimits } from "@/lib/utils/tiers";
 
 type TempMailRequest = {
   user_id: string;
@@ -14,6 +15,7 @@ type TempMailRequest = {
   daily_count: number;
   last_reset_date: string;
   created_at: string;
+  total_donated: number;
 };
 
 export default function AdminTempMailRequestsPage() {
@@ -190,7 +192,7 @@ export default function AdminTempMailRequestsPage() {
         ) : (
           <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden">
             <div className="overflow-x-auto">
-              <div className="min-w-[700px] sm:min-w-0">
+              <div className="min-w-[700px]">
                 {/* Header Grid */}
                 <div className="grid grid-cols-[minmax(200px,2fr)_minmax(120px,1fr)_minmax(120px,1fr)_100px_160px] gap-6 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
                   <span>User</span>
@@ -219,21 +221,25 @@ export default function AdminTempMailRequestsPage() {
                       <div className="text-right flex flex-col items-end justify-center gap-1">
                         {req.status === 'approved' ? (
                           <>
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-500 ${
-                                    (100 - req.daily_count) <= 20 ? 'bg-destructive' : 'bg-emerald-500'
-                                  }`}
-                                  style={{ width: `${Math.max(0, 100 - req.daily_count)}%` }}
-                                />
-                              </div>
-                              <span className={`font-mono text-[10px] font-bold ${
-                                (100 - req.daily_count) <= 20 ? 'text-destructive' : 'text-emerald-500'
-                              }`}>
-                                {100 - req.daily_count}
-                              </span>
-                            </div>
+                            {(() => {
+                              const limit = getTierLimits(req.total_donated ?? 0).tempMailLimit;
+                              const remaining = Math.max(0, limit - req.daily_count);
+                              const fillPct = Math.max(0, (remaining / limit) * 100);
+                              const isLow = fillPct <= 20;
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-20 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-500 ${isLow ? 'bg-destructive' : 'bg-emerald-500'}`}
+                                      style={{ width: `${fillPct}%` }}
+                                    />
+                                  </div>
+                                  <span className={`font-mono text-[10px] font-bold ${isLow ? 'text-destructive' : 'text-emerald-500'}`}>
+                                    {remaining} / {limit.toLocaleString()}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </>
                         ) : (
                           <span className="text-muted-foreground text-sm">—</span>

@@ -337,7 +337,7 @@ export function GlobalChatbox() {
       });
   }, [currentUserId]);
 
-  // Reset component state when user logs out or switches accounts
+  // Reset component state when user logs out or switches accounts 
   const previousUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (
@@ -427,7 +427,7 @@ export function GlobalChatbox() {
       supabase.removeChannel(chatSub);
       supabase.removeChannel(rxSub);
     };
-  }, [currentUserId]);
+  }, [currentUserId, checkIsMentioned]);
 
   // Helper: fetch user names for a list of user_ids via secure RPC
   const fetchUserNames = useCallback(async (userIds: string[]) => {
@@ -850,7 +850,7 @@ export function GlobalChatbox() {
               return (
                 <div
                   key={msg.id}
-                  className="flex flex-col gap-0.5 group"
+                  className="flex flex-col gap-0.5 group relative"
                   onMouseEnter={() => setHoveredMsg(msg.id)}
                   onMouseLeave={() => setHoveredMsg(null)}
                 >
@@ -868,7 +868,7 @@ export function GlobalChatbox() {
                   </div>
 
                   <div
-                    className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+                    className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} flex-wrap sm:flex-nowrap`}
                   >
                     <div className="flex flex-col gap-1 max-w-[80%]">
                       {msg.reply_to_id && (
@@ -994,30 +994,36 @@ export function GlobalChatbox() {
                     </div>
 
                     <AnimatePresence>
-                      {hoveredMsg === msg.id && (
+                      {hoveredMsg === msg.id && msg.type !== "referral" && (
                         <motion.div
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.8 }}
-                          className="flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg"
+                          className={`flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg shrink-0 ${isMe ? "flex-row-reverse" : "flex-row"}`}
                         >
-                          <button
-                            onClick={() => setReplyingTo(msg)}
-                            className="text-muted-foreground hover:text-foreground text-xs hover:bg-foreground/10 transition-colors rounded-full p-1"
-                            title="Reply"
-                          >
-                            <Reply className="size-3.5" />
-                          </button>
-                          <div className="w-px h-3 bg-border/50 self-center mx-0.5" />
-                          {QUICK_REACTIONS.map((emoji) => (
-                            <button
-                              key={emoji}
-                              onClick={() => toggleReaction(msg.id, emoji)}
-                              className="text-sm hover:scale-125 transition-transform leading-none"
-                            >
-                              {emoji}
-                            </button>
-                          ))}
+                          {msg.type !== "gif" && (
+                            <>
+                              <button
+                                onClick={() => setReplyingTo(msg)}
+                                className="text-muted-foreground hover:text-foreground text-xs hover:bg-foreground/10 transition-colors rounded-full p-1"
+                                title="Reply"
+                              >
+                                <Reply className={`size-3.5 ${isMe ? 'scale-x-[-1]' : ''}`} />
+                              </button>
+                              <div className="w-px h-3 bg-border/50 self-center mx-0.5" />
+                            </>
+                          )}
+                          <div className="flex gap-0.5">
+                            {QUICK_REACTIONS.map((emoji) => (
+                              <button
+                                key={emoji}
+                                onClick={() => toggleReaction(msg.id, emoji)}
+                                className="text-sm hover:scale-125 transition-transform leading-none"
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
