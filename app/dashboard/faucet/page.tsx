@@ -355,7 +355,7 @@ export default function FaucetPage() {
 
   const handleClaim = async () => {
     if (!user) return;
-    if (addressValidation.status !== 'valid') { toast.error("Please enter a valid, unused Polygon address."); return; }
+    if (addressValidation.status !== 'valid') { toast.error("Please enter a valid Polygon address."); return; }
     setIsClaiming(true);
     try {
       const res = await fetch("/api/faucet/claim", {
@@ -425,7 +425,7 @@ export default function FaucetPage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setIsCopied(true);
-    toast.success("Wallet address copied!");
+    toast.success("Faucet Hot Wallet address copied!");
     setTimeout(() => setIsCopied(false), 2000);
   };
 

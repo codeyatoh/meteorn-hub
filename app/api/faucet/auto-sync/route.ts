@@ -29,17 +29,14 @@ export async function POST(req: NextRequest) {
     const hotWalletAddress = new ethers.Wallet(privateKey).address.toLowerCase();
 
     // 1. Get User's Wallet Address
-    const { data: userAccount } = await supabaseAdmin
-      .from("user_accounts")
-      .select("wallet_address")
-      .eq("user_id", userId)
-      .single();
+    const { data: { user: dbUser } } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const savedWallet = dbUser?.user_metadata?.wallet_address;
 
-    if (!userAccount || !userAccount.wallet_address) {
-      return NextResponse.json({ error: "No wallet address linked to this account. Please update your profile." }, { status: 400 });
+    if (!savedWallet) {
+      return NextResponse.json({ error: "Security Error: You must set your Personal Wallet Address in your Account Settings before auto-syncing donations." }, { status: 400 });
     }
 
-    const userWallet = userAccount.wallet_address.toLowerCase();
+    const userWallet = savedWallet.toLowerCase().trim();
 
     // 2. Fetch Transactions from Polygonscan (Normal Transactions)
     // We fetch the last 100 txs for the hot wallet.

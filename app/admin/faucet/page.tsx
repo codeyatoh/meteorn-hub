@@ -148,7 +148,7 @@ export default function AdminFaucetPage() {
         amount: parseFloat(creditAmount),
       });
       if (error) throw error;
-      toast.success("Successfully credited user!");
+      toast.success("Successfully credited user with donation.");
       setCreditUserId(""); setCreditAmount(""); setCreditTxHash("");
       fetchData();
     } catch (error: unknown) {
@@ -168,7 +168,7 @@ export default function AdminFaucetPage() {
         amount: -Math.abs(parseFloat(adjustAmount)),
       });
       if (error) throw error;
-      toast.success("Balance adjusted successfully!");
+      toast.success("Faucet balance adjusted successfully!");
       setIsAdjustModalOpen(false);
       setAdjustAmount("");
       fetchData();

@@ -372,7 +372,7 @@ export default function UserDashboardPage() {
             account_name: account.name,
             increment: actualDelta
           });
-        toast.success("Tickets updated!");
+        toast.success("Account tickets successfully updated!");
       }
     } finally {
       setUpdatingTicketsIds(prev => {
@@ -418,7 +418,7 @@ export default function UserDashboardPage() {
           fiat_currency: data.fiat_currency || 'php'
         };
         setIncomeLogs(prev => [formattedLog, ...prev]);
-        toast.success("Income logged successfully!");
+        toast.success("Farming income logged successfully!");
       } else {
         toast.error("Failed to log income.");
       }
@@ -475,7 +475,7 @@ export default function UserDashboardPage() {
           console.warn("Audio playback not supported.", e);
         }
         
-        toast.success("Cashout logged successfully!");
+        toast.success("Cashout submitted successfully!");
         setIsCashoutModalOpen(false);
         setCashoutAccountIds([]);
         setCashoutFiat("");
@@ -737,7 +737,7 @@ export default function UserDashboardPage() {
         if (selectedAccountId === null) setSelectedAccountId(data.id);
         toast.success("Account added successfully.");
       } else {
-        toast.error("Failed to add account.");
+        toast.error("Failed to add account. Please check your inputs or try again.");
       }
       
       setNewAccountName("");

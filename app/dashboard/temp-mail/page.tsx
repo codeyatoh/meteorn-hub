@@ -287,7 +287,7 @@ export default function TempMailPage() {
       setMessages([]);
       setSelectedMsg(null);
       setAccess((prev) => prev ? { ...prev, daily_count: prev.daily_count + 1 } : null);
-      toast.success(`Inbox ready: ${data.address}`, { classNames: { icon: "text-green-500" } });
+      toast.success(`Temp Email ready: ${data.address}`, { classNames: { icon: "text-green-500" } });
     } catch {
       toast.error("Network error. Please try again.", { classNames: { icon: "text-destructive" } });
     } finally {
@@ -367,7 +367,7 @@ export default function TempMailPage() {
     if (!session) return;
     navigator.clipboard.writeText(session.address);
     setCopied(true);
-    toast.success("Email address copied!");
+    toast.success("Temp Email address copied!");
     setTimeout(() => setCopied(false), 2000);
   };
 
