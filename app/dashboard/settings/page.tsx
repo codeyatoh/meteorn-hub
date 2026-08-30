@@ -90,7 +90,7 @@ export default function SettingsPage() {
         throw error;
       }
 
-      toast.success("Settings updated successfully! If you changed your email, check your inbox for a confirmation link.", {
+      toast.success("Settings updated successfully!", {
         classNames: { icon: "text-green-500" },
       });
       setNewPassword("");
