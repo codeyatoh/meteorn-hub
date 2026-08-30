@@ -252,6 +252,7 @@ export default function FaucetPage() {
   const [txHashInput, setTxHashInput] = useState("");
   const [isClaiming, setIsClaiming] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [hotWalletAddress, setHotWalletAddress] = useState("Loading...");
   const [isTiersModalOpen, setIsTiersModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -301,6 +302,17 @@ export default function FaucetPage() {
 
       const prices = await priceRes.json();
       if (prices && !prices.error) setPolPrices(prices);
+
+      // Quiet background auto-sync
+      fetch("/api/faucet/auto-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id })
+      })
+      .then(r => r.json())
+      .then(d => { if (d.syncedCount && d.syncedCount > 0) fetchData(); })
+      .catch(() => {});
+
     } catch (error) {
       console.error("Failed to load stats:", error);
       toast.error("Failed to load faucet stats.");
@@ -377,6 +389,31 @@ export default function FaucetPage() {
       toast.error((error as Error).message || "An error occurred");
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleAutoSync = async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/faucet/auto-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to sync transactions.");
+      
+      if (data.syncedCount > 0) {
+        toast.success(data.message);
+        fetchData(); // refresh stats
+      } else {
+        toast.info(data.message || "No new donations found.");
+      }
+    } catch (error: unknown) {
+      toast.error((error as Error).message || "An error occurred");
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -557,9 +594,21 @@ export default function FaucetPage() {
               <div className="flex items-center gap-2 mb-2">
                 <Droplets className="size-4 text-primary" />
                 <h2 className="text-lg font-heading text-foreground">Fund the Pool</h2>
+                <div className="ml-auto">
+                   <Button 
+                     onClick={handleAutoSync} 
+                     variant="outline" 
+                     size="sm" 
+                     disabled={isSyncing}
+                     className="h-7 text-xs px-3"
+                   >
+                     {isSyncing ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <svg className="size-3 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>}
+                     Auto-Sync
+                   </Button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground max-w-md">
-                Send $POL directly to the Faucet Hot Wallet. Wait for blockchain confirmation, then submit your transaction hash to upgrade your Faucet & Temp Mail tier.
+                Send $POL directly to the Faucet Hot Wallet. It will be auto-detected within a few minutes, or you can click Auto-Sync / Verify manually below.
               </p>
 
               <div className="rounded-lg border border-border/40 bg-background/40 p-4">
