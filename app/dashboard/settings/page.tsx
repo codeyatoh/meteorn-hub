@@ -63,6 +63,25 @@ export default function SettingsPage() {
 
     setSaving(true);
     
+    // Validate wallet address if provided
+    if (walletAddress) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const res = await fetch(`/api/faucet/check-address?address=${walletAddress}&userId=${user.id}&mode=settings`);
+          const data = await res.json();
+          if (data.used) {
+            toast.error(data.message || "Invalid wallet address.", { classNames: { icon: "text-destructive" } });
+            setSaving(false);
+            return;
+          }
+        }
+      } catch (err) {
+        toast.error("Could not verify wallet address security.", { classNames: { icon: "text-destructive" } });
+        setSaving(false);
+        return;
+      }
+    }
     try {
       const updates: { data: { nickname: string, currency: string, wallet_address: string, lbank_address: string }, email?: string, password?: string } = {
         data: {

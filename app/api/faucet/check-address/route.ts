@@ -14,19 +14,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Address is required" }, { status: 400 });
     }
 
-    const { data: existingClaim, error } = await supabaseAdmin
-      .from("faucet_claims")
-      .select("id")
-      .eq("wallet_address", address.toLowerCase())
-      .single();
+    const mode = req.nextUrl.searchParams.get("mode");
 
-    if (error && error.code !== "PGRST116") {
-      console.error("[Check Address API] Database Error:", error);
-      return NextResponse.json({ error: "Database error" }, { status: 500 });
-    }
+    if (mode !== "settings") {
+      const { data: existingClaim, error } = await supabaseAdmin
+        .from("faucet_claims")
+        .select("id")
+        .eq("wallet_address", address.toLowerCase())
+        .single();
 
-    if (existingClaim) {
-      return NextResponse.json({ used: true, message: "Address already funded by faucet." });
+      if (error && error.code !== "PGRST116") {
+        console.error("[Check Address API] Database Error:", error);
+        return NextResponse.json({ error: "Database error" }, { status: 500 });
+      }
+
+      if (existingClaim) {
+        return NextResponse.json({ used: true, message: "Address already funded by faucet." });
+      }
     }
 
     // Check if it's the hot wallet
