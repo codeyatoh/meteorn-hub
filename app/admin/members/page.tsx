@@ -5,6 +5,7 @@ import Image from "next/image";
 import { UsersIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon, RefreshCcwIcon, ListFilterIcon } from "lucide-react";
 import { toast } from "sonner";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { PageContainer } from "@/components/ui/page-container";
 
 type AdminUser = {
   id: string;
@@ -107,8 +108,7 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="px-4 sm:px-6 py-8 sm:py-10">
-      <div className="mx-auto max-w-5xl">
+    <PageContainer>
 
         {/* Header */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -185,7 +185,7 @@ export default function MembersPage() {
         </div>
 
         {loading ? (
-          <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
+          <div className="fixed inset-0 z-[100] bg-background flex h-screen w-full items-center justify-center">
             <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
           </div>
         ) : users.length === 0 ? (
@@ -360,7 +360,6 @@ export default function MembersPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageContainer>
   );
 }

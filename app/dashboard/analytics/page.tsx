@@ -7,6 +7,7 @@ import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { GuideModal } from "@/components/ui/guide-modal";
 import Image from "next/image";
 import { AnalyticsIncomeChart } from "@/features/dashboard/components/analytics-income-chart";
+import { PageContainer } from "@/components/ui/page-container";
 
 
 type TicketLog = {
@@ -215,18 +216,17 @@ export default function AnalyticsPage() {
   const totalCashoutPages = Math.max(1, Math.ceil(cashouts.length / ITEMS_PER_PAGE));
 
   return (
-    <div className="px-6 py-10 relative min-h-screen">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center justify-center px-3 py-1 text-[10px] font-mono font-medium tracking-widest text-primary uppercase bg-primary/10 rounded-full mb-3">
+    <PageContainer>
+                <div className="mb-8">
+          <div className="inline-flex items-center justify-center px-3 py-1 text-[10px] font-mono font-medium tracking-widest text-primary uppercase bg-primary/10 rounded-full mb-3">
               <BarChart2 className="size-3 mr-2" />
               Analytics
             </div>
-            <div className="flex items-center gap-4">
-              <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
-                History & Reports
-              </h1>
+          <div className="flex items-center justify-between gap-4 mt-3 sm:mt-0">
+            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+              History & Reports
+            </h1>
+            <div className="shrink-0">
               <GuideModal title="Understanding Analytics">
                 <p>The Analytics dashboard helps you track your Meteorn Hub activity and earnings over time.</p>
                 <ul className="list-disc pl-4 space-y-2 mt-2">
@@ -236,12 +236,20 @@ export default function AnalyticsPage() {
                 </ul>
               </GuideModal>
             </div>
-            <p className="mt-2 text-muted-foreground text-sm">
-              Track your tickets and income over time.
-            </p>
           </div>
-          
-          <div className="flex bg-background/50 border border-border/40 rounded-md p-1 self-start sm:self-auto">
+          <p className="mt-2 text-muted-foreground text-sm">
+            Track your tickets and income over time.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="fixed inset-0 z-[100] bg-background flex h-screen w-full items-center justify-center">
+            <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-end">
+              <div className="flex bg-background/50 border border-border/40 rounded-md p-1 self-start sm:self-auto">
             {(['today', 'weekly', 'monthly', 'all'] as FilterType[]).map(f => (
               <button
                 key={f}
@@ -260,14 +268,7 @@ export default function AnalyticsPage() {
               </button>
             ))}
           </div>
-        </div>
-
-        {loading ? (
-          <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
-            <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
-          </div>
-        ) : (
-          <div className="space-y-6">
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <StatCard 
                 label={`Tickets (${filter})`}
@@ -433,8 +434,7 @@ export default function AnalyticsPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageContainer>
   );
 }
 

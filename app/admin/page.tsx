@@ -9,6 +9,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { RealtimeSync } from "@/components/realtime-sync";
 import { AdminCurrencySelector } from "@/features/admin/components/admin-currency-selector";
 import { MaintenanceCard } from "@/features/admin/components/maintenance-card";
+import { PageContainer } from "@/components/ui/page-container";
 
 export default async function AdminOverviewPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -89,10 +90,9 @@ export default async function AdminOverviewPage(props: { searchParams: Promise<{
   };
 
   return (
-    <div className="px-6 py-10">
+    <PageContainer innerClassName="space-y-10">
       <AutoRefresh />
       <RealtimeSync />
-      <div className="mx-auto max-w-5xl space-y-10">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -154,8 +154,7 @@ export default async function AdminOverviewPage(props: { searchParams: Promise<{
         {/* Database Maintenance */}
         <MaintenanceCard />
 
-      </div>
-    </div>
+    </PageContainer>
   );
 }
 

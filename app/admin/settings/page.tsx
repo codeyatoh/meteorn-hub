@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { PageContainer } from "@/components/ui/page-container";
 
 type PlatformSettings = {
   id: number;
@@ -118,15 +119,14 @@ export default function AdminSettingsPage() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
+      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-full items-center justify-center">
         <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
       </div>
     );
   }
 
   return (
-    <div className="px-4 sm:px-6 py-8 sm:py-10">
-      <div className="mx-auto max-w-4xl">
+    <PageContainer>
 
         {/* Header */}
         <div className="mb-8">
@@ -287,7 +287,6 @@ export default function AdminSettingsPage() {
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

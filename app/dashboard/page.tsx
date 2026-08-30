@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, CircleIcon, PlusIcon, WalletIcon, MinusIcon, ChevronDownIcon, LinkIcon, SearchIcon, PencilIcon, TrashIcon, MailIcon, CopyIcon, ListFilterIcon, WrenchIcon, HelpCircleIcon } from "lucide-react";
+import { CopyIcon, LinkIcon, PencilIcon, TrashIcon, CheckIcon, CircleIcon, MinusIcon, PlusIcon, ChevronDownIcon, WalletIcon, MailIcon, WrenchIcon, SearchIcon, ListFilterIcon, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -13,6 +13,7 @@ import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { ReactNode, useState, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { PageContainer } from "@/components/ui/page-container";
 
 // Admin provided avatar choices
 const AVATAR_MAP: Record<string, ReactNode> = {
@@ -765,96 +766,85 @@ export default function UserDashboardPage() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
+      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-full items-center justify-center">
         <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
       </div>
     );
   }
 
   return (
-    <div className="px-6 py-10 relative min-h-screen">
-      <div className="mx-auto max-w-7xl">
+    <PageContainer>
         
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.3em] flex items-center gap-2">
+        <div className="mb-8">
+          <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.3em] flex items-center gap-2 mb-3">
               <span>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
               <span>—</span>
               <span className={getModeColor()}>{getModeText()}</span>
             </div>
-               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-4">
-              <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
-                Welcome back, <span className="text-primary">{nickname}</span>
-              </h1>
+          
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+              Welcome back, <span className="text-primary">{nickname}</span>
+            </h1>
+            <div className="shrink-0">
               <GuideModal title="Dashboard Overview">
                 <p>Welcome to Meteorn Hub! This is your central dashboard for managing game accounts, tickets, and income.</p>
-                <ul className="list-disc pl-4 space-y-2 mt-2">
-                  <li><strong>Accounts:</strong> Add your game accounts to easily track their progress and manage their individual tickets.</li>
-                  <li><strong>Daily Tickets:</strong> Quickly log the number of tickets you use each day per account.</li>
-                  <li><strong>Income & Cashouts:</strong> Record the GMTO you earn. You can easily mark income as sold and convert it to your local fiat currency in real-time.</li>
-                </ul>
+              <ul className="list-disc pl-4 space-y-2 mt-2">
+                <li><strong>Accounts:</strong> Add your game accounts to easily track their progress and manage their individual tickets.</li>
+                <li><strong>Daily Tickets:</strong> Quickly log the number of tickets you use each day per account.</li>
+                <li><strong>Income & Cashouts:</strong> Record the GMTO you earn. You can easily mark income as sold and convert it to your local fiat currency in real-time.</li>
+              </ul>
               </GuideModal>
             </div>
-            <p className="mt-2 text-muted-foreground text-sm">
-              Here&apos;s an overview of your game accounts today.
-            </p>
-          </div>
-        </div>
           </div>
           
-          <div className="flex items-end gap-2">
-            <div className="flex flex-col items-start sm:items-end space-y-1.5 relative">
-              <label className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Currency</label>
-              <div className="relative">
-                <button 
-                  type="button"
-                  onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
-                  className={`w-28 flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-xs font-medium cursor-pointer transition-colors ${isCurrencyDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
-                >
-                  <span className={currency ? "text-foreground" : "text-muted-foreground"}>
-                    {currency.toUpperCase()} ({currencySymbol})
-                  </span>
-                  <ChevronDownIcon className={`size-3 text-muted-foreground transition-transform ${isCurrencyDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isCurrencyDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsCurrencyDropdownOpen(false)} />
-                    <div className="absolute z-50 top-full right-0 mt-1.5 w-28 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
-                      {Object.keys(CURRENCY_SYMBOLS).map(key => (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={async () => { 
-                            setCurrency(key); 
-                            setIsCurrencyDropdownOpen(false); 
-                            const { error } = await supabase.auth.updateUser({ data: { currency: key } });
-                            if (error) {
-                              toast.error("Failed to update currency.");
-                            } else {
-                              toast.success("Currency updated successfully.");
-                            }
-                          }}
-                          className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors outline-none ${
-                            currency === key 
-                              ? 'bg-primary/10 text-primary border-l-2 border-primary' 
-                              : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'
-                          }`}
-                        >
-                          <span className="font-medium">{key.toUpperCase()}</span>
-                          <span className="opacity-80">{CURRENCY_SYMBOLS[key]}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+            <p className="text-muted-foreground text-sm max-w-2xl">
+              Here&apos;s an overview of your game accounts today.
+            </p>
+            
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-col items-start sm:items-end space-y-1.5 relative">
+                <label className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Currency</label>
+                <div className="relative">
+              <button 
+                type="button"
+                onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
+                className={`w-28 flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-xs font-medium cursor-pointer transition-colors ${isCurrencyDropdownOpen ? 'ring-1 ring-ring border-ring' : 'hover:bg-foreground/[0.02]'}`}
+              >
+                <span className={currency ? "text-foreground" : "text-muted-foreground"}>
+                  {currency.toUpperCase()} ({currencySymbol})
+                </span>
+                <ChevronDownIcon className={`size-3 text-muted-foreground transition-transform ${isCurrencyDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isCurrencyDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsCurrencyDropdownOpen(false)} />
+                  <div className="absolute z-50 top-full right-0 mt-1.5 w-28 bg-background border border-input rounded-md shadow-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+                    {Object.keys(CURRENCY_SYMBOLS).map(key => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={async () => { 
+                          setCurrency(key); 
+                          setIsCurrencyDropdownOpen(false); 
+                          const { error } = await supabase.auth.updateUser({ data: { currency: key } });
+                          if (error) toast.error("Failed to update currency.");
+                          else toast.success("Currency updated successfully.");
+                        }}
+                        className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors outline-none ${currency === key ? 'bg-primary/10 text-primary border-l-2 border-primary' : 'text-foreground hover:bg-foreground/[0.05] border-l-2 border-transparent'}`}
+                      >
+                        <span className="font-medium">{key.toUpperCase()}</span>
+                        <span className="opacity-80">{CURRENCY_SYMBOLS[key]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-
-            {/* Global Wallet Button — after currency */}
+            </div>
+              
             {globalWalletAddress && (
               <div className="flex flex-col items-center space-y-1.5">
                 <label className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Wallet</label>
@@ -868,6 +858,7 @@ export default function UserDashboardPage() {
                 </button>
               </div>
             )}
+            </div>
           </div>
         </div>
 
@@ -1050,22 +1041,20 @@ export default function UserDashboardPage() {
                             <MailIcon className="size-4" />
                           </button>
                         )}
+                        
+                        {/* Action Buttons */}
+                        <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center transition-opacity shrink-0 ml-1">
+                          <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
+                            <PencilIcon className="size-4" />
+                          </button>
+                          <button onClick={() => openDeleteAccountModal(account.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors" title="Delete Account">
+                            <TrashIcon className="size-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                     
                     <div className="flex flex-wrap items-center w-full xl:w-auto mt-2 xl:mt-0 justify-center xl:justify-end gap-x-4 gap-y-3">
-                      {/* Action Buttons */}
-                      <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-1.5 transition-opacity shrink-0">
-                        <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
-                          <PencilIcon className="size-4" />
-                        </button>
-                        <button onClick={() => openDeleteAccountModal(account.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors" title="Delete Account">
-                          <TrashIcon className="size-4" />
-                        </button>
-                      </div>
-
-
-
                       {/* Interactive Ticket Logger */}
                       {!account.isBanned && (
                         <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] shrink-0">
@@ -1260,7 +1249,6 @@ export default function UserDashboardPage() {
 
           <GmtoChartConverter currency={currency} />
         </div>
-      </div>
       
       {/* Log Income Modal Overlay */}
       <AnimatedModal
@@ -1756,8 +1744,7 @@ export default function UserDashboardPage() {
           </div>
         </div>
       </AnimatedModal>
-
-    </div>
+    </PageContainer>
   );
 }
 

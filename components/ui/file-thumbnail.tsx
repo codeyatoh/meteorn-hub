@@ -69,6 +69,7 @@ function FileThumbnail({ file, size, className }: FileThumbnailProps) {
     if (!isImage) {
       // Clear stale state if the `file` prop swaps type on the same mount —
       // otherwise a revoked blob URL would keep winning over the new preview.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImageUrl(null);
       return;
     }
@@ -83,6 +84,7 @@ function FileThumbnail({ file, size, className }: FileThumbnailProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPdfError(false);
     if (!isPdf) {
       setPdfUrl(null);

@@ -537,7 +537,7 @@ export default function TempMailPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 16 }}
               transition={{ duration: 0.2 }}
-              className="space-y-6"
+              className="space-y-6 max-w-2xl mx-auto"
             >
               {/* ── Active Session Card ── */}
               {session ? (
@@ -600,7 +600,7 @@ export default function TempMailPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        Daily Limit
+                        Daily Limit Remaining
                       </div>
                       <div className="flex items-center gap-2">
                         {/* Fill bar matching accounts page style */}
@@ -630,7 +630,7 @@ export default function TempMailPage() {
                             const isLow = fillPct <= 20;
                             return (
                               <div className={`font-mono text-xs font-bold ${isLow ? 'text-destructive' : 'text-emerald-500'}`}>
-                                {remaining} / {tempMailLimit.toLocaleString()}
+                                {remaining} remaining
                               </div>
                             );
                           })()}

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Settings, Save, Mail, Lock, User, DollarSign, Loader2, ChevronDown, Coffee, CheckIcon, WalletIcon } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { GuideModal } from "@/components/ui/guide-modal";
+import { PageContainer } from "@/components/ui/page-container";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -105,15 +106,14 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
+      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-full items-center justify-center">
         <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
       </div>
     );
   }
 
   return (
-    <div className="px-6 py-10 relative min-h-screen">
-      <div className="mx-auto max-w-4xl">
+    <PageContainer>
         <div className="mb-8">
           <div className="inline-flex items-center justify-center px-3 py-1 text-[10px] font-mono font-medium tracking-widest text-primary uppercase bg-primary/10 rounded-full mb-3">
             <Settings className="size-3 mr-2" />
@@ -344,7 +344,6 @@ export default function SettingsPage() {
               </Button>
             </div>
           )}
-      </div>
-    </div>
+    </PageContainer>
   );
 }

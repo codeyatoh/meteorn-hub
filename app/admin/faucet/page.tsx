@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnimatedModal } from "@/components/ui/animated-modal";
-import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
+import { PageContainer } from "@/components/ui/page-container";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface FaucetUser {
@@ -226,8 +226,7 @@ export default function AdminFaucetPage() {
   }
 
   return (
-    <div className="px-6 py-10">
-      <div className="mx-auto max-w-5xl space-y-10">
+    <PageContainer innerClassName="space-y-10">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -239,16 +238,7 @@ export default function AdminFaucetPage() {
             </div>
             <div className="flex items-center gap-4">
               <h1 className="mt-1 font-heading text-4xl tracking-tight text-foreground">Faucet Control Center</h1>
-              <GuideModal title="Admin: Faucet Control">
-                <p>Manage the decentralized Community Faucet and monitor network outflows.</p>
-                <ul className="list-disc pl-4 space-y-2 mt-2">
-                  <li><strong>User Monitoring:</strong> Track the total donated vs claimed amounts per user. The system highlights users who are near their maximum claimable limit (70% of donations).</li>
-                  <li><strong>Manual Credit:</strong> If a user donated but their transaction wasn&apos;t automatically verified, you can manually credit them here to instantly boost their tier and limits.</li>
-                  <li><strong>Adjust Balances:</strong> Use the sliders button next to a user to deduct balance (e.g., if they abused a bug).</li>
-                  <li><strong>Dev Cut:</strong> You can see the 30% dev cut available for withdrawal to the maintenance wallet.</li>
-                </ul>
-              </GuideModal>
-            </div>
+</div>
             <p className="mt-2 max-w-xl text-muted-foreground text-sm">
               Manage the Hot Wallet, adjust user balances, and monitor global outflows.
             </p>
@@ -405,7 +395,7 @@ export default function AdminFaucetPage() {
                         <span>User ID</span>
                         <span>Address Funded</span>
                         <span>TxHash</span>
-                        <span>Status</span>
+                        <span className="text-right">Status</span>
                       </div>
                       <div className="divide-y divide-border/30">
                         {filteredClaims.slice((claimsPage - 1) * ITEMS_PER_PAGE, claimsPage * ITEMS_PER_PAGE).map((c) => {
@@ -437,8 +427,8 @@ export default function AdminFaucetPage() {
                                   <span className="font-mono text-[10px] text-muted-foreground/50">—</span>
                                 )}
                               </div>
-                              {/* Status Badge - last column */}
-                              <div>
+                              {/* Status Badge */}
+                              <div className="flex justify-end">
                                 {status === 'processing' && (
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
                                     <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
@@ -628,7 +618,6 @@ export default function AdminFaucetPage() {
           </div>
         </AnimatedModal>
 
-      </div>
-    </div>
+    </PageContainer>
   );
 }

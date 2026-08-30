@@ -11,7 +11,7 @@ import { AnimatedModal } from "@/components/ui/animated-modal";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { getTierLimits, TIER_TABLE } from "@/lib/utils/tiers";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, Label } from "recharts";
 
 interface FaucetClaim {
@@ -41,13 +41,15 @@ const donutChartConfig = {
 } satisfies ChartConfig;
 
 function DonutChart({ claimable, devCut, total }: { claimable: number; devCut: number; total: number }) {
+  const [activeSegment, setActiveSegment] = useState<string | null>(null);
+
   if (total <= 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 w-[140px] h-[140px]">
+      <div className="rounded-xl border border-border/20 bg-background/40 p-5 flex flex-col items-center justify-center gap-2 w-[180px] h-[220px]">
         <div className="size-16 rounded-full border-4 border-border/20 flex items-center justify-center">
           <Droplets className="size-5 text-muted-foreground/40" />
         </div>
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">No donations yet</p>
+        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider text-center mt-2">No donations yet</p>
       </div>
     );
   }
@@ -60,62 +62,101 @@ function DonutChart({ claimable, devCut, total }: { claimable: number; devCut: n
   ].filter((d) => d.value > 0);
 
   return (
-    <ChartContainer config={donutChartConfig} className="h-[140px] w-[140px]">
-      <PieChart>
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              nameKey="name"
-              formatter={(value) => `${Number(value).toFixed(4)} POL`}
-            />
-          }
-        />
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="name"
-          innerRadius={44}
-          outerRadius={58}
-          paddingAngle={3}
-          cornerRadius={4}
-          strokeWidth={0}
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={`var(--color-${entry.name})`} />
-          ))}
-          <Label
-            content={({ viewBox }) => {
-              if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                return (
-                  <text
-                    x={viewBox.cx}
-                    y={viewBox.cy}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                  >
-                    <tspan
+    <div className="rounded-xl border border-border/40 bg-background/20 p-6 shadow-2xl backdrop-blur-md flex flex-col items-center justify-center gap-6 w-full">
+      <div className="text-center w-full space-y-2">
+        <div>
+          <h3 className="font-heading text-sm text-foreground">Pool Distribution</h3>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">Donation Breakdown</p>
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Track how your lifetime donations are split between the community pool and maintenance.
+        </p>
+      </div>
+      <ChartContainer config={donutChartConfig} className="h-[140px] w-[140px]">
+        <PieChart>
+          <ChartTooltip
+            content={
+              <ChartTooltipContent
+                nameKey="name"
+                formatter={(value) => `${Number(value).toFixed(4)} POL`}
+              />
+            }
+          />
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={44}
+            outerRadius={58}
+            paddingAngle={3}
+            cornerRadius={4}
+            strokeWidth={0}
+          >
+            {data.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`} 
+                fill={`var(--color-${entry.name})`} 
+                opacity={activeSegment ? (activeSegment === entry.name ? 1 : 0.2) : 1}
+                style={{ transition: 'opacity 0.2s ease-in-out' }}
+              />
+            ))}
+            <Label
+              content={({ viewBox }) => {
+                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                  return (
+                    <text
                       x={viewBox.cx}
                       y={viewBox.cy}
-                      className="fill-foreground text-lg font-bold font-heading"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
                     >
-                      {total.toFixed(1)}
-                    </tspan>
-                    <tspan
-                      x={viewBox.cx}
-                      y={(viewBox.cy || 0) + 16}
-                      className="fill-muted-foreground text-[9px] font-mono uppercase tracking-wider"
-                    >
-                      POL
-                    </tspan>
-                  </text>
-                );
-              }
-            }}
-          />
-        </Pie>
-        <ChartLegend content={<ChartLegendContent nameKey="name" className="hidden" />} />
-      </PieChart>
-    </ChartContainer>
+                      <tspan
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                        className="fill-foreground text-lg font-bold font-heading"
+                      >
+                        {total.toFixed(1)}
+                      </tspan>
+                      <tspan
+                        x={viewBox.cx}
+                        y={(viewBox.cy || 0) + 16}
+                        className="fill-muted-foreground text-[10px] font-mono"
+                      >
+                        POL
+                      </tspan>
+                    </text>
+                  );
+                }
+              }}
+            />
+          </Pie>
+        </PieChart>
+      </ChartContainer>
+
+      <div className="flex flex-col gap-2 text-[10px] font-mono w-full px-2">
+        <button 
+          onClick={() => setActiveSegment(s => s === 'claimable' ? null : 'claimable')}
+          className={`flex items-center gap-2 transition-opacity hover:opacity-100 ${activeSegment && activeSegment !== 'claimable' ? 'opacity-40' : 'opacity-100'}`}
+        >
+          <span className="size-2 rounded-sm bg-primary inline-block flex-shrink-0" />
+          <span className="text-muted-foreground text-left leading-none">Claimable</span>
+        </button>
+        <button 
+          onClick={() => setActiveSegment(s => s === 'devcut' ? null : 'devcut')}
+          className={`flex items-center gap-2 transition-opacity hover:opacity-100 ${activeSegment && activeSegment !== 'devcut' ? 'opacity-40' : 'opacity-100'}`}
+        >
+          <span className="size-2 rounded-sm bg-foreground/30 inline-block flex-shrink-0" />
+          <span className="text-muted-foreground text-left leading-none">Dev Cut (30%)</span>
+        </button>
+        <button 
+          onClick={() => setActiveSegment(s => s === 'claimed' ? null : 'claimed')}
+          className={`flex items-center gap-2 transition-opacity hover:opacity-100 ${activeSegment && activeSegment !== 'claimed' ? 'opacity-40' : 'opacity-100'}`}
+        >
+          <span className="size-2 rounded-sm bg-indigo-900 inline-block flex-shrink-0" />
+          <span className="text-muted-foreground text-left leading-none">Claimed</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -151,7 +192,7 @@ export default function FaucetPage() {
 
   // Claim history pagination
   const [historyPage, setHistoryPage] = useState(1);
-  const [historyPerPage, setHistoryPerPage] = useState(5);
+  const historyPerPage = 2;
 
   // Validation State
   const [addressValidation, setAddressValidation] = useState<{ status: 'idle' | 'valid' | 'invalid' | 'used' | 'checking'; message: string }>({ status: 'idle', message: '' });
@@ -302,7 +343,7 @@ export default function FaucetPage() {
 
   return (
     <div className="px-4 sm:px-6 py-10 relative min-h-screen">
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
 
         {/* ── Header ── */}
         <div className="mb-8">
@@ -331,8 +372,11 @@ export default function FaucetPage() {
           </button>
         </div>
 
-        {/* ── Main Stats Card ── */}
-        <div className="rounded-2xl border border-border/40 bg-background/20 p-6 sm:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* ── Main Stats Column ── */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* ── Main Stats Card ── */}
+            <div className="rounded-2xl border border-border/40 bg-background/20 p-6 sm:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none -z-10" />
 
           <div className="flex flex-col md:flex-row md:items-start gap-6 mb-8 border-b border-border/40 pb-6">
@@ -355,24 +399,7 @@ export default function FaucetPage() {
               </div>
             </div>
 
-            {/* Center: Donut Chart */}
-            <div className="flex flex-col items-center gap-3">
-              <DonutChart claimable={claimableBalance} devCut={devCutPortion} total={totalDonated} />
-              <div className="flex flex-col gap-1.5 text-[10px] font-mono">
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-sm bg-primary inline-block" />
-                  <span className="text-muted-foreground">Claimable</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-sm bg-foreground/30 inline-block" />
-                  <span className="text-muted-foreground">Dev Cut (30%)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-sm bg-indigo-900 inline-block" />
-                  <span className="text-muted-foreground">Claimed</span>
-                </div>
-              </div>
-            </div>
+
 
             {/* Right: Daily limit tracker */}
             <div className="flex flex-col items-start md:items-end gap-1.5 p-4 rounded-xl border border-border/40 bg-background/40">
@@ -508,7 +535,12 @@ export default function FaucetPage() {
               </form>
             </div>
           </div>
-        </div>
+            </div>
+          </div>
+          
+          {/* ── Right Column: Donut Chart & Claim History ── */}
+          <div className="lg:col-span-4 space-y-6">
+            <DonutChart claimable={claimableBalance} devCut={devCutPortion} total={totalDonated} />
 
         {/* ── Claim History ── */}
         {claimHistory.length > 0 && (
@@ -520,110 +552,99 @@ export default function FaucetPage() {
               </div>
               
               <div className="flex items-center gap-1.5 p-1 rounded-md border border-border/40 bg-background/40">
-                <span className="px-2 text-[10px] font-mono text-muted-foreground uppercase tracking-widest hidden sm:inline-block">View</span>
-                {[5, 10, 25].map(opt => (
-                  <button
-                    key={opt}
-                    onClick={() => { setHistoryPerPage(opt); setHistoryPage(1); }}
-                    className={`h-6 px-2.5 rounded text-[11px] font-medium transition-colors ${historyPerPage === opt ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-foreground/10 hover:text-foreground'}`}
-                  >
-                    {opt}
-                  </button>
-                ))}
+                <span className="px-2 text-[10px] font-mono text-muted-foreground uppercase tracking-widest hidden sm:inline-block">Recent</span>
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden pb-4">
-              <div className="overflow-x-auto">
-                <div className="min-w-[520px]">
-                  {/* Header */}
-                  <div className="grid grid-cols-[120px_minmax(140px,1.5fr)_minmax(120px,2fr)_90px] gap-4 px-4 py-3 border-b border-border/40 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.2em]">
-                    <span>Time</span>
-                    <span>Address Funded</span>
-                    <span>TxHash</span>
-                    <span>Status</span>
-                  </div>
-
-                  <div className="divide-y divide-border/30">
-                    {pagedHistory.map((c) => {
-                      const status = c.status ?? 'success';
-                      return (
-                        <div key={c.id} className="grid grid-cols-[120px_minmax(140px,1.5fr)_minmax(120px,2fr)_90px] gap-4 px-4 py-3 items-center hover:bg-foreground/[0.02] transition-colors">
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                          </div>
-                          <div className="font-mono text-[11px] text-primary truncate" title={c.wallet_address}>
+            <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden pb-2">
+              <div className="divide-y divide-border/30">
+                {pagedHistory.map((c) => {
+                  const status = c.status ?? 'success';
+                  return (
+                    <div key={c.id} className="flex flex-col gap-3 p-4 hover:bg-foreground/[0.02] transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] text-muted-foreground font-mono">
+                          {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </div>
+                        <div>
+                          {status === 'processing' && (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                              <span className="size-1 rounded-full bg-amber-400 animate-pulse" />
+                              PROCESSING
+                            </span>
+                          )}
+                          {status === 'success' && (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                              <span className="size-1 rounded-full bg-emerald-400" />
+                              SUCCESS
+                            </span>
+                          )}
+                          {status === 'failed' && (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-medium bg-red-500/15 text-red-400 border border-red-500/20" title={c.error_message}>
+                              <span className="size-1 rounded-full bg-red-400" />
+                              FAILED
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1.5 bg-background/30 rounded-md p-2.5 border border-border/20">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider shrink-0">To</span>
+                          <span className="font-mono text-[10px] text-primary truncate" title={c.wallet_address}>
                             {c.wallet_address}
-                          </div>
-                          <div>
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider shrink-0">Tx</span>
+                          <div className="min-w-0">
                             {c.tx_hash && c.tx_hash !== 'pending' ? (
                               <a
                                 href={`https://polygonscan.com/tx/${c.tx_hash}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="font-mono text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1 group transition-colors"
+                                className="font-mono text-[10px] text-muted-foreground hover:text-primary flex items-center justify-end gap-1 group transition-colors truncate"
                                 title={c.tx_hash}
                               >
-                                <span className="truncate">{c.tx_hash.slice(0, 20)}...{c.tx_hash.slice(-12)}</span>
-                                <ExternalLink className="size-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <span className="truncate">{c.tx_hash.slice(0, 10)}...{c.tx_hash.slice(-8)}</span>
+                                <ExternalLink className="size-2.5 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
                               </a>
                             ) : (
                               <span className="text-[10px] text-muted-foreground/50 font-mono">—</span>
                             )}
                           </div>
-                          {/* Status Badge - last column */}
-                          <div>
-                            {status === 'processing' && (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
-                                <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
-                                Processing
-                              </span>
-                            )}
-                            {status === 'success' && (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                                <span className="size-1.5 rounded-full bg-emerald-400" />
-                                Success
-                              </span>
-                            )}
-                            {status === 'failed' && (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-500/15 text-red-400 border border-red-500/20" title={c.error_message}>
-                                <span className="size-1.5 rounded-full bg-red-400" />
-                                Failed
-                              </span>
-                            )}
-                          </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Pagination */}
-              {totalHistoryPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/40 px-4">
-                  <button
-                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
-                    disabled={historyPage === 1}
-                    className="flex size-7 items-center justify-center rounded-md border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <div className="text-[10px] font-mono text-muted-foreground">
-                    {historyPage} / {totalHistoryPages}
-                  </div>
-                  <button
-                    onClick={() => setHistoryPage(p => Math.min(totalHistoryPages, p + 1))}
-                    disabled={historyPage === totalHistoryPages}
-                    className="flex size-7 items-center justify-center rounded-md border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/40 px-4 pb-4">
+                <button
+                  onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                  disabled={historyPage === 1}
+                  className="flex size-7 items-center justify-center rounded-md border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <div className="text-[10px] font-mono text-muted-foreground">
+                  {totalHistoryPages === 0 ? 0 : historyPage} / {totalHistoryPages}
                 </div>
-              )}
+                <button
+                  onClick={() => setHistoryPage(p => Math.min(Math.max(1, totalHistoryPages), p + 1))}
+                  disabled={historyPage >= totalHistoryPages}
+                  className="flex size-7 items-center justify-center rounded-md border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
+          </div> {/* end right column */}
+        </div> {/* end grid */}
 
       </div>
 

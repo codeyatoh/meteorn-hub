@@ -5,7 +5,7 @@ import { GamepadIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon, ListFilterI
 import Image from "next/image";
 import { toast } from "sonner";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
-import { GuideModal } from "@/components/ui/guide-modal";
+import { PageContainer } from "@/components/ui/page-container";
 
 type AdminAccount = {
   id: number;
@@ -45,8 +45,7 @@ export default function AdminAccountsPage() {
   }, []);
 
   return (
-    <div className="px-4 sm:px-6 py-8 sm:py-10">
-      <div className="mx-auto max-w-5xl">
+    <PageContainer>
 
         {/* Header */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -57,15 +56,7 @@ export default function AdminAccountsPage() {
             </div>
             <div className="flex items-center gap-4">
               <h1 className="font-heading text-3xl sm:text-4xl text-foreground">All Game Accounts</h1>
-              <GuideModal title="Admin: Accounts">
-                <p>Manage all player game accounts registered across the platform.</p>
-                <ul className="list-disc pl-4 space-y-2 mt-2">
-                  <li><strong>Account Overview:</strong> View ticket usage, total earnings, and the linked Meteorn Hub user.</li>
-                  <li><strong>Status & Bans:</strong> Filter by Active or Banned accounts. You can also ban specific game accounts from being used.</li>
-                  <li><strong>Search:</strong> Quickly find a specific game account by searching its in-game name.</li>
-                </ul>
-              </GuideModal>
-            </div>
+</div>
             <p className="mt-2 text-muted-foreground text-sm">
               Platform-wide view of every game account. Edit quotas or manually reset tickets.
             </p>
@@ -132,7 +123,7 @@ export default function AdminAccountsPage() {
         </div>
 
         {loading ? (
-          <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
+          <div className="fixed inset-0 z-[100] bg-background flex h-screen w-full items-center justify-center">
             <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
           </div>
         ) : accounts.length === 0 ? (
@@ -272,7 +263,6 @@ export default function AdminAccountsPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageContainer>
   );
 }

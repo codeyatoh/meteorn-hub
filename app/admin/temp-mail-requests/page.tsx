@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Check, X, Loader2, MailWarning, SearchIcon, ChevronLeft, ChevronDown, ListFilterIcon } from "lucide-react";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
-import { GuideModal } from "@/components/ui/guide-modal";
+import { PageContainer } from "@/components/ui/page-container";
 import { AnimatePresence, motion } from "motion/react";
 import { getTierLimits } from "@/lib/utils/tiers";
 
@@ -90,7 +90,7 @@ export default function AdminTempMailRequestsPage() {
   const paginatedRequests = filteredRequests.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   return (
-    <div className="px-4 sm:px-6 py-10 relative min-h-screen">
+    <PageContainer>
       <AutoRefresh />
       <div className="mx-auto max-w-7xl">
         
@@ -105,15 +105,7 @@ export default function AdminTempMailRequestsPage() {
               <h1 className="mt-1 font-heading text-3xl sm:text-4xl tracking-tight text-foreground">
                 Access Requests
               </h1>
-              <GuideModal title="Admin: Access Requests">
-                <p>Manage which users are allowed to use the Temporary Email generator.</p>
-                <ul className="list-disc pl-4 space-y-2 mt-2">
-                  <li><strong>Gating:</strong> New users cannot use the Temp Mail service until an admin approves them here.</li>
-                  <li><strong>Limits:</strong> The table shows how many addresses a user generates daily. Limits are strictly enforced based on their Faucet donation tier.</li>
-                  <li><strong>Revoking:</strong> If a user abuses the service, you can change their status back to Rejected at any time.</li>
-                </ul>
-              </GuideModal>
-            </div>
+</div>
             <p className="mt-2 max-w-xl text-muted-foreground text-sm">
               Approve or reject user requests for the Temp Mail generator feature.
             </p>
@@ -193,7 +185,7 @@ export default function AdminTempMailRequestsPage() {
 
         {/* Requests Table */}
         {loading ? (
-          <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
+          <div className="fixed inset-0 z-[100] bg-background flex h-screen w-full items-center justify-center">
             <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
           </div>
         ) : requests.length === 0 ? (
@@ -334,8 +326,7 @@ export default function AdminTempMailRequestsPage() {
             </div>
           </div>
         )}
-
       </div>
-    </div>
+    </PageContainer>
   );
 }

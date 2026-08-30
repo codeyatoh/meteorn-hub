@@ -10,7 +10,7 @@ import {
   ToggleRight,
 } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
-import { GuideModal } from "@/components/ui/guide-modal";
+import { PageContainer } from "@/components/ui/page-container";
 
 type Domain = {
   id: number;
@@ -78,15 +78,14 @@ export default function TempMailDomainsPage() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-screen items-center justify-center">
+      <div className="fixed inset-0 z-[100] bg-background flex h-screen w-full items-center justify-center">
         <WanderingEyes className="h-20 w-[180px] [--eye-color:#f8fafc] [--pupil-color:#0f172a] [--duration:4s]" />
       </div>
     );
   }
 
   return (
-    <div className="px-4 sm:px-6 py-8 sm:py-10">
-      <div className="mx-auto max-w-2xl">
+    <PageContainer innerClassName="max-w-2xl">
 
         {/* Header */}
         <div className="mb-8">
@@ -96,15 +95,7 @@ export default function TempMailDomainsPage() {
           </div>
           <div className="flex items-center gap-4">
             <h1 className="font-heading text-3xl sm:text-4xl text-foreground">Domain Management</h1>
-            <GuideModal title="Admin: Domain Management">
-              <p>Manage the list of domains available for the Temporary Email service.</p>
-              <ul className="list-disc pl-4 space-y-2 mt-2">
-                <li><strong>Auto-sync:</strong> The system automatically pulls domains configured in the database.</li>
-                <li><strong>Active Status:</strong> You can toggle domains on or off. Inactive domains will not be assigned to new temp mail sessions.</li>
-                <li><strong>Deletion:</strong> Deleting a domain permanently removes it from the service.</li>
-              </ul>
-            </GuideModal>
-          </div>
+</div>
           <p className="mt-2 text-muted-foreground text-sm">
             Domains are automatically synced from your custom domains list. You can manage which ones are active.
           </p>
@@ -214,7 +205,6 @@ export default function TempMailDomainsPage() {
         <p className="mt-4 text-[11px] text-muted-foreground">
           💡 Tip: Domains listed here are your custom domains. They are automatically synced every time this page loads.
         </p>
-      </div>
-    </div>
+    </PageContainer>
   );
 }

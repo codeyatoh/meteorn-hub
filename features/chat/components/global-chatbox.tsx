@@ -930,7 +930,7 @@ export function GlobalChatbox() {
                           />
                         )}
                         {msg.type === "referral" && msg.message && (
-                          <div className="bg-background/95 backdrop-blur border border-border/50 rounded-xl p-3 w-[220px] shadow-sm flex flex-col gap-2.5">
+                          <div className="bg-background/95 backdrop-blur border border-border/50 rounded-xl p-3 max-w-[220px] w-full shadow-sm flex flex-col gap-2.5">
                             <div className="flex items-center gap-1.5 border-b border-border/50 pb-1.5">
                               <HandHeart className="size-3.5 text-primary" />
                               <span className="text-[11px] font-semibold text-foreground/90 uppercase tracking-wider">

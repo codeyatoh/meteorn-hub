@@ -9,7 +9,7 @@ export async function GET() {
     }
     const wallet = new ethers.Wallet(privateKey);
     return NextResponse.json({ address: wallet.address });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ address: "Error loading wallet" }, { status: 500 });
   }
 }
