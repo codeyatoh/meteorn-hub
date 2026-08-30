@@ -28,7 +28,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const updatePayload: Record<string, any> = {};
+  const updatePayload: Record<string, boolean> = {};
 
   if (body.is_active !== undefined) updatePayload.is_active = body.is_active;
   if (body.is_banned !== undefined) updatePayload.is_banned = body.is_banned;
