@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Fetch Transactions from Polygonscan (Normal Transactions)
     // We fetch the last 100 txs for the hot wallet.
-    const apiUrl = `https://api.polygonscan.com/api?module=account&action=txlist&address=${hotWalletAddress}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc&apikey=${polygonscanKey}`;
+    const apiUrl = `https://api.etherscan.io/v2/api?chainid=137&module=account&action=txlist&address=${hotWalletAddress}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc&apikey=${polygonscanKey}`;
     
     const response = await fetch(apiUrl);
     const data = await response.json();
