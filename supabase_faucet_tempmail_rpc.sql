@@ -44,11 +44,15 @@ BEGIN
         IF v_access IS NULL OR v_access.status != 'approved' THEN
             RETURN FALSE;
         END IF;
-    ELSE
-        -- Ensure they have an access row even if they bypassed
+    ELSE        -- Ensure they have an access row even if they bypassed
         IF v_access IS NULL THEN
             INSERT INTO temp_mail_access (user_id, status, daily_count, last_reset_date)
             VALUES (target_user_id, 'approved', 0, today_pht)
+            RETURNING * INTO v_access;
+        ELSIF v_access.status != 'approved' THEN
+            UPDATE temp_mail_access
+            SET status = 'approved'
+            WHERE user_id = target_user_id
             RETURNING * INTO v_access;
         END IF;
     END IF;

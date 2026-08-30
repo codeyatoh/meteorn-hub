@@ -12,11 +12,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: access, error } = await supabase
+    const { data: initialAccess, error } = await supabase
       .from('temp_mail_access')
       .select('*')
       .eq('user_id', user.id)
       .single();
+      
+    let access = initialAccess;
 
     if (error && error.code !== 'PGRST116') {
       console.error('Error fetching temp_mail_access:', error);
@@ -24,7 +26,8 @@ export async function GET() {
     }
 
     if (!access) {
-      return NextResponse.json({ status: 'none', daily_count: 0, last_reset_date: null });
+      // Don't return 'none' immediately. We need to check if they have donated first.
+      access = null;
     }
 
     // Check if it's a new day in PHT (Asia/Manila)
@@ -35,25 +38,52 @@ export async function GET() {
       day: '2-digit' 
     }).format(new Date());
 
-    let { daily_count } = access;
-    const { last_reset_date } = access;
+    let daily_count = access ? access.daily_count : 0;
+    const last_reset_date = access ? access.last_reset_date : phtDateStr;
 
-    if (last_reset_date < phtDateStr) {
+    if (access && last_reset_date < phtDateStr) {
       daily_count = 0;
     }
 
-    // Also fetch total_donated from faucet so the UI can compute the correct tier limit
+    // Fetch total_donated from faucet
     const { data: faucetStats } = await supabase
       .from('faucet_user_stats')
       .select('total_donated')
       .eq('user_id', user.id)
       .single();
+      
+    const totalDonated = faucetStats?.total_donated ?? 0;
+
+    // AUTO-APPROVE DONORS
+    if (totalDonated > 0 && (!access || access.status !== 'approved')) {
+      const { data: newAccess, error: upsertError } = await supabase
+        .from('temp_mail_access')
+        .upsert({
+          user_id: user.id,
+          status: 'approved',
+          daily_count: daily_count,
+          last_reset_date: last_reset_date
+        }, { onConflict: 'user_id' })
+        .select('*')
+        .single();
+        
+      if (!upsertError && newAccess) {
+        access = newAccess;
+      } else {
+        // Fallback in case of DB error so the UI still lets them in
+        access = { status: 'approved' };
+      }
+    }
+
+    if (!access) {
+      return NextResponse.json({ status: 'none', daily_count: 0, last_reset_date: null, total_donated: totalDonated });
+    }
 
     return NextResponse.json({
       status: access.status,
       daily_count,
       last_reset_date,
-      total_donated: faucetStats?.total_donated ?? 0,
+      total_donated: totalDonated,
     });
   } catch (err) {
     console.error('temp_mail_access GET error:', err);
