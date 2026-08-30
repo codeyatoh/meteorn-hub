@@ -207,7 +207,7 @@ function LiquidFlaskChart({ claimable, total }: { claimable: number; total: numb
               className="font-mono font-extrabold tracking-wider"
               style={{ fontSize: '7px', filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.8))' }}
             >
-              POL LEFT
+              $POL LEFT
             </text>
           </g>
         </svg>
@@ -424,14 +424,14 @@ export default function FaucetPage() {
         <div className="mb-8">
           <div className="inline-flex items-center justify-center px-3 py-1 text-[10px] font-mono font-medium tracking-widest text-primary uppercase bg-primary/10 rounded-full mb-3">
             <Droplets className="size-3 mr-2" />
-            POL FAUCET
+            $POL FAUCET
           </div>
           <div className="flex items-center justify-between gap-4">
             <h1 className="font-heading text-3xl sm:text-4xl text-foreground">Community Faucet</h1>
             <GuideModal title="How the Faucet Works">
-              <p>The Faucet is a decentralized community pool that allows users to instantly fund their wallets with POL.</p>
+              <p>The Faucet is a decentralized community pool that allows users to instantly fund their wallets with $POL.</p>
               <ul className="list-disc pl-4 space-y-2 mt-2">
-                <li><strong>Claiming:</strong> Each wallet address can receive 0.05 POL. Your daily claim count depends on your Tier.</li>
+                <li><strong>Claiming:</strong> Each wallet address can receive 0.05 $POL. Your daily claim count depends on your Tier.</li>
                 <li><strong>Tiers & Limits:</strong> Contributing to the Hot Wallet pool upgrades your Tier, increasing how many addresses you can fund per day.</li>
                 <li><strong>Claimable Balance:</strong> You can claim back up to 70% of your total lifetime donations to the pool.</li>
               </ul>
@@ -460,7 +460,7 @@ export default function FaucetPage() {
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Lifetime Donated</div>
                 <div className="text-3xl font-heading text-foreground flex items-baseline gap-1.5">
-                  <NumberTicker value={totalDonated} decimalPlaces={2} /> <span className="text-xl text-muted-foreground font-sans">POL</span>
+                  <NumberTicker value={totalDonated} decimalPlaces={2} /> <span className="text-xl text-muted-foreground font-sans">$POL</span>
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">≈ {toFiat(totalDonated)}</div>
               </div>
@@ -468,7 +468,7 @@ export default function FaucetPage() {
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Claimable Balance</div>
                 <div className="text-xl font-heading text-primary flex items-baseline gap-1.5">
-                  <NumberTicker value={claimableBalance} decimalPlaces={2} /> <span className="text-sm text-primary/70 font-sans">POL</span>
+                  <NumberTicker value={claimableBalance} decimalPlaces={2} /> <span className="text-sm text-primary/70 font-sans">$POL</span>
                 </div>
                 <div className="text-xs text-primary/70 mt-0.5">≈ {toFiat(claimableBalance)}</div>
               </div>
@@ -504,10 +504,10 @@ export default function FaucetPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <ShieldCheck className="size-4 text-primary" />
-                <h2 className="text-lg font-heading text-foreground">Auto-Claim POL</h2>
+                <h2 className="text-lg font-heading text-foreground">Auto-Claim $POL</h2>
               </div>
               <p className="text-xs text-muted-foreground max-w-md">
-                Enter your Polygon address to instantly receive 0.05 POL for gas fees. No manual approval required.
+                Enter your Polygon address to instantly receive 0.05 $POL for gas fees. No manual approval required.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
@@ -538,7 +538,7 @@ export default function FaucetPage() {
                     className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                   >
                     {isClaiming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {claimableBalance < 0.05 ? "Insufficient Balance" : claimsLeftToday <= 0 ? "Daily Limit Reached" : "Claim 0.05 POL"}
+                    {claimableBalance < 0.05 ? "Insufficient Balance" : claimsLeftToday <= 0 ? "Daily Limit Reached" : "Claim 0.05 $POL"}
                   </Button>
                 </div>
               </div>
@@ -559,7 +559,7 @@ export default function FaucetPage() {
                 <h2 className="text-lg font-heading text-foreground">Fund the Pool</h2>
               </div>
               <p className="text-xs text-muted-foreground max-w-md">
-                Send POL directly to the Faucet Hot Wallet. Wait for blockchain confirmation, then submit your transaction hash to upgrade your Faucet & Temp Mail tier.
+                Send $POL directly to the Faucet Hot Wallet. Wait for blockchain confirmation, then submit your transaction hash to upgrade your Faucet & Temp Mail tier.
               </p>
 
               <div className="rounded-lg border border-border/40 bg-background/40 p-4">
@@ -626,7 +626,7 @@ export default function FaucetPage() {
             <div className="flex items-end justify-between gap-4">
               <div>
                 <h2 className="font-heading text-lg text-foreground">Claim History</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Your past POL claims from the faucet pool.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Your past $POL claims from the faucet pool.</p>
               </div>
               
               <div className="flex items-center gap-1.5 p-1 rounded-md border border-border/40 bg-background/40">
@@ -744,7 +744,7 @@ export default function FaucetPage() {
                   return (
                     <tr key={tier.min} className={`hover:bg-foreground/5 transition-colors ${isCurrentTier ? 'bg-primary/5' : ''}`}>
                       <td className={`py-3 pr-4 font-medium whitespace-nowrap ${isCurrentTier ? 'text-primary' : i === 0 ? 'text-foreground' : 'text-foreground/70'}`}>
-                        {tier.min}+ POL {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded ml-1">YOUR TIER</span>}
+                        {tier.min}+ $POL {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded ml-1">YOUR TIER</span>}
                       </td>
                       <td className="py-3 px-4">{tier.faucetLimit} / day</td>
                       <td className="py-3 px-4">{tier.tempMailLimit.toLocaleString()} / day</td>
