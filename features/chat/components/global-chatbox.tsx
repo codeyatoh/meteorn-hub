@@ -16,6 +16,8 @@ import {
   Heart,
   HandHeart,
   AtSign,
+  Sparkles,
+  Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -60,15 +62,36 @@ type UserAccount = {
 // Mention parser helper
 const parseMentions = (text: string) => {
   if (!text) return null;
-  const parts = text.split(/(@[\w.-]+)/g);
+  // Match @mentions, emails, EVM addresses, and Solana/Base58 addresses
+  const regex = /(@[\w.-]+|[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+|0x[a-fA-F0-9]{40}|\b[1-9A-HJ-NP-Za-km-z]{32,44}\b)/g;
+  const parts = text.split(regex);
   return (
     <>
       {parts.map((part, i) => {
-        if (part.startsWith("@")) {
+        if (part.startsWith("@") && !part.includes("@", 1)) {
           return (
             <span
               key={i}
               className="text-cyan-400 font-semibold bg-cyan-400/10 px-1 rounded-sm"
+            >
+              {part}
+            </span>
+          );
+        } else if (
+          part.match(/^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+$/) ||
+          part.match(/^0x[a-fA-F0-9]{40}$/i) ||
+          part.match(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/)
+        ) {
+          return (
+            <span
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(part);
+                toast.success("Copied to clipboard!");
+              }}
+              className="text-primary hover:text-primary/80 font-mono text-[11px] cursor-pointer underline decoration-primary/30 underline-offset-2 bg-primary/5 px-1 py-0.5 rounded-sm transition-colors break-all"
+              title="Click to copy"
             >
               {part}
             </span>
@@ -121,6 +144,7 @@ export function GlobalChatbox() {
   const [messages, setMessages] = useState<GlobalChat[]>([]);
   const [isOpen, setIsOpenState] = useState<boolean>(false);
   const currentUserIdRef = useRef<string | null>(null);
+  const [onlineCount, setOnlineCount] = useState<number>(1);
 
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
@@ -168,7 +192,9 @@ export function GlobalChatbox() {
   const [gifSearch, setGifSearch] = useState("");
   const [hoveredMsg, setHoveredMsg] = useState<number | null>(null);
   const [unread, setUnread] = useState(0);
-  const [hasUnreadMention, setHasUnreadMention] = useState(false);
+  const [unreadDirect, setUnreadDirect] = useState(false);
+  const [unreadEveryone, setUnreadEveryone] = useState(false);
+  const [unreadHighlight, setUnreadHighlight] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
@@ -176,13 +202,13 @@ export function GlobalChatbox() {
   const mySafeName = currentUserProfileName?.replace(/\s+/g, "") ?? "";
   const checkIsMentioned = useCallback(
     (msgText: string | null) => {
-      if (!msgText) return false;
+      if (!msgText) return { direct: false, highlight: false, everyone: false };
       const text = msgText.toLowerCase();
-      return (
-        text.includes("@everyone") ||
-        text.includes("@highlight") ||
-        (mySafeName !== "" && text.includes(`@${mySafeName.toLowerCase()}`))
-      );
+      return {
+        everyone: text.includes("@everyone"),
+        highlight: text.includes("@highlight"),
+        direct: mySafeName !== "" && text.includes(`@${mySafeName.toLowerCase()}`),
+      };
     },
     [mySafeName],
   );
@@ -197,6 +223,7 @@ export function GlobalChatbox() {
       setShowReferralPicker(false);
       return;
     }
+    setActivePanel(null);
     setShowReferralPicker(true);
     setLoadingAccounts(true);
     const { data } = await supabase
@@ -346,7 +373,9 @@ export function GlobalChatbox() {
     ) {
       setMessages([]);
       setUnread(0);
-      setHasUnreadMention(false);
+      setUnreadDirect(false);
+      setUnreadEveryone(false);
+      setUnreadHighlight(false);
       setIsOpenState(false);
       setHasMore(true);
     }
@@ -386,9 +415,10 @@ export function GlobalChatbox() {
             }
             if (!isOpenRef.current) {
               setUnread((u) => u + 1);
-              if (checkIsMentioned(newMsg.message)) {
-                setHasUnreadMention(true);
-              }
+              const mentions = checkIsMentioned(newMsg.message);
+              if (mentions.direct) setUnreadDirect(true);
+              if (mentions.everyone) setUnreadEveryone(true);
+              if (mentions.highlight) setUnreadHighlight(true);
             }
             // If chat is open but user scrolled up, increment new-while-away counter
             if (isOpenRef.current && !isAtBottomRef.current) {
@@ -397,7 +427,22 @@ export function GlobalChatbox() {
           }
         },
       )
-      .subscribe();
+      .on("presence", { event: "sync" }, () => {
+        const state = chatSub.presenceState();
+        const uniqueUsers = new Set<string>();
+        for (const id in state) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          state[id].forEach((presence: any) => {
+            if (presence.user_id) uniqueUsers.add(presence.user_id);
+          });
+        }
+        setOnlineCount(Math.max(1, uniqueUsers.size));
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED" && currentUserId) {
+          await chatSub.track({ user_id: currentUserId });
+        }
+      });
 
     const rxSub = supabase
       .channel("chat_reactions_always")
@@ -490,14 +535,20 @@ export function GlobalChatbox() {
           (m) => m.id > lastSeenId && m.user_id !== currentUserId,
         ).length;
         setUnread(initialUnread);
-        const unreadMentions =
-          (enriched as GlobalChat[]).filter(
-            (m) =>
-              m.id > lastSeenId &&
-              m.user_id !== currentUserId &&
-              checkIsMentioned(m.message),
-          ).length > 0;
-        setHasUnreadMention(unreadMentions);
+        let d = false,
+          h = false,
+          e = false;
+        (enriched as GlobalChat[]).forEach((m) => {
+          if (m.id > lastSeenId && m.user_id !== currentUserId) {
+            const mns = checkIsMentioned(m.message);
+            if (mns.direct) d = true;
+            if (mns.highlight) h = true;
+            if (mns.everyone) e = true;
+          }
+        });
+        setUnreadDirect(d);
+        setUnreadHighlight(h);
+        setUnreadEveryone(e);
       } else {
         setHasMore(false);
       }
@@ -708,8 +759,10 @@ export function GlobalChatbox() {
     }
   };
 
-  const togglePanel = (panel: PanelType) =>
+  const togglePanel = (panel: PanelType) => {
+    setShowReferralPicker(false);
     setActivePanel((prev) => (prev === panel ? null : panel));
+  };
 
   const fetchGifs = useCallback(
     (offset: number) =>
@@ -732,7 +785,9 @@ export function GlobalChatbox() {
             unlockAudio();
             setIsOpen(true);
             setUnread(0);
-            setHasUnreadMention(false);
+            setUnreadDirect(false);
+            setUnreadHighlight(false);
+            setUnreadEveryone(false);
           }}
           className="relative size-12 rounded-full bg-background/70 backdrop-blur-xl border border-primary/30 text-primary shadow-lg shadow-primary/10 flex items-center justify-center transition-colors hover:bg-background/90"
         >
@@ -743,24 +798,30 @@ export function GlobalChatbox() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0 }}
-                className="absolute -top-1 -right-1 size-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-md"
+                className="absolute -top-1 -right-1 size-5 rounded-full bg-destructive/80 backdrop-blur-md border border-destructive/50 text-white text-[10px] font-bold flex items-center justify-center shadow-md"
               >
                 {unread > 9 ? "9+" : unread}
               </motion.span>
             )}
           </AnimatePresence>
-          <AnimatePresence>
-            {hasUnreadMention && (
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                className="absolute -top-2 -left-2 size-6 rounded-full bg-amber-500 text-amber-950 flex items-center justify-center shadow-lg shadow-amber-500/20 border-2 border-background animate-bounce"
-              >
-                <AtSign className="size-3.5" strokeWidth={3} />
-              </motion.div>
+          
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 flex flex-col items-center gap-2 pointer-events-none">
+            {unreadEveryone && (
+              <div className="size-7 rounded-full bg-blue-500/10 backdrop-blur-md text-blue-400 flex items-center justify-center border border-blue-500/20 shadow-lg shadow-blue-500/10 shrink-0">
+                <Users className="size-3.5" />
+              </div>
             )}
-          </AnimatePresence>
+            {unreadHighlight && (
+              <div className="size-7 rounded-full bg-fuchsia-500/10 backdrop-blur-md text-fuchsia-400 flex items-center justify-center border border-fuchsia-500/20 shadow-lg shadow-fuchsia-500/10 shrink-0">
+                <Sparkles className="size-3.5" />
+              </div>
+            )}
+            {unreadDirect && (
+              <div className="size-7 rounded-full bg-amber-500/10 backdrop-blur-md text-amber-400 flex items-center justify-center border border-amber-500/20 shadow-lg shadow-amber-500/10 shrink-0">
+                <AtSign className="size-3.5" />
+              </div>
+            )}
+          </div>
         </motion.button>
       </div>
     );
@@ -780,13 +841,20 @@ export function GlobalChatbox() {
       ].join(" ")}
     >
       {/* Header */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border/40">
-        <div className="flex items-center gap-2">
+      <div className="shrink-0 flex items-center px-4 py-3 border-b border-border/40">
+        <span className="font-mono text-[11px] uppercase tracking-widest font-bold text-foreground/80">
+          Chat
+        </span>
+
+        <div className="flex-1" />
+
+        <div className="flex items-center gap-1.5 mr-3">
           <div className="size-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="font-mono text-[11px] uppercase tracking-widest font-bold text-foreground/80">
-            Global Chat
+          <span className="text-xs text-muted-foreground font-medium">
+            {onlineCount} online
           </span>
         </div>
+
         <button
           onClick={() => setIsOpen(false)}
           className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-foreground/5"
@@ -870,7 +938,7 @@ export function GlobalChatbox() {
                   <div
                     className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} flex-wrap sm:flex-nowrap`}
                   >
-                    <div className="flex flex-col gap-1 max-w-[80%]">
+                    <div className="flex flex-col gap-1 max-w-[55%] relative">
                       {msg.reply_to_id && (
                         <div
                           onClick={() => {
@@ -991,42 +1059,42 @@ export function GlobalChatbox() {
                           </div>
                         )}
                       </div>
-                    </div>
 
-                    <AnimatePresence>
-                      {hoveredMsg === msg.id && msg.type !== "referral" && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className={`flex gap-0.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-full p-1 shadow-lg shrink-0 ${isMe ? "flex-row-reverse" : "flex-row"}`}
-                        >
-                          {msg.type !== "gif" && (
-                            <>
-                              <button
-                                onClick={() => setReplyingTo(msg)}
-                                className="text-muted-foreground hover:text-foreground text-xs hover:bg-foreground/10 transition-colors rounded-full p-1"
-                                title="Reply"
-                              >
-                                <Reply className={`size-3.5 ${isMe ? 'scale-x-[-1]' : ''}`} />
-                              </button>
-                              <div className="w-px h-3 bg-border/50 self-center mx-0.5" />
-                            </>
-                          )}
-                          <div className="flex gap-0.5">
-                            {QUICK_REACTIONS.map((emoji) => (
-                              <button
-                                key={emoji}
-                                onClick={() => toggleReaction(msg.id, emoji)}
-                                className="text-sm hover:scale-125 transition-transform leading-none"
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                      <AnimatePresence>
+                        {hoveredMsg === msg.id && msg.type !== "referral" && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className={`absolute top-1/2 -translate-y-1/2 ${isMe ? "right-full mr-2" : "left-full ml-2"} z-10 flex gap-0.5 bg-background/90 backdrop-blur-md border border-border/50 rounded-full p-1 shadow-xl shadow-background/50 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+                          >
+                            {msg.type !== "gif" && (
+                              <>
+                                <button
+                                  onClick={() => setReplyingTo(msg)}
+                                  className="text-muted-foreground hover:text-foreground text-xs hover:bg-foreground/10 transition-colors rounded-full p-1"
+                                  title="Reply"
+                                >
+                                  <Reply className={`size-3.5 ${isMe ? 'scale-x-[-1]' : ''}`} />
+                                </button>
+                                <div className="w-px h-3 bg-border/50 self-center mx-0.5" />
+                              </>
+                            )}
+                            <div className="flex gap-0.5">
+                              {QUICK_REACTIONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => toggleReaction(msg.id, emoji)}
+                                  className="text-sm hover:scale-125 transition-transform leading-none"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
 
                   {Object.keys(grouped).length > 0 && (
