@@ -124,6 +124,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     console.error("[Auto-Sync API] Error:", error);
-    return NextResponse.json({ error: "Failed to auto-sync transactions." }, { status: 500 });
+    return NextResponse.json({ error: "No incoming $POL donation detected." }, { status: 500 });
   }
 }

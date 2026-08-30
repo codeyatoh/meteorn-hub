@@ -971,16 +971,16 @@ export function GlobalChatbox() {
                         className={[
                           "rounded-2xl px-3 py-2 text-sm leading-snug w-full relative",
                           isMe
-                            ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
+                            ? "bg-primary/10 border border-primary/20 text-foreground rounded-br-sm"
                             : mentionType === "everyone"
-                              ? "bg-cyan-500/10 border border-cyan-500/40 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(6,182,212,0.1)]"
+                              ? "bg-cyan-500/5 border border-cyan-500/20 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(6,182,212,0.05)]"
                               : mentionType === "highlight"
-                                ? "bg-rose-500/10 border border-rose-500/40 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(243,24,113,0.1)]"
+                                ? "bg-rose-500/5 border border-rose-500/20 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(243,24,113,0.05)]"
                                 : mentionType === "direct"
-                                  ? "bg-amber-500/10 border border-amber-500/40 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(245,158,11,0.1)]"
-                                  : "bg-foreground/[0.06] border border-border/40 text-foreground rounded-bl-sm",
-                          msg.type === "referral"
-                            ? "p-0 border-none bg-transparent"
+                                  ? "bg-amber-500/5 border border-amber-500/20 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(245,158,11,0.05)]"
+                                  : "bg-secondary/40 border border-border/20 text-secondary-foreground rounded-bl-sm",
+                          msg.type === "referral" || msg.type === "gif"
+                            ? "p-0 border-none bg-transparent shadow-none"
                             : "",
                         ].join(" ")}
                       >
