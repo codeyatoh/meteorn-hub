@@ -8,6 +8,7 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
+  ShieldBan,
 } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { PageContainer } from "@/components/ui/page-container";
@@ -16,6 +17,7 @@ type Domain = {
   id: number;
   domain: string;
   is_active: boolean;
+  is_banned: boolean;
   created_at: string;
 };
 
@@ -23,6 +25,7 @@ export default function TempMailDomainsPage() {
   const [loading, setLoading] = useState(true);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [banningId, setBanningId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 8;
@@ -59,6 +62,28 @@ export default function TempMailDomainsPage() {
       toast.error("Failed to update domain.", { classNames: { icon: "text-destructive" } });
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const handleBanToggle = async (d: Domain) => {
+    setBanningId(d.id);
+    const newBanned = !d.is_banned;
+    // Optimistic
+    setDomains((prev) => prev.map((x) => (x.id === d.id ? { ...x, is_banned: newBanned } : x)));
+    try {
+      const res = await fetch(`/api/admin/temp-mail-domains/${d.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_banned: newBanned }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(newBanned ? "Domain banned." : "Domain unbanned.", { classNames: { icon: "text-amber-500" } });
+    } catch {
+      // Revert
+      setDomains((prev) => prev.map((x) => (x.id === d.id ? { ...x, is_banned: d.is_banned } : x)));
+      toast.error("Failed to update ban status.", { classNames: { icon: "text-destructive" } });
+    } finally {
+      setBanningId(null);
     }
   };
 
@@ -138,8 +163,15 @@ export default function TempMailDomainsPage() {
                     }`}>
                       {d.is_active ? "Active" : "Inactive"}
                     </span>
+                    
+                    {/* Banned badge */}
+                    {d.is_banned && (
+                      <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        Banned
+                      </span>
+                    )}
 
-                    {/* Toggle */}
+                    {/* Toggle Active */}
                     <button
                       onClick={() => handleToggle(d)}
                       disabled={togglingId === d.id}
@@ -152,6 +184,22 @@ export default function TempMailDomainsPage() {
                         <ToggleRight className="size-4 text-green-500" />
                       ) : (
                         <ToggleLeft className="size-4" />
+                      )}
+                    </button>
+
+                    {/* Toggle Ban */}
+                    <button
+                      onClick={() => handleBanToggle(d)}
+                      disabled={banningId === d.id}
+                      title={d.is_banned ? "Unban" : "Ban"}
+                      className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${
+                        d.is_banned ? "text-amber-500 hover:text-amber-400 hover:bg-amber-500/10" : "text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
+                      }`}
+                    >
+                      {banningId === d.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <ShieldBan className="size-4" />
                       )}
                     </button>
 

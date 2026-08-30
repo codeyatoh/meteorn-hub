@@ -27,11 +27,15 @@ export async function PATCH(
   );
 
   const { id } = await params;
-  const { is_active } = await request.json();
+  const body = await request.json();
+  const updatePayload: Record<string, any> = {};
+
+  if (body.is_active !== undefined) updatePayload.is_active = body.is_active;
+  if (body.is_banned !== undefined) updatePayload.is_banned = body.is_banned;
 
   const { data, error } = await adminSupabase
     .from('temp_mail_allowed_domains')
-    .update({ is_active })
+    .update(updatePayload)
     .eq('id', id)
     .select()
     .single();

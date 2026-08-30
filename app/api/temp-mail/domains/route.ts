@@ -1,19 +1,25 @@
 import { NextResponse } from 'next/server';
 
-// ── Custom domains only ──────────────────────────────────────────────────────
-// All emails are received via Cloudflare Email Routing → Worker → Supabase.
-// To add a new domain: buy it, set up Cloudflare Email Routing + Worker,
-// then add it to this list.
-const CUSTOM_DOMAINS = [
-  "yatmail.lat",
-  "3hitsmail.xyz",
-  // add more custom domains here as you buy them
-];
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/temp-mail/domains
  * Returns available custom domains for the temp mail service.
+ * Fetches from the database to check is_active and is_banned statuses.
  */
 export async function GET() {
-  return NextResponse.json({ domains: CUSTOM_DOMAINS });
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('temp_mail_allowed_domains')
+      .select('domain, is_banned')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return NextResponse.json({ domains: data || [] });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
 }

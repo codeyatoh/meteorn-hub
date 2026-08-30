@@ -40,14 +40,15 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Sync: upsert custom domains
     const insertData = CUSTOM_DOMAINS.map(domain => ({
       domain,
-      is_active: true
+      is_active: true,
+      is_banned: false
     }));
 
     await adminSupabase.from('temp_mail_allowed_domains').upsert(insertData, {
       onConflict: 'domain',
+      ignoreDuplicates: true
     });
 
     // Remove any stale domains that are no longer in our custom list

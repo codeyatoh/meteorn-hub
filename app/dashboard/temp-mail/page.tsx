@@ -45,6 +45,11 @@ type Session = {
   expires_at: string;
 };
 
+type DomainInfo = {
+  domain: string;
+  is_banned: boolean;
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatRelativeTime(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -152,7 +157,7 @@ export default function TempMailPage() {
   // Generator form
   const [username, setUsername] = useState("");
   const [domain, setDomain] = useState("");
-  const [domains, setDomains] = useState<string[]>([]);
+  const [domains, setDomains] = useState<DomainInfo[]>([]);
   const [domainOpen, setDomainOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
 
@@ -192,9 +197,13 @@ export default function TempMailPage() {
         if (d) setDomain(d);
       }
       if (domainData.domains?.length) {
-        setDomains(domainData.domains);
+        // Sort domains: not banned first, then banned
+        const sortedDomains = domainData.domains.sort((a: DomainInfo, b: DomainInfo) => 
+          (a.is_banned === b.is_banned) ? 0 : a.is_banned ? 1 : -1
+        );
+        setDomains(sortedDomains);
         if (!sessionData.session) {
-          setDomain(domainData.domains[0] || ''); // Default only if no session
+          setDomain(sortedDomains[0]?.domain || ''); // Default only if no session
         }
       }
     }).finally(() => setPageLoading(false));
@@ -701,17 +710,24 @@ export default function TempMailPage() {
                                 {/* Domain list */}
                                 {domains.map((d) => (
                                   <button
-                                    key={d}
+                                    key={d.domain}
                                     type="button"
-                                    onClick={() => { setDomain(d); setDomainOpen(false); }}
+                                    onClick={() => { setDomain(d.domain); setDomainOpen(false); }}
                                     className={`w-full px-4 py-2.5 text-sm text-left font-mono transition-colors flex items-center justify-between ${
-                                      domain === d
+                                      domain === d.domain
                                         ? "bg-primary/10 text-primary"
                                         : "text-foreground hover:bg-foreground/[0.04]"
                                     }`}
                                   >
-                                    <span className="truncate">@{d}</span>
-                                    {domain === d && <CheckIcon className="size-3.5 flex-shrink-0" />}
+                                    <div className="flex items-center gap-2 truncate">
+                                      <span className="truncate">@{d.domain}</span>
+                                      {d.is_banned && (
+                                        <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-amber-500/10 text-amber-500 flex-shrink-0">
+                                          Banned in Game
+                                        </span>
+                                      )}
+                                    </div>
+                                    {domain === d.domain && <CheckIcon className="size-3.5 flex-shrink-0" />}
                                   </button>
                                 ))}
                               </div>
