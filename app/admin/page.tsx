@@ -10,6 +10,7 @@ import { RealtimeSync } from "@/components/realtime-sync";
 import { AdminCurrencySelector } from "@/features/admin/components/admin-currency-selector";
 import { MaintenanceCard } from "@/features/admin/components/maintenance-card";
 import { PageContainer } from "@/components/ui/page-container";
+import { NumberTicker } from "@/components/ui/number-ticker";
 
 export default async function AdminOverviewPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -77,11 +78,6 @@ export default async function AdminOverviewPage(props: { searchParams: Promise<{
   });
   const chartData = Object.entries(grouped).map(([date, amount]) => ({ date, amount }));
 
-  const totalGMTODisplay = totalGMTO.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -116,23 +112,23 @@ export default async function AdminOverviewPage(props: { searchParams: Promise<{
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Registered Users"
-            value={totalUsers.toLocaleString()}
+            value={<NumberTicker value={totalUsers} locale />}
             icon={<UsersIcon className="size-4 opacity-40" />}
           />
           <StatCard
             label="Total Game Accounts"
-            value={(totalAccounts ?? 0).toLocaleString()}
+            value={<NumberTicker value={totalAccounts || 0} locale />}
             icon={<GamepadIcon className="size-4 opacity-40" />}
           />
           <StatCard
             label="Total GMTO Logged"
-            value={totalGMTODisplay}
+            value={<NumberTicker value={totalGMTO} decimalPlaces={2} locale />}
             sub={`~${currencySymbol}${(totalGMTO * gmtoPrice).toLocaleString("en-US", { minimumFractionDigits: 2 })} (Live: ${currencySymbol}${gmtoPrice.toFixed(4)})`}
             icon={<Image src="/gmto.png" alt="GMTO" width={24} height={24} className="opacity-80 rounded-full grayscale mix-blend-screen" />}
           />
           <StatCard
             label="Tickets Done Today"
-            value={ticketsToday.toLocaleString()}
+            value={<NumberTicker value={ticketsToday} locale />}
             sub="Resets at 12 AM PHT"
             icon={<Image src="/repair-ticket.png" alt="Ticket" width={24} height={24} className="opacity-80 grayscale mix-blend-screen" />}
           />
@@ -165,7 +161,7 @@ function StatCard({
   icon,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   sub?: string;
   icon?: React.ReactNode;
 }) {

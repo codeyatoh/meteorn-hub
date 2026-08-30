@@ -11,8 +11,7 @@ import { AnimatedModal } from "@/components/ui/animated-modal";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { getTierLimits, TIER_TABLE } from "@/lib/utils/tiers";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { PieChart, Pie, Cell, Label } from "recharts";
+import { NumberTicker } from "@/components/ui/number-ticker";
 
 interface FaucetClaim {
   id: string;
@@ -24,25 +23,8 @@ interface FaucetClaim {
   error_message?: string;
 }
 
-// ── Recharts Donut Chart ─────────────────────────────────────────────────────
-const donutChartConfig = {
-  claimable: {
-    label: "Claimable (70%)",
-    color: "#6366f1", // primary
-  },
-  devcut: {
-    label: "Dev Cut (30%)",
-    color: "#64748b", // slate-500
-  },
-  claimed: {
-    label: "Claimed",
-    color: "#312e81", // dim primary
-  },
-} satisfies ChartConfig;
 
-function DonutChart({ claimable, devCut, total }: { claimable: number; devCut: number; total: number }) {
-  const [activeSegment, setActiveSegment] = useState<string | null>(null);
-
+function LiquidFlaskChart({ claimable, total }: { claimable: number; total: number }) {
   if (total <= 0) {
     return (
       <div className="rounded-xl border border-border/20 bg-background/40 p-5 flex flex-col items-center justify-center gap-2 w-[180px] h-[220px]">
@@ -54,107 +36,194 @@ function DonutChart({ claimable, devCut, total }: { claimable: number; devCut: n
     );
   }
 
-  const claimed = total - claimable - devCut < 0 ? 0 : total - claimable - devCut;
-  const data = [
-    { name: "claimable", value: parseFloat(claimable.toFixed(4)) },
-    { name: "devcut",    value: parseFloat(devCut.toFixed(4)) },
-    { name: "claimed",   value: parseFloat(claimed.toFixed(4)) },
-  ].filter((d) => d.value > 0);
+  const claimedAndCut = total - claimable < 0 ? 0 : total - claimable;
+  // Calculate percentage of remaining claimable funds in the pool
+  const levelPct = Math.max(0, Math.min(100, (claimable / total) * 100));
+
+  // Liquid starts at y=113 (bottom of inner spherical bulb) and goes up to y=25 (top neck inside)
+  // Total vertical range is 88 units.
+  const y_liquid = 113 - (levelPct / 100) * 88;
+
+  const wavePath = (y: number, waveHeight = 3) => {
+    return `M -100,${y} 
+            Q -87.5,${y - waveHeight} -75,${y} 
+            T -50,${y} 
+            T -25,${y} 
+            T 0,${y} 
+            T 25,${y} 
+            T 50,${y} 
+            T 75,${y} 
+            T 100,${y} 
+            T 125,${y} 
+            T 150,${y} 
+            T 175,${y} 
+            T 200,${y} 
+            L 200,130 L -100,130 Z`;
+  };
 
   return (
-    <div className="rounded-xl border border-border/40 bg-background/20 p-6 shadow-2xl backdrop-blur-md flex flex-col items-center justify-center gap-6 w-full">
-      <div className="text-center w-full space-y-2">
+    <div className="rounded-xl border border-border/40 bg-background/20 p-3.5 shadow-2xl backdrop-blur-md flex flex-col items-center justify-center gap-3 w-full">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes wave-swim-fast {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-100px); }
+        }
+        @keyframes wave-swim-slow {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50px); }
+        }
+        @keyframes bubble-float {
+          0% {
+            transform: translateY(0) scale(0.8);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.6;
+          }
+          90% {
+            opacity: 0.6;
+          }
+          100% {
+            transform: translateY(-75px) scale(0.4);
+            opacity: 0;
+          }
+        }
+        .animate-wave-fast {
+          animation: wave-swim-fast 3s linear infinite;
+        }
+        .animate-wave-slow {
+          animation: wave-swim-slow 5s linear infinite;
+        }
+        .animate-bubble-1 {
+          animation: bubble-float 4s ease-in-out infinite;
+        }
+        .animate-bubble-2 {
+          animation: bubble-float 5s ease-in-out infinite 1.5s;
+        }
+        .animate-bubble-3 {
+          animation: bubble-float 3.5s ease-in-out infinite 0.7s;
+        }
+        .animate-bubble-4 {
+          animation: bubble-float 6s ease-in-out infinite 2.2s;
+        }
+      `}} />
+      <div className="text-center w-full space-y-1">
         <div>
           <h3 className="font-heading text-sm text-foreground">Pool Distribution</h3>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">Donation Breakdown</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">Live Funds Tracker</p>
         </div>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Track how your lifetime donations are split between the community pool and maintenance.
+        <p className="text-[11px] text-muted-foreground leading-normal">
+          Live monitor of available faucet pool funds.
         </p>
       </div>
-      <ChartContainer config={donutChartConfig} className="h-[140px] w-[140px]">
-        <PieChart>
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                nameKey="name"
-                formatter={(value) => `${Number(value).toFixed(4)} POL`}
-              />
-            }
-          />
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={44}
-            outerRadius={58}
-            paddingAngle={3}
-            cornerRadius={4}
-            strokeWidth={0}
-          >
-            {data.map((entry, index) => (
-              <Cell 
-                key={`cell-${index}`} 
-                fill={`var(--color-${entry.name})`} 
-                opacity={activeSegment ? (activeSegment === entry.name ? 1 : 0.2) : 1}
-                style={{ transition: 'opacity 0.2s ease-in-out' }}
-              />
-            ))}
-            <Label
-              content={({ viewBox }) => {
-                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                  return (
-                    <text
-                      x={viewBox.cx}
-                      y={viewBox.cy}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                    >
-                      <tspan
-                        x={viewBox.cx}
-                        y={viewBox.cy}
-                        className="fill-foreground text-lg font-bold font-heading"
-                      >
-                        {total.toFixed(1)}
-                      </tspan>
-                      <tspan
-                        x={viewBox.cx}
-                        y={(viewBox.cy || 0) + 16}
-                        className="fill-muted-foreground text-[10px] font-mono"
-                      >
-                        POL
-                      </tspan>
-                    </text>
-                  );
-                }
-              }}
-            />
-          </Pie>
-        </PieChart>
-      </ChartContainer>
+      
+      {/* Potion Bottle Container */}
+      <div className="relative flex flex-col items-center">
+        <svg viewBox="0 0 100 130" className="w-32 h-44 relative drop-shadow-[0_10px_25px_rgba(16,185,129,0.2)] overflow-visible">
+          <defs>
+            {/* The Clip Path for Potion Liquid */}
+            <clipPath id="potion-inner-clip">
+              <path d="M 43,15 L 43,36 C 31,36 17,51 17,80 A 33,33 0 1 0 83,80 C 83,51 69,36 57,36 L 57,15 Z" />
+            </clipPath>
 
-      <div className="flex flex-col gap-2 text-[10px] font-mono w-full px-2">
-        <button 
-          onClick={() => setActiveSegment(s => s === 'claimable' ? null : 'claimable')}
-          className={`flex items-center gap-2 transition-opacity hover:opacity-100 ${activeSegment && activeSegment !== 'claimable' ? 'opacity-40' : 'opacity-100'}`}
-        >
-          <span className="size-2 rounded-sm bg-primary inline-block flex-shrink-0" />
-          <span className="text-muted-foreground text-left leading-none">Claimable</span>
-        </button>
-        <button 
-          onClick={() => setActiveSegment(s => s === 'devcut' ? null : 'devcut')}
-          className={`flex items-center gap-2 transition-opacity hover:opacity-100 ${activeSegment && activeSegment !== 'devcut' ? 'opacity-40' : 'opacity-100'}`}
-        >
-          <span className="size-2 rounded-sm bg-foreground/30 inline-block flex-shrink-0" />
-          <span className="text-muted-foreground text-left leading-none">Dev Cut (30%)</span>
-        </button>
-        <button 
-          onClick={() => setActiveSegment(s => s === 'claimed' ? null : 'claimed')}
-          className={`flex items-center gap-2 transition-opacity hover:opacity-100 ${activeSegment && activeSegment !== 'claimed' ? 'opacity-40' : 'opacity-100'}`}
-        >
-          <span className="size-2 rounded-sm bg-indigo-900 inline-block flex-shrink-0" />
-          <span className="text-muted-foreground text-left leading-none">Claimed</span>
-        </button>
+            {/* Liquid Gradients */}
+            {/* Claimable (Vibrant Emerald Green) */}
+            <linearGradient id="claimable-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#34d399" />
+              <stop offset="100%" stopColor="#059669" />
+            </linearGradient>
+          </defs>
+
+          {/* Wooden Cork Stopper at the neck */}
+          <path d="M 43,8 L 57,8 L 55,16 L 45,16 Z" fill="#854d0e" stroke="#451a03" strokeWidth="2" />
+
+          {/* Liquid content within the mask */}
+          <g clipPath="url(#potion-inner-clip)">
+            {/* Background of the flask (Empty space) */}
+            <rect x="0" y="0" width="100" height="130" fill="rgba(255, 255, 255, 0.02)" />
+
+            {/* Claimable Layer (Emerald Green Liquid) */}
+            {levelPct > 0 && (
+              <>
+                {/* Back wave for 3D effect */}
+                <g className="animate-wave-slow opacity-60">
+                  <path d={wavePath(y_liquid, 4)} fill="url(#claimable-grad)" />
+                </g>
+                {/* Front wave */}
+                <g className="animate-wave-fast">
+                  <path d={wavePath(y_liquid, 3)} fill="url(#claimable-grad)" />
+                </g>
+              </>
+            )}
+
+            {/* Bubble animations */}
+            {levelPct > 10 && (
+              <>
+                <circle cx="38" cy="105" r="2.2" fill="rgba(255,255,255,0.4)" className="animate-bubble-1" />
+                <circle cx="62" cy="100" r="1.5" fill="rgba(255,255,255,0.3)" className="animate-bubble-2" />
+                <circle cx="48" cy="110" r="2.0" fill="rgba(255,255,255,0.5)" className="animate-bubble-3" />
+                <circle cx="54" cy="104" r="1.2" fill="rgba(255,255,255,0.2)" className="animate-bubble-4" />
+              </>
+            )}
+          </g>
+
+          {/* Glass Highlights & Glare (adds 3D glass look) */}
+          <path d="M 24,95 A 25,25 0 0 1 20,70" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M 45,20 L 45,30" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" strokeLinecap="round" />
+          
+          {/* Flask Outline glass border */}
+          <path 
+            d="M 42,15 L 42,36 C 30,36 15,51 15,80 A 35,35 0 1 0 85,80 C 85,51 70,36 58,36 L 58,15" 
+            fill="none" 
+            stroke="white" 
+            strokeWidth="3.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="opacity-95"
+          />
+
+          {/* Top Lip of the flask */}
+          <ellipse cx="50" cy="15" rx="8" ry="2.5" fill="none" stroke="white" strokeWidth="3" className="opacity-95" />
+
+          {/* Total Label overlaid inside SVG for perfect responsiveness */}
+          <g className="pointer-events-none select-none">
+            <text 
+              x="50" 
+              y="82" 
+              textAnchor="middle" 
+              dominantBaseline="middle"
+              fill="white"
+              className="font-heading font-black"
+              style={{ fontSize: '18px', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.8))' }}
+            >
+              {claimable.toFixed(1)}
+            </text>
+            <text 
+              x="50" 
+              y="97" 
+              textAnchor="middle" 
+              dominantBaseline="middle"
+              fill="rgba(255,255,255,0.9)"
+              className="font-mono font-extrabold tracking-wider"
+              style={{ fontSize: '7px', filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.8))' }}
+            >
+              POL LEFT
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      <div className="flex flex-col gap-2 text-[10px] font-mono w-full px-2 mt-2">
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-sm bg-emerald-400 inline-block flex-shrink-0" />
+          <span className="text-muted-foreground text-left leading-none flex-1">Claimable (Live)</span>
+          <span className="font-medium text-foreground">{claimable.toFixed(4)}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-sm bg-emerald-950/50 border border-emerald-800/30 inline-block flex-shrink-0" />
+          <span className="text-muted-foreground text-left leading-none flex-1">Claimed (Drained)</span>
+          <span className="font-medium text-foreground">{claimedAndCut.toFixed(4)}</span>
+        </div>
       </div>
     </div>
   );
@@ -192,7 +261,7 @@ export default function FaucetPage() {
 
   // Claim history pagination
   const [historyPage, setHistoryPage] = useState(1);
-  const historyPerPage = 2;
+  const historyPerPage = 3;
 
   // Validation State
   const [addressValidation, setAddressValidation] = useState<{ status: 'idle' | 'valid' | 'invalid' | 'used' | 'checking'; message: string }>({ status: 'idle', message: '' });
@@ -316,7 +385,6 @@ export default function FaucetPage() {
   const claimsToday = stats?.claims_today || 0;
 
   const claimableBalance = Math.max(0, (totalDonated * 0.7) - totalClaimed);
-  const devCutPortion = totalDonated * 0.3;
   const { faucetLimit: maxDaily } = getTierLimits(totalDonated);
   const claimsLeftToday = Math.max(0, maxDaily - claimsToday);
 
@@ -384,16 +452,16 @@ export default function FaucetPage() {
             <div className="flex-1 space-y-4">
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Lifetime Donated</div>
-                <div className="text-3xl font-heading text-foreground">
-                  {totalDonated.toFixed(2)} <span className="text-xl text-muted-foreground">POL</span>
+                <div className="text-3xl font-heading text-foreground flex items-baseline gap-1.5">
+                  <NumberTicker value={totalDonated} decimalPlaces={2} /> <span className="text-xl text-muted-foreground font-sans">POL</span>
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">≈ {toFiat(totalDonated)}</div>
               </div>
 
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Claimable Balance</div>
-                <div className="text-xl font-heading text-primary">
-                  {claimableBalance.toFixed(2)} <span className="text-sm text-primary/70">POL</span>
+                <div className="text-xl font-heading text-primary flex items-baseline gap-1.5">
+                  <NumberTicker value={claimableBalance} decimalPlaces={2} /> <span className="text-sm text-primary/70 font-sans">POL</span>
                 </div>
                 <div className="text-xs text-primary/70 mt-0.5">≈ {toFiat(claimableBalance)}</div>
               </div>
@@ -414,8 +482,11 @@ export default function FaucetPage() {
                     style={{ width: `${fillPercentage}%` }}
                   />
                 </div>
-                <div className={`font-mono text-xs font-bold ${fillPercentage <= 20 ? 'text-destructive' : 'text-primary'}`}>
-                  {claimsLeftToday} / {maxDaily} left
+                <div className={`font-mono text-xs font-bold ${fillPercentage <= 20 ? 'text-destructive' : 'text-primary'} flex items-center gap-1`}>
+                  <NumberTicker value={claimsLeftToday} />
+                  <span>/</span>
+                  <NumberTicker value={maxDaily} />
+                  <span>left</span>
                 </div>
               </div>
             </div>
@@ -540,7 +611,7 @@ export default function FaucetPage() {
           
           {/* ── Right Column: Donut Chart & Claim History ── */}
           <div className="lg:col-span-4 space-y-6">
-            <DonutChart claimable={claimableBalance} devCut={devCutPortion} total={totalDonated} />
+            <LiquidFlaskChart claimable={claimableBalance} total={totalDonated} />
 
         {/* ── Claim History ── */}
         {claimHistory.length > 0 && (
@@ -556,12 +627,12 @@ export default function FaucetPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden pb-2">
+            <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden pb-1">
               <div className="divide-y divide-border/30">
                 {pagedHistory.map((c) => {
                   const status = c.status ?? 'success';
                   return (
-                    <div key={c.id} className="flex flex-col gap-3 p-4 hover:bg-foreground/[0.02] transition-colors">
+                    <div key={c.id} className="flex flex-col gap-2 p-2.5 hover:bg-foreground/[0.02] transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="text-[10px] text-muted-foreground font-mono">
                           {new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
@@ -588,7 +659,7 @@ export default function FaucetPage() {
                         </div>
                       </div>
                       
-                      <div className="space-y-1.5 bg-background/30 rounded-md p-2.5 border border-border/20">
+                      <div className="space-y-1 bg-background/30 rounded-md p-2 border border-border/20">
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider shrink-0">To</span>
                           <span className="font-mono text-[10px] text-primary truncate" title={c.wallet_address}>
@@ -621,7 +692,7 @@ export default function FaucetPage() {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/40 px-4 pb-4">
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40 px-3 pb-3">
                 <button
                   onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
                   disabled={historyPage === 1}

@@ -8,6 +8,7 @@ import { GuideModal } from "@/components/ui/guide-modal";
 import Image from "next/image";
 import { AnalyticsIncomeChart } from "@/features/dashboard/components/analytics-income-chart";
 import { PageContainer } from "@/components/ui/page-container";
+import { NumberTicker } from "@/components/ui/number-ticker";
 
 
 type TicketLog = {
@@ -272,7 +273,7 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <StatCard 
                 label={`Tickets (${filter})`}
-                value={`${totalTickets} Tix`}
+                value={<><NumberTicker value={totalTickets} /> Tix</>}
                 sub={`Across ${activeAccountsCount} accounts`}
                 icon={<Image src="/repair-ticket.png" alt="ticket" width={24} height={24} className="opacity-70" />}
               />
@@ -281,7 +282,7 @@ export default function AnalyticsPage() {
                 value={
                   gmtoPrice === 0 || allGmtoPrices[currency] === undefined 
                     ? <span className="animate-pulse opacity-50">...</span> 
-                    : `${currencySymbol}${grossFiat.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : <NumberTicker value={grossFiat} prefix={currencySymbol} decimalPlaces={2} />
                 }
                 sub={`${totalGMTOEarned.toFixed(2)} GMTO earned (${totalGMTOSold > 0 ? `${totalGMTOSold.toFixed(2)} sold` : '0 sold'})`}
                 icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}

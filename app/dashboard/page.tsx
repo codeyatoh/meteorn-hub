@@ -14,6 +14,7 @@ import { ReactNode, useState, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { PageContainer } from "@/components/ui/page-container";
+import { NumberTicker } from "@/components/ui/number-ticker";
 
 // Admin provided avatar choices
 const AVATAR_MAP: Record<string, ReactNode> = {
@@ -866,13 +867,19 @@ export default function UserDashboardPage() {
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <FactCard 
             label="Tickets Logged" 
-            value={`${totalTicketsLogged} / ${totalMaxTickets}`} 
+            value={
+              <div className="flex items-center gap-1.5 justify-center sm:justify-start">
+                <NumberTicker value={totalTicketsLogged} />
+                <span className="opacity-40 text-lg">/</span>
+                <NumberTicker value={totalMaxTickets} />
+              </div>
+            } 
             sub={`across ${activeAccountsForStats.length} accounts today`} 
             icon={<Image src="/repair-ticket.png" alt="ticket" width={24} height={24} className="object-contain" />}
           />
           <FactCard 
             label="Est. Income" 
-            value={`${currencySymbol}${totalGross.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+            value={<NumberTicker value={totalGross} prefix={currencySymbol} decimalPlaces={2} />} 
             sub={`$GMTO Price: ${currencySymbol}${gmtoPrice.toFixed(6)}`} 
             icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}
           />
@@ -881,7 +888,7 @@ export default function UserDashboardPage() {
             value={
               allGmtoPrices[currency] === undefined 
                 ? <span className="animate-pulse opacity-50">...</span> 
-                : `${currencySymbol}${totalP2PSoldFiatConverted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : <NumberTicker value={totalP2PSoldFiatConverted} prefix={currencySymbol} decimalPlaces={2} />
             }
             sub={`${totalP2PSoldGmto.toLocaleString()} GMTO sold`} 
             icon={<WalletIcon className="size-5 opacity-40 text-emerald-500" />}
