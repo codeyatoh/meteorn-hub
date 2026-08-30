@@ -396,11 +396,10 @@ export default function TempMailPage() {
             <GuideModal title="How Temp Mail Works">
               <p>Generate a disposable email address to receive verification codes without exposing your real email.</p>
               <ul className="list-disc pl-4 space-y-2 mt-2">
-                <li><strong>Privacy:</strong> All emails expire after 10 minutes and messages are permanently deleted.</li>
+                <li><strong>Privacy:</strong> All emails strictly expire 10 minutes after generation. Messages and addresses are permanently deleted.</li>
                 <li><strong>Limits:</strong> By default, users have a limited number of active temp mail addresses.</li>
                 <li><strong>Upgrading:</strong> Donating POL to the community Faucet increases your active address limit.</li>
               </ul>
-              <p className="mt-2 text-primary font-medium">💡 Tip: Avoid refreshing the page, as it will reset the 10-minute timer for your active addresses if you re-generate.</p>
             </GuideModal>
           </div>
           <p className="mt-2 text-muted-foreground text-sm">

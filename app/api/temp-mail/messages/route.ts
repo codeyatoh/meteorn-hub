@@ -33,17 +33,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Session expired. Please generate a new address.' }, { status: 410 });
     }
 
-    // Reset expires_at on activity only if less than 5 minutes remaining
-    let currentExpiry = session.expires_at;
-    const msRemaining = new Date(currentExpiry).getTime() - Date.now();
-    
-    if (msRemaining < 5 * 60 * 1000) {
-      currentExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-      await supabase
-        .from('temp_mail_sessions')
-        .update({ expires_at: currentExpiry })
-        .eq('user_id', user.id);
-    }
+    const currentExpiry = session.expires_at;
 
     // Read from Supabase yatmail_messages table
     const { data: msgs, error: msgsError } = await supabase
