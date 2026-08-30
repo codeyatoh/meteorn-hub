@@ -82,7 +82,7 @@ export default function SettingsPage() {
             return;
           }
         }
-      } catch (err) {
+      } catch {
         toast.error("Could not verify wallet address security.", { classNames: { icon: "text-destructive" } });
         setSaving(false);
         return;

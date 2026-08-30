@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if this wallet is linked to a user in user_accounts
-    const { data: userAccounts, error: accountError } = await supabaseAdmin
+    const { data: userAccounts } = await supabaseAdmin
       .from("user_accounts")
       .select("user_id")
       .eq("wallet_address", address)
