@@ -303,15 +303,7 @@ export default function FaucetPage() {
       const prices = await priceRes.json();
       if (prices && !prices.error) setPolPrices(prices);
 
-      // Quiet background auto-sync
-      fetch("/api/faucet/auto-sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id })
-      })
-      .then(r => r.json())
-      .then(d => { if (d.syncedCount && d.syncedCount > 0) fetchData(); })
-      .catch(() => {});
+
 
     } catch (error) {
       console.error("Failed to load stats:", error);
@@ -325,6 +317,19 @@ export default function FaucetPage() {
     const timer = setTimeout(() => { fetchData(); }, 0);
     return () => clearTimeout(timer);
   }, [fetchData]);
+
+  // Background auto-sync on load
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/faucet/auto-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id })
+    })
+    .then(r => r.json())
+    .then(d => { if (d.syncedCount && d.syncedCount > 0) fetchData(); })
+    .catch(() => {});
+  }, [user, fetchData]);
 
   // Debounced Address Validation
   useEffect(() => {
@@ -346,7 +351,7 @@ export default function FaucetPage() {
     };
     const timeoutId = setTimeout(validateAddress, 500);
     return () => clearTimeout(timeoutId);
-  }, [addressInput]);
+  }, [addressInput, user?.id]);
 
   const handleClaim = async () => {
     if (!user) return;
