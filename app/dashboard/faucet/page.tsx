@@ -321,12 +321,12 @@ export default function FaucetPage() {
       if (!ethers.isAddress(addressInput)) { setAddressValidation({ status: 'invalid', message: 'Invalid Polygon address format.' }); return; }
       setAddressValidation({ status: 'checking', message: 'Checking address...' });
       try {
-        const res = await fetch(`/api/faucet/check-address?address=${addressInput}`);
+        const res = await fetch(`/api/faucet/check-address?address=${addressInput}&userId=${user?.id}`);
         const data = await res.json();
         if (data.used) {
-          setAddressValidation({ status: 'used', message: 'Address already funded.' });
+          setAddressValidation({ status: 'used', message: data.message || 'Address already funded.' });
         } else {
-          setAddressValidation({ status: 'valid', message: 'Valid and eligible!' });
+          setAddressValidation({ status: 'valid', message: data.message || 'Valid and eligible!' });
         }
       } catch {
         setAddressValidation({ status: 'idle', message: 'Could not verify address.' });

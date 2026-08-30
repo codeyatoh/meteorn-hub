@@ -25,8 +25,38 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
 
+    if (existingClaim) {
+      return NextResponse.json({ used: true, message: "Address already funded by faucet." });
+    }
+
+    // Check if it's the hot wallet
+    const privateKey = process.env.FAUCET_HOT_WALLET_PRIVATE_KEY;
+    if (privateKey) {
+      const ethers = (await import('ethers')).ethers;
+      const hotWallet = new ethers.Wallet(privateKey);
+      if (address.toLowerCase() === hotWallet.address.toLowerCase()) {
+        return NextResponse.json({ used: true, message: "Security Error: Cannot claim to the Faucet Hot Wallet." });
+      }
+    }
+
+    // Check if this wallet is linked to a user in user_accounts
+    const { data: userAccounts, error: accountError } = await supabaseAdmin
+      .from("user_accounts")
+      .select("user_id")
+      .eq("wallet_address", address)
+      .limit(1);
+    
+    const userId = req.nextUrl.searchParams.get("userId");
+
+    if (userAccounts && userAccounts.length > 0) {
+      if (!userId || userAccounts[0].user_id !== userId) {
+         return NextResponse.json({ used: true, message: "Security Error: This address is locked to another user." });
+      }
+    }
+
     return NextResponse.json({
-      used: !!existingClaim,
+      used: false,
+      message: "Valid and eligible!"
     });
   } catch (error) {
     console.error("[Check Address API] Internal Error:", error);

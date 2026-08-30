@@ -64,6 +64,29 @@ export async function POST(req: NextRequest) {
 
     // 4. Verify Addresses haven't been claimed before
     const lowerAddresses = addresses.map((a: string) => a.toLowerCase());
+    
+    const hotWalletAddress = new ethers.Wallet(privateKey).address.toLowerCase();
+    if (lowerAddresses.includes(hotWalletAddress)) {
+      return NextResponse.json({
+        error: "Security Error: You cannot claim funds back to the Faucet Hot Wallet."
+      }, { status: 400 });
+    }
+    
+    // Check if any address belongs to another user in user_accounts
+    const { data: userAccounts } = await supabaseAdmin
+      .from("user_accounts")
+      .select("wallet_address, user_id")
+      .in("wallet_address", lowerAddresses);
+
+    if (userAccounts && userAccounts.length > 0) {
+      const lockedToOthers = userAccounts.filter(acc => acc.user_id !== userId);
+      if (lockedToOthers.length > 0) {
+        return NextResponse.json({
+          error: "Security Error: One or more requested addresses are locked to another user's personal account."
+        }, { status: 400 });
+      }
+    }
+
     const { data: existingClaims } = await supabaseAdmin
       .from("faucet_claims")
       .select("wallet_address")
