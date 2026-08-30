@@ -93,7 +93,7 @@ export default function SettingsPage() {
         data: {
           nickname: nickname,
           currency: currency,
-          wallet_address: walletAddress,
+          wallet_address: walletAddress.toLowerCase().trim(),
           lbank_address: lbankAddress
         }
       };

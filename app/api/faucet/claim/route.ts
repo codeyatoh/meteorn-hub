@@ -72,19 +72,16 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-    // Check if any address belongs to another user in user_accounts
-    const { data: userAccounts } = await supabaseAdmin
-      .from("user_accounts")
-      .select("wallet_address, user_id")
-      .in("wallet_address", lowerAddresses);
+    // Check if any address belongs to another user's profile metadata
+    const { data: isUsedByAnother } = await supabaseAdmin.rpc("check_wallets_in_use", {
+      check_wallets: lowerAddresses,
+      exclude_user_id: userId
+    });
 
-    if (userAccounts && userAccounts.length > 0) {
-      const lockedToOthers = userAccounts.filter(acc => acc.user_id !== userId);
-      if (lockedToOthers.length > 0) {
-        return NextResponse.json({
-          error: "Security Error: One or more requested addresses are locked to another user's personal account."
-        }, { status: 400 });
-      }
+    if (isUsedByAnother) {
+      return NextResponse.json({
+        error: "Security Error: One or more requested addresses are locked to another user's personal account."
+      }, { status: 400 });
     }
 
     const { data: existingClaims } = await supabaseAdmin

@@ -45,19 +45,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Check if this wallet is linked to a user in user_accounts
-    const { data: userAccounts } = await supabaseAdmin
-      .from("user_accounts")
-      .select("user_id")
-      .eq("wallet_address", address)
-      .limit(1);
-    
+    // Check if this wallet is linked to another user's profile metadata
     const userId = req.nextUrl.searchParams.get("userId");
+    const { data: isUsedByAnother } = await supabaseAdmin.rpc("check_wallet_in_use", {
+      check_wallet: address,
+      exclude_user_id: userId || null
+    });
 
-    if (userAccounts && userAccounts.length > 0) {
-      if (!userId || userAccounts[0].user_id !== userId) {
-         return NextResponse.json({ used: true, message: "Security Error: This address is locked to another user." });
-      }
+    if (isUsedByAnother) {
+      return NextResponse.json({ used: true, message: "Security Error: This address is locked to another user." });
     }
 
     return NextResponse.json({
