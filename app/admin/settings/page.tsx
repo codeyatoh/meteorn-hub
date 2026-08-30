@@ -64,7 +64,7 @@ export default function AdminSettingsPage() {
     }
 
     if (newPassword && newPassword !== confirmPassword) {
-      toast.error("Passwords do not match.", { classNames: { icon: "text-destructive" } });
+      toast.error("New passwords do not match.", { classNames: { icon: "text-destructive" } });
       return;
     }
 
@@ -99,7 +99,7 @@ export default function AdminSettingsPage() {
           setConfirmPassword("");
         }
 
-        toast.success("Settings saved successfully! If you changed your email, check your inbox for a confirmation link.", {
+        toast.success("Profile preferences saved! Check your email for confirmation if you changed it.", {
           classNames: { icon: "text-green-500" },
         });
       } catch (err: unknown) {

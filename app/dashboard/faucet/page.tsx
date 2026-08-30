@@ -307,7 +307,7 @@ export default function FaucetPage() {
 
     } catch (error) {
       console.error("Failed to load stats:", error);
-      toast.error("Failed to load faucet stats.");
+      toast.error("Could not fetch Faucet pool balance.");
     } finally {
       setIsLoading(false);
     }
@@ -355,7 +355,7 @@ export default function FaucetPage() {
 
   const handleClaim = async () => {
     if (!user) return;
-    if (addressValidation.status !== 'valid') { toast.error("Please enter a valid Polygon address."); return; }
+    if (addressValidation.status !== 'valid') { toast.error("Invalid format. Enter a valid Polygon wallet."); return; }
     setIsClaiming(true);
     try {
       const res = await fetch("/api/faucet/claim", {
@@ -413,7 +413,7 @@ export default function FaucetPage() {
         toast.success(data.message);
         fetchData(); // refresh stats
       } else {
-        toast.info(data.message || "No new donations found.");
+        toast.info(data.message || "No incoming $POL donation detected.");
       }
     } catch (error: unknown) {
       toast.error((error as Error).message || "An error occurred");
@@ -425,7 +425,7 @@ export default function FaucetPage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setIsCopied(true);
-    toast.success("Faucet Hot Wallet address copied!");
+    toast.success("Faucet Hot Wallet address copied.");
     setTimeout(() => setIsCopied(false), 2000);
   };
 

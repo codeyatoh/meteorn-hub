@@ -57,7 +57,7 @@ export default function SettingsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword && newPassword !== confirmPassword) {
-      toast.error("Passwords do not match.", { classNames: { icon: "text-destructive" } });
+      toast.error("New passwords do not match.", { classNames: { icon: "text-destructive" } });
       return;
     }
 
@@ -66,7 +66,7 @@ export default function SettingsPage() {
     // Validate wallet address if provided
     if (walletAddress) {
       if (donationWallet && walletAddress.toLowerCase() === donationWallet.toLowerCase()) {
-        toast.error("Security Error: Cannot use the Faucet Hot Wallet as your personal address.", { classNames: { icon: "text-destructive" } });
+        toast.error("Cannot use Faucet Hot Wallet as personal address.", { classNames: { icon: "text-destructive" } });
         setSaving(false);
         return;
       }
@@ -115,7 +115,7 @@ export default function SettingsPage() {
         throw error;
       }
 
-      toast.success("Settings updated successfully!", {
+      toast.success("Profile preferences saved.", {
         classNames: { icon: "text-green-500" },
       });
       setNewPassword("");

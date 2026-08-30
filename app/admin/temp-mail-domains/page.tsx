@@ -55,7 +55,7 @@ export default function TempMailDomainsPage() {
         body: JSON.stringify({ is_active: newActive }),
       });
       if (!res.ok) throw new Error();
-      toast.success(newActive ? "Domain activated." : "Domain deactivated.", { classNames: { icon: "text-green-500" } });
+      toast.success(newActive ? "Domain active for Temp Mail." : "Domain hidden from users.", { classNames: { icon: "text-green-500" } });
     } catch {
       // Revert
       setDomains((prev) => prev.map((x) => (x.id === d.id ? { ...x, is_active: d.is_active } : x)));
@@ -77,7 +77,7 @@ export default function TempMailDomainsPage() {
         body: JSON.stringify({ is_banned: newBanned }),
       });
       if (!res.ok) throw new Error();
-      toast.success(newBanned ? "Domain banned." : "Domain unbanned.", { classNames: { icon: "text-amber-500" } });
+      toast.success(newBanned ? "Domain marked as banned." : "Domain ban lifted.", { classNames: { icon: "text-amber-500" } });
     } catch {
       // Revert
       setDomains((prev) => prev.map((x) => (x.id === d.id ? { ...x, is_banned: d.is_banned } : x)));

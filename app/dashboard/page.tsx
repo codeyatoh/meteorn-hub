@@ -372,7 +372,7 @@ export default function UserDashboardPage() {
             account_name: account.name,
             increment: actualDelta
           });
-        toast.success("Account tickets successfully updated!");
+        toast.success("Daily repair tickets updated.");
       }
     } finally {
       setUpdatingTicketsIds(prev => {
@@ -418,7 +418,7 @@ export default function UserDashboardPage() {
           fiat_currency: data.fiat_currency || 'php'
         };
         setIncomeLogs(prev => [formattedLog, ...prev]);
-        toast.success("Farming income logged successfully!");
+        toast.success("GMTO farming income recorded.");
       } else {
         toast.error("Failed to log income.");
       }
@@ -440,7 +440,7 @@ export default function UserDashboardPage() {
       const totalGmto = targetLogs.reduce((sum, log) => sum + log.gmto, 0);
 
       if (totalGmto <= 0) {
-        toast.error("No valid logs selected.");
+        toast.error("Select an unsold GMTO log to cashout.");
         return;
       }
 
@@ -475,7 +475,7 @@ export default function UserDashboardPage() {
           console.warn("Audio playback not supported.", e);
         }
         
-        toast.success("Cashout submitted successfully!");
+        toast.success("GMTO sale recorded as cashout.");
         setIsCashoutModalOpen(false);
         setCashoutAccountIds([]);
         setCashoutFiat("");
@@ -567,7 +567,7 @@ export default function UserDashboardPage() {
         // Rollback
         setAccounts(prev => prev.map(acc => acc.id === repairTicketAccountId ? { ...acc, repairTicketsUsed: account.repairTicketsUsed } : acc));
       } else {
-        toast.success(`Used ${repairTicketAmount} repair ticket(s).`);
+        toast.success(`${repairTicketAmount} repair tickets applied.`);
       }
 
       setIsRepairTicketModalOpen(false);
@@ -735,9 +735,9 @@ export default function UserDashboardPage() {
           repairTicketsUsed: 0
         }]);
         if (selectedAccountId === null) setSelectedAccountId(data.id);
-        toast.success("Account added successfully.");
+        toast.success("New Meteon account added.");
       } else {
-        toast.error("Failed to add account. Please check your inputs or try again.");
+        toast.error("Could not add account. Name or email in use.");
       }
       
       setNewAccountName("");
@@ -868,7 +868,7 @@ export default function UserDashboardPage() {
           <FactCard 
             label="Tickets Logged" 
             value={
-              <div className="flex items-center gap-1.5 justify-center sm:justify-start">
+              <div className="flex items-center gap-1.5 justify-start">
                 <NumberTicker value={totalTicketsLogged} />
                 <span className="opacity-40 text-lg">/</span>
                 <NumberTicker value={totalMaxTickets} />
@@ -879,7 +879,7 @@ export default function UserDashboardPage() {
           />
           <FactCard 
             label="Est. Income" 
-            value={<NumberTicker value={totalGross} prefix={currencySymbol} decimalPlaces={2} />} 
+            value={<NumberTicker value={totalGross} prefix={currencySymbol} decimalPlaces={2} locale />} 
             sub={`$GMTO Price: ${currencySymbol}${gmtoPrice.toFixed(6)}`} 
             icon={<Image src="/gmto.png" alt="gmto" width={24} height={24} className="opacity-70" />}
           />
@@ -888,7 +888,7 @@ export default function UserDashboardPage() {
             value={
               allGmtoPrices[currency] === undefined 
                 ? <span className="animate-pulse opacity-50">...</span> 
-                : <NumberTicker value={totalP2PSoldFiatConverted} prefix={currencySymbol} decimalPlaces={2} />
+                : <NumberTicker value={totalP2PSoldFiatConverted} prefix={currencySymbol} decimalPlaces={2} locale />
             }
             sub={`${totalP2PSoldGmto.toLocaleString()} GMTO sold`} 
             icon={<WalletIcon className="size-5 opacity-40 text-emerald-500" />}
@@ -1034,7 +1034,7 @@ export default function UserDashboardPage() {
                       <div className="flex items-center gap-1 shrink-0">
                         {account.referralLink && (
                           <>
-                            <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied!"); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Referral Link">
+                            <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Referral Link">
                               <CopyIcon className="size-4" />
                             </button>
                             <button onClick={(e) => handleReferralClick(e, account.referralLink!)} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center rounded-md" title="Open Referral Link">
@@ -1044,7 +1044,7 @@ export default function UserDashboardPage() {
                         )}
 
                         {account.email && (
-                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied to clipboard!"); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Email">
+                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Email">
                             <MailIcon className="size-4" />
                           </button>
                         )}
@@ -1683,7 +1683,7 @@ export default function UserDashboardPage() {
               onClick={() => {
                 navigator.clipboard.writeText(globalWalletAddress);
                 setIsWalletCopied(true);
-                toast.success("Wallet address copied to clipboard!");
+                toast.success("Wallet address copied.");
                 setTimeout(() => setIsWalletCopied(false), 2000);
               }}
             >

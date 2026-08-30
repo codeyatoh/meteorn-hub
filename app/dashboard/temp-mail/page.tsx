@@ -241,7 +241,7 @@ export default function TempMailPage() {
         setMessages([]);
         if (pollRef.current) clearInterval(pollRef.current);
         if (!destroyingRef.current) {
-          toast.error("Your temp email has expired. Generate a new one.", { classNames: { icon: 'text-destructive' } });
+          toast.error("Session expired. Generate a new email.", { classNames: { icon: 'text-destructive' } });
         }
         return;
       }
@@ -255,7 +255,7 @@ export default function TempMailPage() {
         seen: currentReadIds.has(m.id)
       })));
     } catch {
-      if (!silent) toast.error("Failed to refresh inbox.");
+      if (!silent) toast.error("Inbox sync failed. Check connection.");
     } finally {
       if (!silent) setRefreshing(false);
     }
@@ -296,7 +296,7 @@ export default function TempMailPage() {
       setMessages([]);
       setSelectedMsg(null);
       setAccess((prev) => prev ? { ...prev, daily_count: prev.daily_count + 1 } : null);
-      toast.success(`Temp Email ready: ${data.address}`, { classNames: { icon: "text-green-500" } });
+      toast.success(`Temp email active and ready.`, { classNames: { icon: "text-green-500" } });
     } catch {
       toast.error("Network error. Please try again.", { classNames: { icon: "text-destructive" } });
     } finally {
@@ -323,7 +323,7 @@ export default function TempMailPage() {
       
       if (pollRef.current) clearInterval(pollRef.current);
       
-      toast.success("Temp email destroyed.", { classNames: { icon: "text-green-500" } });
+      toast.success("Temp email session closed.", { classNames: { icon: "text-green-500" } });
     } catch {
       destroyingRef.current = false;
       toast.error("Failed to destroy session.", { classNames: { icon: "text-destructive" } });
@@ -338,7 +338,7 @@ export default function TempMailPage() {
       const res = await fetch("/api/temp-mail/access", { method: "POST" });
       if (res.ok) {
         setAccess({ status: "pending", daily_count: 0 });
-        toast.success("Access requested successfully. Please wait for admin approval.");
+        toast.success("Whitelist request sent to admin.");
       } else {
         throw new Error();
       }
@@ -376,7 +376,7 @@ export default function TempMailPage() {
     if (!session) return;
     navigator.clipboard.writeText(session.address);
     setCopied(true);
-    toast.success("Temp Email address copied!");
+    toast.success("Temp email copied.");
     setTimeout(() => setCopied(false), 2000);
   };
 
