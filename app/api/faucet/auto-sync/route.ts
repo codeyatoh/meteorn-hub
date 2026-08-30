@@ -57,13 +57,21 @@ export async function POST(req: NextRequest) {
        throw new Error(data.result || "Polygonscan API error");
     }
 
-    const transactions = data.result;
+    interface PolygonscanTx {
+      to: string;
+      from: string;
+      isError: string;
+      hash: string;
+      value: string;
+    }
+
+    const transactions: PolygonscanTx[] = data.result;
     
     // Filter transactions:
     // 1. tx.to == hotWalletAddress
     // 2. tx.from == userWallet
     // 3. isError == "0" (successful)
-    const incomingTxs = transactions.filter((tx: any) => 
+    const incomingTxs = transactions.filter((tx: PolygonscanTx) => 
        tx.to.toLowerCase() === hotWalletAddress && 
        tx.from.toLowerCase() === userWallet && 
        tx.isError === "0"
@@ -74,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Filter out transactions that are already in the database
-    const txHashes = incomingTxs.map((tx: any) => tx.hash);
+    const txHashes = incomingTxs.map((tx: PolygonscanTx) => tx.hash);
     
     const { data: existingDonations } = await supabaseAdmin
       .from("faucet_donations")
@@ -83,14 +91,14 @@ export async function POST(req: NextRequest) {
 
     const existingHashSet = new Set(existingDonations?.map(d => d.tx_hash) || []);
 
-    const newTxs = incomingTxs.filter((tx: any) => !existingHashSet.has(tx.hash));
+    const newTxs = incomingTxs.filter((tx: PolygonscanTx) => !existingHashSet.has(tx.hash));
 
     if (newTxs.length === 0) {
       return NextResponse.json({ success: true, syncedCount: 0, message: "All donations are already synced." });
     }
 
     // 4. Insert new transactions
-    const insertPayload = newTxs.map((tx: any) => {
+    const insertPayload = newTxs.map((tx: PolygonscanTx) => {
         const amountInPol = ethers.formatEther(tx.value);
         return {
             user_id: userId,
@@ -109,7 +117,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to save synced donations." }, { status: 500 });
     }
 
-    const totalSyncedPol = insertPayload.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalSyncedPol = insertPayload.reduce((acc: number, curr: { amount: number }) => acc + curr.amount, 0);
 
     return NextResponse.json({ 
        success: true, 
@@ -117,7 +125,7 @@ export async function POST(req: NextRequest) {
        message: `Successfully synced ${newTxs.length} donation(s) totaling ${totalSyncedPol} POL!`,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Auto-Sync API] Error:", error);
     return NextResponse.json({ error: "Failed to auto-sync transactions." }, { status: 500 });
   }
