@@ -10,7 +10,8 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { txHash, userId } = await req.json();
+    let { txHash, userId } = await req.json();
+    txHash = txHash?.toLowerCase().trim();
 
     if (!txHash || !userId) {
       return NextResponse.json(
@@ -57,18 +58,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-
-    // 3.5 Verify if this sending address is already locked to another user (Implicit Sender-Locking)
-    const { data: lockedUser } = await supabaseAdmin
-      .from("faucet_donations")
-      .select("user_id")
-      .eq("sender_address", tx.from.toLowerCase())
-      .not("user_id", "eq", userId)
-      .limit(1);
-
-    if (lockedUser && lockedUser.length > 0) {
+    // 3.5 Verify Strict Sender-Wallet Binding
+    const { data: { user: dbUser } } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const savedWallet = dbUser?.user_metadata?.wallet_address;
+    
+    if (!savedWallet) {
       return NextResponse.json(
-        { error: "Security Error: This transaction originated from a wallet address that is already locked to another user's account." },
+        { error: "Security Error: You must set your Personal Wallet Address in your Account Settings before claiming donations." },
+        { status: 400 },
+      );
+    }
+
+    if (tx.from.toLowerCase() !== savedWallet.toLowerCase()) {
+      return NextResponse.json(
+        { error: "Security Error: This transaction was not sent from your saved Personal Wallet Address. You cannot claim someone else's donation." },
         { status: 400 },
       );
     }

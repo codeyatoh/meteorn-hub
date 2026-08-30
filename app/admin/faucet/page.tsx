@@ -144,7 +144,7 @@ export default function AdminFaucetPage() {
     try {
       const { error } = await supabase.from("faucet_donations").insert({
         user_id: creditUserId,
-        tx_hash: creditTxHash,
+        tx_hash: creditTxHash.toLowerCase().trim(),
         amount: parseFloat(creditAmount),
       });
       if (error) throw error;

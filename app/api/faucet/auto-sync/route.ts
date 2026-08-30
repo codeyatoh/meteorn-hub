@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Filter out transactions that are already in the database
-    const txHashes = incomingTxs.map((tx: PolygonscanTx) => tx.hash);
+    const txHashes = incomingTxs.map((tx: PolygonscanTx) => tx.hash.toLowerCase());
     
     const { data: existingDonations } = await supabaseAdmin
       .from("faucet_donations")
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     const existingHashSet = new Set(existingDonations?.map(d => d.tx_hash) || []);
 
-    const newTxs = incomingTxs.filter((tx: PolygonscanTx) => !existingHashSet.has(tx.hash));
+    const newTxs = incomingTxs.filter((tx: PolygonscanTx) => !existingHashSet.has(tx.hash.toLowerCase()));
 
     if (newTxs.length === 0) {
       return NextResponse.json({ success: true, syncedCount: 0, message: "All donations are already synced." });
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
         const amountInPol = ethers.formatEther(tx.value);
         return {
             user_id: userId,
-            tx_hash: tx.hash,
+            tx_hash: tx.hash.toLowerCase(),
             amount: Number(amountInPol),
             sender_address: userWallet,
         };
