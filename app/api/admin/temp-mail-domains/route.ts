@@ -17,6 +17,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 // To add a new domain: buy it, set up Cloudflare, then add it here.
 const CUSTOM_DOMAINS = [
   "yatmail.lat",
+  "3hitsmail.xyz",
   // add more custom domains here as you buy them
 ];
 

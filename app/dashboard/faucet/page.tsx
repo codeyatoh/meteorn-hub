@@ -31,7 +31,7 @@ function LiquidFlaskChart({ claimable, total }: { claimable: number; total: numb
         <div className="size-16 rounded-full border-4 border-border/20 flex items-center justify-center">
           <Droplets className="size-5 text-muted-foreground/40" />
         </div>
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider text-center mt-2">No donations yet</p>
+        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider text-center mt-2">Pool is empty</p>
       </div>
     );
   }
@@ -255,6 +255,7 @@ export default function FaucetPage() {
   const [hotWalletAddress, setHotWalletAddress] = useState("Loading...");
   const [isTiersModalOpen, setIsTiersModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [globalStats, setGlobalStats] = useState({ total_donated: 0, claimable: 0 });
 
   // Live POL price
   const [polPrices, setPolPrices] = useState<{ usd: number; php: number; eur: number }>({ usd: 0.45, php: 25, eur: 0.41 });
@@ -291,6 +292,12 @@ export default function FaucetPage() {
 
       const info = await walletRes.json();
       setHotWalletAddress(info.address);
+      if (info.global_total_donated !== undefined) {
+        setGlobalStats({
+          total_donated: info.global_total_donated || 0,
+          claimable: info.global_pool_claimable || 0,
+        });
+      }
 
       const prices = await priceRes.json();
       if (prices && !prices.error) setPolPrices(prices);
@@ -611,7 +618,7 @@ export default function FaucetPage() {
           
           {/* ── Right Column: Donut Chart & Claim History ── */}
           <div className="lg:col-span-4 space-y-6">
-            <LiquidFlaskChart claimable={claimableBalance} total={totalDonated} />
+            <LiquidFlaskChart claimable={globalStats.claimable} total={globalStats.total_donated} />
 
         {/* ── Claim History ── */}
         {claimHistory.length > 0 && (

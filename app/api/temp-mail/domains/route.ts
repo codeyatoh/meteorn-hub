@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 // then add it to this list.
 const CUSTOM_DOMAINS = [
   "yatmail.lat",
+  "3hitsmail.xyz",
   // add more custom domains here as you buy them
 ];
 
