@@ -39,8 +39,8 @@ BEGIN
     FOR UPDATE;
 
     -- Check approval
-    -- If user donated (>0), bypass the approval requirement
-    IF v_total_donated = 0 THEN
+    -- If user donated (>=10), bypass the approval requirement
+    IF v_total_donated < 10 THEN
         IF v_access IS NULL OR v_access.status != 'approved' THEN
             RETURN FALSE;
         END IF;

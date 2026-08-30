@@ -55,7 +55,7 @@ export async function GET() {
     const totalDonated = faucetStats?.total_donated ?? 0;
 
     // AUTO-APPROVE DONORS
-    if (totalDonated > 0 && (!access || access.status !== 'approved')) {
+    if (totalDonated >= 10 && (!access || access.status !== 'approved')) {
       const { data: newAccess, error: upsertError } = await supabase
         .from('temp_mail_access')
         .upsert({

@@ -426,6 +426,9 @@ export default function TempMailPage() {
                 >
                   {requestingAccess ? <Loader2 className="size-4 animate-spin" /> : "Request Access"}
                 </button>
+                <p className="mt-6 text-sm text-primary font-medium bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
+                  💡 Tip: Donate at least 10 POL to the community Faucet to get automatically approved for Temp Mail access!
+                </p>
               </>
             )}
             {access?.status === "pending" && (
