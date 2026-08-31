@@ -606,37 +606,21 @@ export default function TempMailPage() {
               ) : (
                 /* ── Generator Form ── */
                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       Generate Address
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <span>Daily Limit Remaining</span>
-                        <button onClick={() => setIsTiersModalOpen(true)} className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors bg-primary/10 px-2 py-1 rounded-md shrink-0">
-                          <HelpCircle className="size-3" /> <span className="text-[9px] whitespace-nowrap">View Tiers</span>
-                        </button>
-                      </div>
+                    <button onClick={() => setIsTiersModalOpen(true)} className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors bg-primary/10 px-2 py-1 rounded-md shrink-0">
+                      <HelpCircle className="size-3" /> <span className="text-[9px] whitespace-nowrap">View Tiers</span>
+                    </button>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 -mt-2">
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Daily Limit Remaining
+                    </div>
+                    <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2">
-                        {/* Fill bar matching accounts page style */}
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
-                            {(() => {
-                              const tempMailLimit = getTierLimits(access?.total_donated ?? 0).tempMailLimit;
-                              const used = access?.daily_count || 0;
-                              const remaining = Math.max(0, tempMailLimit - used);
-                              const fillPct = Math.max(0, (remaining / tempMailLimit) * 100);
-                              const isLow = fillPct <= 20;
-                              return (
-                                <>
-                                  <div
-                                    className={`h-full rounded-full transition-all duration-500 ${isLow ? 'bg-destructive' : 'bg-emerald-500'}`}
-                                    style={{ width: `${fillPct}%` }}
-                                  />
-                                </>
-                              );
-                            })()}
-                          </div>
+                        <div className="w-24 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
                           {(() => {
                             const tempMailLimit = getTierLimits(access?.total_donated ?? 0).tempMailLimit;
                             const used = access?.daily_count || 0;
@@ -644,12 +628,27 @@ export default function TempMailPage() {
                             const fillPct = Math.max(0, (remaining / tempMailLimit) * 100);
                             const isLow = fillPct <= 20;
                             return (
-                              <div className={`font-mono text-xs font-bold ${isLow ? 'text-destructive' : 'text-emerald-500'}`}>
-                                {remaining} remaining
-                              </div>
+                              <>
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${isLow ? 'bg-destructive' : 'bg-emerald-500'}`}
+                                  style={{ width: `${fillPct}%` }}
+                                />
+                              </>
                             );
                           })()}
                         </div>
+                        {(() => {
+                          const tempMailLimit = getTierLimits(access?.total_donated ?? 0).tempMailLimit;
+                          const used = access?.daily_count || 0;
+                          const remaining = Math.max(0, tempMailLimit - used);
+                          const fillPct = Math.max(0, (remaining / tempMailLimit) * 100);
+                          const isLow = fillPct <= 20;
+                          return (
+                            <div className={`font-mono text-xs font-bold ${isLow ? 'text-destructive' : 'text-emerald-500'}`}>
+                              {remaining} remaining
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
