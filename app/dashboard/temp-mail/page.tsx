@@ -606,17 +606,15 @@ export default function TempMailPage() {
               ) : (
                 /* ── Generator Form ── */
                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       Generate Address
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center justify-between w-full md:justify-end gap-2">
-                        <div className="flex items-center">
-                          Daily Limit Remaining
-                        </div>
-                        <button onClick={() => setIsTiersModalOpen(true)} className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors bg-primary/10 px-1.5 py-0.5 rounded-sm">
-                          <HelpCircle className="size-3" /> <span className="text-[9px]">View Tiers</span>
+                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <span>Daily Limit Remaining</span>
+                        <button onClick={() => setIsTiersModalOpen(true)} className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors bg-primary/10 px-2 py-1 rounded-md shrink-0">
+                          <HelpCircle className="size-3" /> <span className="text-[9px] whitespace-nowrap">View Tiers</span>
                         </button>
                       </div>
                       <div className="flex items-center gap-2">
@@ -880,8 +878,42 @@ export default function TempMailPage() {
 
       {/* ── Tiers Modal ── */}
       <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Crown size={18} strokeWidth={1.5} />} maxWidth="lg">
-        <div className="p-6">
-          <div className="overflow-x-auto">
+        <div className="p-4 sm:p-6">
+          {/* Mobile: stacked cards */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {TIER_TABLE.map((tier, i) => {
+              const totalDonated = access?.total_donated ?? 0;
+              const isCurrentTier = totalDonated >= tier.min && (i === TIER_TABLE.length - 1 || totalDonated < TIER_TABLE[i + 1].min);
+              return (
+                <div key={tier.min} className={`rounded-xl border p-4 space-y-2 transition-colors ${
+                  isCurrentTier ? 'border-primary/40 bg-primary/5' : 'border-border/40 bg-background/40'
+                }`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`font-bold text-sm ${isCurrentTier ? 'text-primary' : i === 0 ? 'text-foreground' : 'text-foreground/70'}`}>
+                        {tier.name}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">({tier.min}+ POL)</span>
+                    </div>
+                    {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded shrink-0">YOUR TIER</span>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-foreground/5 p-2 text-center">
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Faucet</div>
+                      <div className="text-xs font-bold text-foreground">{tier.faucetLimit}/day</div>
+                    </div>
+                    <div className="rounded-lg bg-foreground/5 p-2 text-center">
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Temp Mail</div>
+                      <div className="text-xs font-bold text-foreground">{tier.tempMailLimit.toLocaleString()}/day</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">
               <thead>
                 <tr className="border-b border-border/40 text-muted-foreground font-mono uppercase tracking-wider text-[10px]">
@@ -911,7 +943,8 @@ export default function TempMailPage() {
               </tbody>
             </table>
           </div>
-          <div className="mt-6 p-4 bg-primary/5 rounded-xl border border-primary/20 text-center">
+
+          <div className="mt-5 p-4 bg-primary/5 rounded-xl border border-primary/20 text-center">
             <p className="text-[10px] font-mono uppercase tracking-widest text-primary/80">
               Donations are cumulative. Upgrade your tier anytime.
             </p>

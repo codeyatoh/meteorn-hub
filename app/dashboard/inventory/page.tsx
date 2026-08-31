@@ -60,6 +60,11 @@ export default function InventoryPage() {
   const [rarityFilter, setRarityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  // Pagination state
+  const [myPostsPage, setMyPostsPage] = useState(1);
+  const [sharedPostsPage, setSharedPostsPage] = useState(1);
+  const POSTS_PER_PAGE = 8;
+
   // Modals State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -287,6 +292,12 @@ export default function InventoryPage() {
 
   const myPosts = filteredPosts.filter(p => p.user_id === currentUser?.id || p.borrowed_by === currentUser?.id);
   const sharedPosts = filteredPosts.filter(p => p.user_id !== currentUser?.id);
+
+  const paginatedMyPosts = myPosts.slice((myPostsPage - 1) * POSTS_PER_PAGE, myPostsPage * POSTS_PER_PAGE);
+  const totalMyPostsPages = Math.ceil(myPosts.length / POSTS_PER_PAGE);
+
+  const paginatedSharedPosts = sharedPosts.slice((sharedPostsPage - 1) * POSTS_PER_PAGE, sharedPostsPage * POSTS_PER_PAGE);
+  const totalSharedPostsPages = Math.ceil(sharedPosts.length / POSTS_PER_PAGE);
 
   const ShoeCard = ({ 
     post, 
@@ -549,20 +560,27 @@ export default function InventoryPage() {
                 <p className="text-muted-foreground text-sm">No accounts found.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
-                {myPosts.map(post => (
-                  <ShoeCard 
-                    key={post.id} 
-                    post={post} 
-                    currentUser={currentUser} 
-                    openEditModal={openEditModal} 
-                    openDeleteModal={openDeleteModal} 
-                    handleCopy={handleCopy} 
-                    copiedId={copiedId} 
-                    handleReturn={handleReturn}
-                    handleBorrow={handleBorrow}
-                  />
-                ))}
+              <div className="flex flex-col h-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-12">
+                  {paginatedMyPosts.map(post => (
+                    <ShoeCard 
+                      key={post.id} 
+                      post={post} 
+                      currentUser={currentUser} 
+                      openEditModal={openEditModal} 
+                      openDeleteModal={openDeleteModal} 
+                      handleCopy={handleCopy} 
+                      copiedId={copiedId} 
+                      handleReturn={handleReturn}
+                      handleBorrow={handleBorrow}
+                    />
+                  ))}
+                </div>
+                <PaginationControls 
+                  currentPage={myPostsPage} 
+                  totalPages={totalMyPostsPages} 
+                  onPageChange={setMyPostsPage} 
+                />
               </div>
             )}
           </DashboardCard>
@@ -578,20 +596,27 @@ export default function InventoryPage() {
                 <p className="text-muted-foreground text-sm">No shared accounts found.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
-                {sharedPosts.map(post => (
-                  <ShoeCard 
-                    key={post.id} 
-                    post={post} 
-                    currentUser={currentUser} 
-                    openEditModal={openEditModal} 
-                    openDeleteModal={openDeleteModal} 
-                    handleCopy={handleCopy} 
-                    copiedId={copiedId} 
-                    handleReturn={handleReturn}
-                    handleBorrow={handleBorrow}
-                  />
-                ))}
+              <div className="flex flex-col h-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-12">
+                  {paginatedSharedPosts.map(post => (
+                    <ShoeCard 
+                      key={post.id} 
+                      post={post} 
+                      currentUser={currentUser} 
+                      openEditModal={openEditModal} 
+                      openDeleteModal={openDeleteModal} 
+                      handleCopy={handleCopy} 
+                      copiedId={copiedId} 
+                      handleReturn={handleReturn}
+                      handleBorrow={handleBorrow}
+                    />
+                  ))}
+                </div>
+                <PaginationControls 
+                  currentPage={sharedPostsPage} 
+                  totalPages={totalSharedPostsPages} 
+                  onPageChange={setSharedPostsPage} 
+                />
               </div>
             )}
           </DashboardCard>
@@ -754,5 +779,38 @@ function FormFields({
         />
       </div>
     </>
+  );
+}
+
+function PaginationControls({
+  currentPage,
+  totalPages,
+  onPageChange
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages === 0) return null;
+  return (
+    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/40">
+      <button 
+        onClick={() => onPageChange(currentPage - 1)} 
+        disabled={currentPage === 1}
+        className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+      >
+        Prev
+      </button>
+      <div className="text-[10px] font-mono text-muted-foreground">
+        {currentPage} / {totalPages}
+      </div>
+      <button 
+        onClick={() => onPageChange(currentPage + 1)} 
+        disabled={currentPage === totalPages}
+        className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors"
+      >
+        Next
+      </button>
+    </div>
   );
 }
