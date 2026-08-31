@@ -343,12 +343,12 @@ export default function InventoryPage() {
       >
         <div className={`flex flex-col rounded-3xl border h-64 z-10 transition-colors w-full border-border hover:border-border/80 ${isBorrowed ? 'bg-muted/10 grayscale' : 'bg-background'}`}>
           <div className={`relative w-full h-full overflow-hidden px-5 pt-6 pb-4 flex flex-col gap-3 rounded-3xl ${getCardGradient(post.rarity)}`}>
-            <div className="flex justify-between items-start z-20">
-              <span className="font-medium text-xl tracking-tight text-foreground truncate drop-shadow-md">
+            <div className="flex justify-between items-start z-20 gap-2">
+              <span className="font-medium text-lg sm:text-xl tracking-tight text-foreground truncate drop-shadow-md min-w-0 flex-1">
                 {post.user_accounts?.name}
               </span>
               
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-1.5 items-center shrink-0">
                 {isOwner && (
                   <>
                     <span onClick={(e) => { e.stopPropagation(); openEditModal(post); }} className="text-[10px] uppercase font-bold text-muted-foreground hover:text-primary z-20 transition-colors cursor-pointer">Edit</span>
@@ -373,12 +373,12 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 z-20">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{post.rarity.replace("_", " ")}</span>
-              <span className="text-muted-foreground/30">•</span>
-              <span className="text-[10px] text-muted-foreground font-semibold">{post.shoe_count} Shoe{post.shoe_count !== 1 ? 's' : ''}</span>
-              <span className="text-muted-foreground/30">•</span>
-              <span className="text-[10px] text-muted-foreground font-semibold capitalize">{post.visibility.replace("_", " ")}</span>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 z-20">
+              <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-muted-foreground font-semibold whitespace-nowrap">{post.rarity.replace("_", " ")}</span>
+              <span className="text-muted-foreground/30 text-[9px] sm:text-[10px]">•</span>
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground font-semibold whitespace-nowrap">{post.shoe_count} Shoe{post.shoe_count !== 1 ? 's' : ''}</span>
+              <span className="text-muted-foreground/30 text-[9px] sm:text-[10px]">•</span>
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground font-semibold capitalize whitespace-nowrap">{post.visibility.replace("_", " ")}</span>
             </div>
             
             {/* The Shoe Image */}
@@ -411,7 +411,7 @@ export default function InventoryPage() {
                  {!canViewCredentials && (
                    <div className="absolute inset-[-10px] z-20 flex flex-col items-center justify-center backdrop-blur-md bg-background/40 rounded-xl border border-border/50">
                      <Lock className="size-4 text-muted-foreground mb-1" />
-                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Borrow to reveal</span>
+                     <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center px-1">Borrow to reveal</span>
                    </div>
                  )}
                  

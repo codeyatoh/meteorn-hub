@@ -37,11 +37,11 @@ export async function POST(request: NextRequest) {
 
     // --- Atomic Access & Rate Limit Check ---
     const { data: allowed, error: rpcError } = await supabase
-      .rpc('increment_temp_mail_count', { target_user_id: user.id });
+      .rpc('check_and_increment_temp_mail_quota', { target_user_id: user.id });
 
     if (rpcError || !allowed) {
       return NextResponse.json(
-        { error: 'Access denied or daily limit (100) reached.' }, 
+        { error: 'Access denied or daily limit reached for your tier.' }, 
         { status: 429 }
       );
     }
