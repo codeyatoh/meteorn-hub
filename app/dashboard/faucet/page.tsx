@@ -565,7 +565,7 @@ export default function FaucetPage() {
                     placeholder="0x..."
                     value={addressInput}
                     onChange={(e) => setAddressInput(e.target.value)}
-                    className={`h-10 w-full rounded-md border bg-background/40 pl-9 pr-4 text-sm font-medium outline-none transition-all placeholder:text-muted-foreground/50 ${
+                    className={`h-10 w-full rounded-md border bg-background/40 pl-9 pr-10 text-sm font-medium outline-none transition-all placeholder:text-muted-foreground/50 ${
                       addressValidation.status === 'valid' ? 'border-primary/50 focus:border-primary focus:ring-1 focus:ring-primary' :
                       addressValidation.status === 'invalid' || addressValidation.status === 'used' ? 'border-destructive/50 focus:border-destructive focus:ring-1 focus:ring-destructive' : 'border-border/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/50'
                     }`}

@@ -10,7 +10,7 @@ DECLARE
     today_pht DATE;
 BEGIN
     -- Get current date in Asia/Manila timezone
-    today_pht := (now() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::DATE;
+    today_pht := (now() AT TIME ZONE 'Asia/Manila')::DATE;
 
     -- Fetch total donated by user
     SELECT COALESCE(total_donated, 0) INTO v_total_donated
