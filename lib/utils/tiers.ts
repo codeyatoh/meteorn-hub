@@ -22,10 +22,10 @@ export function getTierLimits(totalDonated: number): TierLimits {
 
 /** Ordered tier table for display in modals/tables */
 export const TIER_TABLE = [
-  { min: 0,  faucetLimit: 0,  tempMailLimit: 100 },
-  { min: 1,  faucetLimit: 6,  tempMailLimit: 250 },
-  { min: 2,  faucetLimit: 12, tempMailLimit: 500 },
-  { min: 3,  faucetLimit: 18, tempMailLimit: 1000 },
-  { min: 5,  faucetLimit: 30, tempMailLimit: 2500 },
-  { min: 10, faucetLimit: 60, tempMailLimit: 10000 },
+  { min: 0,  faucetLimit: 0,  tempMailLimit: 100, name: "Shoshin (Beginner)" },
+  { min: 1,  faucetLimit: 6,  tempMailLimit: 250, name: "Minarai (Apprentice)" },
+  { min: 2,  faucetLimit: 12, tempMailLimit: 500, name: "Tatsujin (Expert)" },
+  { min: 3,  faucetLimit: 18, tempMailLimit: 1000, name: "Kakusei (Awakening)" },
+  { min: 5,  faucetLimit: 30, tempMailLimit: 2500, name: "Mugen (Infinity)" },
+  { min: 10, faucetLimit: 60, tempMailLimit: 10000, name: "Shinwa (Myth)" },
 ];

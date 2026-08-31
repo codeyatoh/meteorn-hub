@@ -162,3 +162,18 @@
     max-width: 420px !important;
   }
 }
+
+@layer utilities {
+  .glitch-text {
+    animation: glitch 2.5s infinite;
+    display: inline-block;
+  }
+  @keyframes glitch {
+    0%, 14%, 100% { text-shadow: none; transform: none; }
+    15% { text-shadow: 2px 0 0 rgba(255,0,0,0.7), -2px 0 0 rgba(0,255,255,0.7); transform: translate(-1px, 1px); }
+    16% { text-shadow: -2px 0 0 rgba(255,0,0,0.7), 2px 0 0 rgba(0,255,255,0.7); transform: translate(1px, -1px); }
+    17% { text-shadow: none; transform: none; }
+    45% { text-shadow: 2px 0 0 rgba(255,0,0,0.7), -2px 0 0 rgba(0,255,255,0.7); transform: translate(1px, -1px); }
+    46% { text-shadow: none; transform: none; }
+  }
+}

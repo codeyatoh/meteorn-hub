@@ -340,11 +340,11 @@ export default function UserDashboardPage() {
   }, [incomeLogs]);
 
   const getTier = (gmto: number) => {
-    if (gmto >= 5000) return { name: "Shinwa (Myth)", color: "text-purple-500 dark:text-purple-400", icon: "🌟" };
-    if (gmto >= 2000) return { name: "Mugen (Infinity)", color: "text-blue-500 dark:text-blue-400", icon: "🔥" };
-    if (gmto >= 500) return { name: "Kakusei (Awakening)", color: "text-red-500 dark:text-red-400", icon: "⚡" };
-    if (gmto >= 100) return { name: "Tatsujin (Expert)", color: "text-orange-500 dark:text-orange-400", icon: "⚔️" };
-    return { name: "Shoshin (Beginner)", color: "text-zinc-500 dark:text-zinc-400", icon: "🌱" };
+    if (gmto >= 5000) return { name: "Shinwa (Myth)", color: "text-purple-500 dark:text-purple-400" };
+    if (gmto >= 2000) return { name: "Mugen (Infinity)", color: "text-blue-500 dark:text-blue-400" };
+    if (gmto >= 500) return { name: "Kakusei (Awakening)", color: "text-red-500 dark:text-red-400" };
+    if (gmto >= 100) return { name: "Tatsujin (Expert)", color: "text-orange-500 dark:text-orange-400" };
+    return { name: "Shoshin (Beginner)", color: "text-zinc-500 dark:text-zinc-400" };
   };
 
   const userTier = getTier(totalFarmedGmto);
@@ -803,8 +803,7 @@ export default function UserDashboardPage() {
               <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
                 Welcome back, <span className="text-primary">{nickname}</span>
               </h1>
-              <div className={`flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full border border-border/50 bg-background/50 backdrop-blur-sm text-sm font-medium font-mono ${userTier.color}`}>
-                <span>{userTier.icon}</span>
+              <div className={`flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full border border-border/50 bg-background/50 backdrop-blur-sm text-sm font-medium font-mono glitch-text ${userTier.color}`}>
                 <span>{userTier.name}</span>
               </div>
             </div>

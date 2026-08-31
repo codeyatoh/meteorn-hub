@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Mail,
-  Activity,
   Copy,
   CheckIcon,
   RefreshCw,
@@ -16,7 +15,9 @@ import {
   Loader2,
   AtSign,
   Shuffle,
+  Crown,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { GuideModal } from "@/components/ui/guide-modal";
@@ -414,7 +415,9 @@ export default function TempMailPage() {
           <p className="mt-2 text-muted-foreground text-sm">
             Generate a disposable email address to receive codes and verifications.
           </p>
-          <button onClick={() => setIsTiersModalOpen(true)} className="mt-4 text-xs font-medium text-primary hover:underline flex items-center gap-1"><Activity className="size-3" /> View Donation Tiers & Limits</button>
+          <Button onClick={() => setIsTiersModalOpen(true)} variant="outline" size="sm" className="mt-4 flex items-center gap-2 bg-background/50 hover:bg-foreground/5 text-primary border-primary/20 transition-all">
+            <Crown className="size-4 text-amber-500" /> View Donation Tiers & Limits
+          </Button>
         </div>
 
         {/* ── Access Gating ── */}
@@ -870,10 +873,10 @@ export default function TempMailPage() {
           )}
         </AnimatePresence>
         )}
-
       </div>
 
-      <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Mail size={18} strokeWidth={1.5} />} maxWidth="md">
+      {/* ── Tiers Modal ── */}
+      <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Crown size={18} strokeWidth={1.5} className="text-amber-500" />} maxWidth="md">
         <div className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">
@@ -891,7 +894,11 @@ export default function TempMailPage() {
                   return (
                     <tr key={tier.min} className={`hover:bg-foreground/5 transition-colors ${isCurrentTier ? 'bg-primary/5' : ''}`}>
                       <td className={`py-3 pr-4 font-medium whitespace-nowrap ${isCurrentTier ? 'text-primary' : i === 0 ? 'text-foreground' : 'text-foreground/70'}`}>
-                        {tier.min}+ POL {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded ml-1">YOUR TIER</span>}
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">{tier.name}</span>
+                          <span className="text-xs text-muted-foreground">({tier.min}+ POL)</span>
+                          {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded ml-1">YOUR TIER</span>}
+                        </div>
                       </td>
                       <td className="py-3 px-4">{tier.faucetLimit} / day</td>
                       <td className="py-3 px-4">{tier.tempMailLimit.toLocaleString()} / day</td>
@@ -901,9 +908,11 @@ export default function TempMailPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-6 font-mono uppercase tracking-widest text-center">
-            Donations are cumulative. Upgrade your tier anytime.
-          </p>
+          <div className="mt-6 p-4 bg-primary/5 rounded-xl border border-primary/20 text-center">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-primary/80">
+              Donations are cumulative. Upgrade your tier anytime.
+            </p>
+          </div>
         </div>
       </AnimatedModal>
     </div>
