@@ -29,3 +29,21 @@ export const TIER_TABLE = [
   { min: 5,  faucetLimit: 30, tempMailLimit: 2500, name: "Mugen (Infinity)" },
   { min: 10, faucetLimit: 60, tempMailLimit: 10000, name: "Shinwa (Myth)" },
 ];
+
+export interface TierDetails {
+  name: string;
+  colorClass: string;
+  effectClass: string;
+}
+
+/**
+ * Returns the tier name, color, and CSS effect class based on donated amount.
+ */
+export function getTierDetails(totalDonated: number): TierDetails {
+  if (totalDonated >= 10) return { name: "Shinwa (Myth)", colorClass: "text-purple-500 dark:text-purple-400", effectClass: "effect-mythic" };
+  if (totalDonated >= 5)  return { name: "Mugen (Infinity)", colorClass: "text-blue-500 dark:text-blue-400", effectClass: "effect-rgb-glitch" };
+  if (totalDonated >= 3)  return { name: "Kakusei (Awakening)", colorClass: "text-red-500 dark:text-red-400", effectClass: "effect-lightning" };
+  if (totalDonated >= 2)  return { name: "Tatsujin (Expert)", colorClass: "text-orange-500 dark:text-orange-400", effectClass: "effect-glitch" };
+  if (totalDonated >= 1)  return { name: "Minarai (Apprentice)", colorClass: "text-emerald-500 dark:text-emerald-400", effectClass: "effect-pulse" };
+  return                  { name: "Shoshin (Beginner)", colorClass: "text-zinc-500 dark:text-zinc-400", effectClass: "effect-mist" };
+}

@@ -15,6 +15,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { PageContainer } from "@/components/ui/page-container";
 import { NumberTicker } from "@/components/ui/number-ticker";
+import { getTierDetails } from "@/lib/utils/tiers";
 
 // Admin provided avatar choices
 const AVATAR_MAP: Record<string, ReactNode> = {
@@ -61,6 +62,7 @@ export default function UserDashboardPage() {
   const [allUnsoldLogs, setAllUnsoldLogs] = useState<IncomeLog[]>([]);
   const [allSoldLogs, setAllSoldLogs] = useState<{ gmto_amount: string; fiat_received: string; fiat_currency: string }[]>([]);
   const [totalP2PSoldGmto, setTotalP2PSoldGmto] = useState(0);
+  const [totalDonatedAmount, setTotalDonatedAmount] = useState(0);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -252,6 +254,19 @@ export default function UserDashboardPage() {
           fiat_currency: log.fiat_currency || 'php'
         })));
       }
+
+      // Fetch Faucet User Stats for Tier Calculation
+      const { data: faucetStats } = await supabase
+        .from('faucet_user_stats')
+        .select('total_donated')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (faucetStats) {
+        setTotalDonatedAmount(parseFloat(faucetStats.total_donated) || 0);
+      }
+      
+      setLoading(false);
     };
     
     Promise.all([
@@ -335,19 +350,9 @@ export default function UserDashboardPage() {
 
   const totalGross = filteredIncomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
 
-  const totalFarmedGmto = useMemo(() => {
-    return incomeLogs.reduce((sum, log) => sum + log.gmto, 0);
-  }, [incomeLogs]);
 
-  const getTier = (gmto: number) => {
-    if (gmto >= 5000) return { name: "Shinwa (Myth)", color: "text-purple-500 dark:text-purple-400" };
-    if (gmto >= 2000) return { name: "Mugen (Infinity)", color: "text-blue-500 dark:text-blue-400" };
-    if (gmto >= 500) return { name: "Kakusei (Awakening)", color: "text-red-500 dark:text-red-400" };
-    if (gmto >= 100) return { name: "Tatsujin (Expert)", color: "text-orange-500 dark:text-orange-400" };
-    return { name: "Shoshin (Beginner)", color: "text-zinc-500 dark:text-zinc-400" };
-  };
 
-  const userTier = getTier(totalFarmedGmto);
+  const userTier = getTierDetails(totalDonatedAmount);
 
   const updateTicket = async (id: number, delta: number) => {
     if (updatingTicketsIds.has(id)) return;
@@ -803,7 +808,7 @@ export default function UserDashboardPage() {
               <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
                 Welcome back, <span className="text-primary">{nickname}</span>
               </h1>
-              <div className={`flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full border border-border/50 bg-background/50 backdrop-blur-sm text-sm font-medium font-mono glitch-text ${userTier.color}`}>
+              <div className={`flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full border border-border/50 bg-background/50 backdrop-blur-sm text-sm font-medium font-mono ${userTier.effectClass} ${userTier.colorClass}`}>
                 <span>{userTier.name}</span>
               </div>
             </div>
