@@ -517,9 +517,9 @@ export default function FaucetPage() {
 
 
             {/* Right: Daily limit tracker */}
-            <div className="flex flex-col items-start md:items-end gap-1.5 p-4 rounded-xl border border-border/40 bg-background/40">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center justify-between w-full gap-2">
-                <div className="flex items-center">
+            <div className="flex flex-col gap-1.5 p-4 rounded-xl border border-border/40 bg-background/40">
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center">
                   <Activity className="size-3 mr-1 opacity-50" />
                   Daily Limit Tracker
                 </div>
@@ -527,7 +527,7 @@ export default function FaucetPage() {
                   <HelpCircle className="size-3" /> <span className="text-[9px] whitespace-nowrap">View Tiers</span>
                 </button>
               </div>
-              <div className="flex flex-col items-start md:items-end gap-1 mt-1">
+              <div className="flex flex-col items-end gap-1">
                 <div className="w-32 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${fillPercentage <= 20 ? 'bg-destructive' : 'bg-primary'}`}
