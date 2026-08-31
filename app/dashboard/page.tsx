@@ -335,6 +335,20 @@ export default function UserDashboardPage() {
 
   const totalGross = filteredIncomeLogs.reduce((sum, log) => sum + (log.gmto * gmtoPrice), 0);
 
+  const totalFarmedGmto = useMemo(() => {
+    return incomeLogs.reduce((sum, log) => sum + log.gmto, 0);
+  }, [incomeLogs]);
+
+  const getTier = (gmto: number) => {
+    if (gmto >= 5000) return { name: "Shinwa (Myth)", color: "text-purple-500 dark:text-purple-400", icon: "🌟" };
+    if (gmto >= 2000) return { name: "Mugen (Infinity)", color: "text-blue-500 dark:text-blue-400", icon: "🔥" };
+    if (gmto >= 500) return { name: "Kakusei (Awakening)", color: "text-red-500 dark:text-red-400", icon: "⚡" };
+    if (gmto >= 100) return { name: "Tatsujin (Expert)", color: "text-orange-500 dark:text-orange-400", icon: "⚔️" };
+    return { name: "Shoshin (Beginner)", color: "text-zinc-500 dark:text-zinc-400", icon: "🌱" };
+  };
+
+  const userTier = getTier(totalFarmedGmto);
+
   const updateTicket = async (id: number, delta: number) => {
     if (updatingTicketsIds.has(id)) return;
     setUpdatingTicketsIds(prev => new Set(prev).add(id));
@@ -785,9 +799,15 @@ export default function UserDashboardPage() {
             </div>
           
           <div className="flex items-center justify-between gap-4">
-            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
-              Welcome back, <span className="text-primary">{nickname}</span>
-            </h1>
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
+              <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+                Welcome back, <span className="text-primary">{nickname}</span>
+              </h1>
+              <div className={`flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full border border-border/50 bg-background/50 backdrop-blur-sm text-sm font-medium font-mono ${userTier.color}`}>
+                <span>{userTier.icon}</span>
+                <span>{userTier.name}</span>
+              </div>
+            </div>
             <div className="shrink-0">
               <GuideModal title="Dashboard Overview">
                 <p>Welcome to Meteorn Hub! This is your central dashboard for managing game accounts, tickets, and income.</p>
