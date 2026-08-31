@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Droplets, CopyIcon, CheckIcon, Activity, ArrowRight, ShieldCheck, ChevronLeft, ChevronRight, ExternalLink, Crown } from "lucide-react";
+import { Loader2, Droplets, CopyIcon, CheckIcon, Activity, ArrowRight, ShieldCheck, ChevronLeft, ChevronRight, ExternalLink, Crown, HelpCircle } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -484,9 +484,7 @@ export default function FaucetPage() {
             Fund your wallets instantly using the decentralized community pool.
             Contribute to the pool to unlock higher claims and exclusive Temp Mail limits.
           </p>
-          <Button onClick={() => setIsTiersModalOpen(true)} variant="outline" size="sm" className="mt-4 flex items-center gap-2 bg-background/50 hover:bg-foreground/5 text-primary border-primary/20 transition-all">
-            <Crown className="size-4 text-amber-500" /> View Donation Tiers & Limits
-          </Button>
+
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -520,9 +518,14 @@ export default function FaucetPage() {
 
             {/* Right: Daily limit tracker */}
             <div className="flex flex-col items-start md:items-end gap-1.5 p-4 rounded-xl border border-border/40 bg-background/40">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center">
-                <Activity className="size-3 mr-1 opacity-50" />
-                Daily Limit Tracker
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center justify-between w-full md:justify-end gap-2">
+                <div className="flex items-center">
+                  <Activity className="size-3 mr-1 opacity-50" />
+                  Daily Limit Tracker
+                </div>
+                <button onClick={() => setIsTiersModalOpen(true)} className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors bg-primary/10 px-1.5 py-0.5 rounded-sm">
+                  <HelpCircle className="size-3" /> <span className="text-[9px]">View Tiers</span>
+                </button>
               </div>
               <div className="flex flex-col items-start md:items-end gap-1 mt-1">
                 <div className="w-32 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
@@ -781,7 +784,7 @@ export default function FaucetPage() {
       </div>
 
       {/* ── Tiers Modal ── */}
-      <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Crown size={18} strokeWidth={1.5} className="text-amber-500" />} maxWidth="md">
+      <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Crown size={18} strokeWidth={1.5} />} maxWidth="lg">
         <div className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">

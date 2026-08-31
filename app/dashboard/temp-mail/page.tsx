@@ -14,10 +14,10 @@ import {
   ChevronLeft,
   Loader2,
   AtSign,
-  Shuffle,
   Crown,
+  HelpCircle,
+  Shuffle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { GuideModal } from "@/components/ui/guide-modal";
@@ -415,9 +415,7 @@ export default function TempMailPage() {
           <p className="mt-2 text-muted-foreground text-sm">
             Generate a disposable email address to receive codes and verifications.
           </p>
-          <Button onClick={() => setIsTiersModalOpen(true)} variant="outline" size="sm" className="mt-4 flex items-center gap-2 bg-background/50 hover:bg-foreground/5 text-primary border-primary/20 transition-all">
-            <Crown className="size-4 text-amber-500" /> View Donation Tiers & Limits
-          </Button>
+
         </div>
 
         {/* ── Access Gating ── */}
@@ -613,8 +611,13 @@ export default function TempMailPage() {
                       Generate Address
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        Daily Limit Remaining
+                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center justify-between w-full md:justify-end gap-2">
+                        <div className="flex items-center">
+                          Daily Limit Remaining
+                        </div>
+                        <button onClick={() => setIsTiersModalOpen(true)} className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors bg-primary/10 px-1.5 py-0.5 rounded-sm">
+                          <HelpCircle className="size-3" /> <span className="text-[9px]">View Tiers</span>
+                        </button>
                       </div>
                       <div className="flex items-center gap-2">
                         {/* Fill bar matching accounts page style */}
@@ -876,7 +879,7 @@ export default function TempMailPage() {
       </div>
 
       {/* ── Tiers Modal ── */}
-      <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Crown size={18} strokeWidth={1.5} className="text-amber-500" />} maxWidth="md">
+      <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Crown size={18} strokeWidth={1.5} />} maxWidth="lg">
         <div className="p-6">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left border-collapse">
