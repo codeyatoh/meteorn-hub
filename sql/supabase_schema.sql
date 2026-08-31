@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS public.user_accounts (
 -- Enable RLS for user_accounts
 ALTER TABLE public.user_accounts ENABLE ROW LEVEL SECURITY;
 
+CREATE POLICY "Anyone can view user_accounts" 
+  ON public.user_accounts FOR SELECT 
+  USING (true);
+
 CREATE POLICY "Users can view their own accounts" 
   ON public.user_accounts FOR SELECT 
   USING (auth.uid() = user_id);
@@ -77,7 +81,7 @@ CREATE TABLE IF NOT EXISTS public.ticket_logs (
 -- Enable RLS for ticket_logs
 ALTER TABLE public.ticket_logs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY ""Users can view their own ticket logs"" 
+CREATE POLICY "Users can view their own ticket logs" 
   ON public.ticket_logs FOR SELECT 
   USING (auth.uid() = user_id);
 

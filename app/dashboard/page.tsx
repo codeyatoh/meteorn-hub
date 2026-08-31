@@ -186,6 +186,7 @@ export default function UserDashboardPage() {
       const { data: accountsData } = await supabase
         .from('user_accounts')
         .select('*')
+        .eq('user_id', user.id)
         .order('id', { ascending: true });
         
       if (accountsData) {
@@ -208,6 +209,7 @@ export default function UserDashboardPage() {
       const { data: logsData } = await supabase
         .from('income_logs')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
         
       if (logsData) {
@@ -227,6 +229,7 @@ export default function UserDashboardPage() {
       const { data: soldLogsData } = await supabase
         .from('income_logs')
         .select('gmto_amount, fiat_received, fiat_currency')
+        .eq('user_id', user.id)
         .eq('is_sold', true);
         
       if (soldLogsData) {
@@ -239,6 +242,7 @@ export default function UserDashboardPage() {
       const { data: unsoldLogsData } = await supabase
         .from('income_logs')
         .select('*')
+        .eq('user_id', user.id)
         .eq('is_sold', false)
         .order('created_at', { ascending: false });
 
