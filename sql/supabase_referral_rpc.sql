@@ -30,7 +30,8 @@ BEGIN
 
   -- Safe to increment
   UPDATE public.user_accounts
-     SET tickets_done = v_done + 1
+     SET tickets_done = v_done + 1,
+         total_accumulated_tickets = total_accumulated_tickets + 1
    WHERE id = target_account_id;
 
   RETURN 'incremented';
