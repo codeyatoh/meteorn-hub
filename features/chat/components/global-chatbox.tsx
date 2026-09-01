@@ -147,7 +147,7 @@ export function GlobalChatbox() {
   const [isOpen, setIsOpenState] = useState<boolean>(false);
   const currentUserIdRef = useRef<string | null>(null);
   const [onlineCount, setOnlineCount] = useState<number>(1);
-
+  const [processingReferrals, setProcessingReferrals] = useState<Set<number>>(new Set());
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
   }, [currentUserId]);
@@ -1152,8 +1152,10 @@ export function GlobalChatbox() {
                                       Go to Link <ChevronRight className="size-3" />
                                     </button>
                                     <button
-                                      disabled={isDone}
+                                      disabled={isDone || processingReferrals.has(msg.id)}
                                       onClick={async () => {
+                                        if (processingReferrals.has(msg.id)) return;
+                                        setProcessingReferrals(prev => new Set(prev).add(msg.id));
                                         try {
                                           const result = await supabase.rpc(
                                             "increment_referral_tickets",
@@ -1169,12 +1171,18 @@ export function GlobalChatbox() {
                                             toast.success("Help marked as Done!");
                                             fetchAccountStatuses([referralData.accountId]);
                                           }
-                                        } catch { /* ignore */ }
+                                        } catch { /* ignore */ } finally {
+                                          setProcessingReferrals(prev => {
+                                            const next = new Set(prev);
+                                            next.delete(msg.id);
+                                            return next;
+                                          });
+                                        }
                                       }}
                                       title={isDone ? "Quota already reached" : "Mark as Done"}
-                                      className={`flex-1 flex justify-center items-center py-1.5 rounded-md transition-all border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 border-rose-500/20'}`}
+                                      className={`flex-1 flex justify-center items-center py-1.5 rounded-md transition-all border ${isDone || processingReferrals.has(msg.id) ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 border-rose-500/20'}`}
                                     >
-                                      {isDone ? <span className="text-[9px]">Done</span> : <Heart className="size-3.5 fill-current" />}
+                                      {processingReferrals.has(msg.id) ? <Loader2 className="size-3.5 animate-spin" /> : isDone ? <span className="text-[9px]">Done</span> : <Heart className="size-3.5 fill-current" />}
                                     </button>
                                   </div>
                                   {isMe && !isDone && (
