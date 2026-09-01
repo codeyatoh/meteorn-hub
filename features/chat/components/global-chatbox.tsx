@@ -275,6 +275,36 @@ export function GlobalChatbox() {
     setTimeout(() => scrollToBottom("smooth"), 100);
   };
 
+  const sendBump = async (msg: GlobalChat) => {
+    if (!currentUserId || !msg.message) return;
+    try {
+      const refData = JSON.parse(msg.message);
+      if (!refData.accountId) return;
+
+      const result = await supabase.rpc("bump_referral_account", {
+        p_account_id: refData.accountId,
+        p_cooldown_minutes: 60,
+      });
+
+      if (result.error) {
+        toast.error("Error bumping account.");
+      } else if (result.data === "cooldown") {
+        toast.info("⏱ You can only bump once every hour.");
+      } else if (result.data === "quota_reached") {
+        toast.info("✅ This account is already complete!");
+      } else if (result.data === "not_owner") {
+        toast.error("Only the account owner can bump this card.");
+      } else if (result.data === "bumped") {
+        const { error } = await supabase
+          .from("global_chats")
+          .insert({ user_id: currentUserId, message: msg.message, type: "referral_bump" });
+        if (error) toast.error("Failed to bump help request.");
+        else toast.success("Bumped! 🔁");
+        setTimeout(() => scrollToBottom("smooth"), 100);
+      }
+    } catch {}
+  };
+
   const handleReferralClick = (url: string) => {
     const isAndroid = /Android/i.test(navigator.userAgent);
     if (isAndroid) {
@@ -430,7 +460,7 @@ export function GlobalChatbox() {
           });
 
           // If it's a referral message, fetch its account status so the card is immediately accurate
-          if (newMsg.type === "referral" && newMsg.message) {
+          if ((newMsg.type === "referral" || newMsg.type === "referral_bump") && newMsg.message) {
             try {
               const refData = JSON.parse(newMsg.message);
               if (refData.accountId) fetchAccountStatuses([refData.accountId]);
@@ -606,7 +636,7 @@ export function GlobalChatbox() {
         const referralAccountIds = [
           ...new Set(
             (enriched as GlobalChat[])
-              .filter((m) => m.type === "referral" && m.message)
+              .filter((m) => (m.type === "referral" || m.type === "referral_bump") && m.message)
               .map((m) => {
                 try { return JSON.parse(m.message!).accountId as number; } catch { return null; }
               })
@@ -1046,7 +1076,7 @@ export function GlobalChatbox() {
                                 : mentionType === "direct"
                                   ? "bg-amber-500/5 border border-amber-500/20 text-foreground rounded-bl-sm shadow-[0_0_10px_rgba(245,158,11,0.05)]"
                                   : "bg-secondary/40 border border-border/20 text-secondary-foreground rounded-bl-sm",
-                          msg.type === "referral" || msg.type === "gif"
+                          msg.type === "referral" || msg.type === "referral_bump" || msg.type === "gif"
                             ? "p-0 border-none bg-transparent shadow-none"
                             : "",
                         ].join(" ")}
@@ -1064,28 +1094,29 @@ export function GlobalChatbox() {
                             className="max-w-[180px] rounded-lg object-contain"
                           />
                         )}
-                        {msg.type === "referral" && msg.message && (() => {
+                        {(msg.type === "referral" || msg.type === "referral_bump") && msg.message && (() => {
                           try {
                             const refData = JSON.parse(msg.message);
                             const status = accountStatuses.get(refData.accountId);
                             const isDone = status?.done ?? false;
                             const ticketsDone = status?.ticketsDone ?? 0;
                             const totalTickets = status?.totalTickets ?? 0;
+                            const isBump = msg.type === "referral_bump";
                             return (
-                              <div className={`backdrop-blur border rounded-xl p-3 max-w-[220px] w-full shadow-sm flex flex-col gap-2.5 transition-all ${isDone ? 'bg-emerald-950/30 border-emerald-800/40' : 'bg-background/95 border-border/50'}`}>
+                              <div className={`backdrop-blur border rounded-xl p-3 max-w-[220px] w-full shadow-sm flex flex-col gap-2.5 transition-all ${isDone ? 'bg-emerald-950/30 border-emerald-800/40' : isBump ? 'bg-amber-950/20 border-amber-800/30' : 'bg-background/95 border-border/50'}`}>
                                 {/* Header */}
                                 <div className="flex items-center justify-between gap-1.5 border-b border-border/50 pb-1.5">
                                   <div className="flex items-center gap-1.5">
                                     {isDone
                                       ? <span className="text-emerald-400">✅</span>
-                                      : <HandHeart className="size-3.5 text-primary" />
+                                      : <HandHeart className={`size-3.5 ${isBump ? 'text-amber-500' : 'text-primary'}`} />
                                     }
-                                    <span className={`text-[11px] font-semibold uppercase tracking-wider ${isDone ? 'text-emerald-400' : 'text-foreground/90'}`}>
-                                      {isDone ? "Quota Complete" : "Help Needed"}
+                                    <span className={`text-[11px] font-semibold uppercase tracking-wider ${isDone ? 'text-emerald-400' : isBump ? 'text-amber-500' : 'text-foreground/90'}`}>
+                                      {isDone ? "Quota Complete" : isBump ? "Bumped!" : "Help Needed"}
                                     </span>
                                   </div>
                                   {status && (
-                                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${isDone ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/10 text-primary'}`}>
+                                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${isDone ? 'bg-emerald-500/20 text-emerald-400' : isBump ? 'bg-amber-500/20 text-amber-500' : 'bg-primary/10 text-primary'}`}>
                                       {ticketsDone}/{totalTickets}
                                     </span>
                                   )}
@@ -1106,41 +1137,51 @@ export function GlobalChatbox() {
                                   )}
                                 </p>
                                 {/* Action Buttons */}
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <button
-                                    disabled={isDone}
-                                    onClick={async () => {
-                                      if (refData.link) handleReferralClick(refData.link);
-                                    }}
-                                    className={`flex-[2] text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1 border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20'}`}
-                                  >
-                                    Go to Link <ChevronRight className="size-3" />
-                                  </button>
-                                  <button
-                                    disabled={isDone}
-                                    onClick={async () => {
-                                      try {
-                                        const result = await supabase.rpc(
-                                          "increment_referral_tickets",
-                                          { target_account_id: refData.accountId },
-                                        );
-                                        if (result.error) {
-                                          toast.error("Error updating account.");
-                                        } else if (result.data === "quota_reached") {
-                                          toast.info("This account has already reached its quota!");
-                                          // Force-update local status so UI updates immediately
-                                          fetchAccountStatuses([refData.accountId]);
-                                        } else if (result.data === "incremented") {
-                                          toast.success("Help marked as Done! 💖");
-                                          fetchAccountStatuses([refData.accountId]);
-                                        }
-                                      } catch { /* ignore */ }
-                                    }}
-                                    title={isDone ? "Quota already reached" : "Mark as Done"}
-                                    className={`flex-1 flex justify-center items-center py-1.5 rounded-md transition-all border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 border-rose-500/20'}`}
-                                  >
-                                    {isDone ? <span className="text-[9px]">Done</span> : <Heart className="size-3.5 fill-current" />}
-                                  </button>
+                                <div className="flex flex-col gap-1.5 mt-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      disabled={isDone}
+                                      onClick={async () => {
+                                        if (refData.link) handleReferralClick(refData.link);
+                                      }}
+                                      className={`flex-[2] text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1 border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20'}`}
+                                    >
+                                      Go to Link <ChevronRight className="size-3" />
+                                    </button>
+                                    <button
+                                      disabled={isDone}
+                                      onClick={async () => {
+                                        try {
+                                          const result = await supabase.rpc(
+                                            "increment_referral_tickets",
+                                            { target_account_id: refData.accountId },
+                                          );
+                                          if (result.error) {
+                                            toast.error("Error updating account.");
+                                          } else if (result.data === "quota_reached") {
+                                            toast.info("This account has already reached its quota!");
+                                            // Force-update local status so UI updates immediately
+                                            fetchAccountStatuses([refData.accountId]);
+                                          } else if (result.data === "incremented") {
+                                            toast.success("Help marked as Done! 💖");
+                                            fetchAccountStatuses([refData.accountId]);
+                                          }
+                                        } catch { /* ignore */ }
+                                      }}
+                                      title={isDone ? "Quota already reached" : "Mark as Done"}
+                                      className={`flex-1 flex justify-center items-center py-1.5 rounded-md transition-all border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 border-rose-500/20'}`}
+                                    >
+                                      {isDone ? <span className="text-[9px]">Done</span> : <Heart className="size-3.5 fill-current" />}
+                                    </button>
+                                  </div>
+                                  {isMe && !isDone && (
+                                    <button
+                                      onClick={() => sendBump(msg)}
+                                      className="w-full bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1"
+                                    >
+                                      🔁 Bump
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -1151,7 +1192,7 @@ export function GlobalChatbox() {
                       </div>
 
                       <AnimatePresence>
-                        {hoveredMsg === msg.id && msg.type !== "referral" && (
+                        {hoveredMsg === msg.id && msg.type !== "referral" && msg.type !== "referral_bump" && (
                           <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
