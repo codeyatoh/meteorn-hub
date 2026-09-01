@@ -217,6 +217,30 @@ export function GlobalChatbox() {
   const [showReferralPicker, setShowReferralPicker] = useState(false);
   const [myAccounts, setMyAccounts] = useState<UserAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  // Map of accountId -> { done: boolean } for live status tracking
+  const [accountStatuses, setAccountStatuses] = useState<Map<number, { done: boolean; ticketsDone: number; totalTickets: number }>>(new Map());
+
+  // Helper to batch-fetch account statuses for referral message accountIds
+  const fetchAccountStatuses = useCallback(async (accountIds: number[]) => {
+    if (accountIds.length === 0) return;
+    const { data } = await supabase
+      .from("user_accounts")
+      .select("id, tickets_done, total_tickets")
+      .in("id", accountIds);
+    if (data) {
+      setAccountStatuses((prev) => {
+        const next = new Map(prev);
+        (data as { id: number; tickets_done: number; total_tickets: number }[]).forEach((acc) => {
+          next.set(acc.id, {
+            done: acc.tickets_done >= acc.total_tickets,
+            ticketsDone: acc.tickets_done,
+            totalTickets: acc.total_tickets,
+          });
+        });
+        return next;
+      });
+    }
+  }, []);
 
   const openReferralPicker = async () => {
     if (showReferralPicker) {
@@ -405,6 +429,14 @@ export function GlobalChatbox() {
             return [...prev, fullMsg];
           });
 
+          // If it's a referral message, fetch its account status so the card is immediately accurate
+          if (newMsg.type === "referral" && newMsg.message) {
+            try {
+              const refData = JSON.parse(newMsg.message);
+              if (refData.accountId) fetchAccountStatuses([refData.accountId]);
+            } catch { /* ignore parse errors */ }
+          }
+
           if (newMsg.user_id !== currentUserId) {
             // Play ping only if AudioContext has been unlocked by a user gesture
             if (
@@ -468,11 +500,31 @@ export function GlobalChatbox() {
       )
       .subscribe();
 
+    // Subscribe to user_accounts updates to reflect live quota changes
+    const accountsSub = supabase
+      .channel("user_accounts_quota_realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "user_accounts" },
+        (payload) => {
+          const { id, tickets_done, total_tickets } = payload.new as { id: number; tickets_done: number; total_tickets: number };
+          setAccountStatuses((prev) => {
+            // Only update if we're already tracking this account
+            if (!prev.has(id)) return prev;
+            const next = new Map(prev);
+            next.set(id, { done: tickets_done >= total_tickets, ticketsDone: tickets_done, totalTickets: total_tickets });
+            return next;
+          });
+        },
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(chatSub);
       supabase.removeChannel(rxSub);
+      supabase.removeChannel(accountsSub);
     };
-  }, [currentUserId, checkIsMentioned]);
+  }, [currentUserId, checkIsMentioned, fetchAccountStatuses]);
 
   // Helper: fetch user names for a list of user_ids via secure RPC
   const fetchUserNames = useCallback(async (userIds: string[]) => {
@@ -549,6 +601,21 @@ export function GlobalChatbox() {
         setUnreadDirect(d);
         setUnreadHighlight(h);
         setUnreadEveryone(e);
+
+        // Batch-fetch statuses for all referral messages in initial load
+        const referralAccountIds = [
+          ...new Set(
+            (enriched as GlobalChat[])
+              .filter((m) => m.type === "referral" && m.message)
+              .map((m) => {
+                try { return JSON.parse(m.message!).accountId as number; } catch { return null; }
+              })
+              .filter((id): id is number => id !== null),
+          ),
+        ];
+        if (referralAccountIds.length > 0) {
+          fetchAccountStatuses(referralAccountIds);
+        }
       } else {
         setHasMore(false);
       }
@@ -564,7 +631,7 @@ export function GlobalChatbox() {
     loadInitial();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId, fetchUserNames, checkIsMentioned]);
+  }, [currentUserId, fetchUserNames, checkIsMentioned, fetchAccountStatuses]);
 
   // Load older messages on scroll-to-top
   // setMessages is a stable useState setter — including it in deps satisfies
@@ -997,67 +1064,90 @@ export function GlobalChatbox() {
                             className="max-w-[180px] rounded-lg object-contain"
                           />
                         )}
-                        {msg.type === "referral" && msg.message && (
-                          <div className="bg-background/95 backdrop-blur border border-border/50 rounded-xl p-3 max-w-[220px] w-full shadow-sm flex flex-col gap-2.5">
-                            <div className="flex items-center gap-1.5 border-b border-border/50 pb-1.5">
-                              <HandHeart className="size-3.5 text-primary" />
-                              <span className="text-[11px] font-semibold text-foreground/90 uppercase tracking-wider">
-                                Help Needed
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-snug">
-                              {(() => {
-                                try {
-                                  const data = JSON.parse(msg.message);
-                                  return (
+                        {msg.type === "referral" && msg.message && (() => {
+                          try {
+                            const refData = JSON.parse(msg.message);
+                            const status = accountStatuses.get(refData.accountId);
+                            const isDone = status?.done ?? false;
+                            const ticketsDone = status?.ticketsDone ?? 0;
+                            const totalTickets = status?.totalTickets ?? 0;
+                            return (
+                              <div className={`backdrop-blur border rounded-xl p-3 max-w-[220px] w-full shadow-sm flex flex-col gap-2.5 transition-all ${isDone ? 'bg-emerald-950/30 border-emerald-800/40' : 'bg-background/95 border-border/50'}`}>
+                                {/* Header */}
+                                <div className="flex items-center justify-between gap-1.5 border-b border-border/50 pb-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    {isDone
+                                      ? <span className="text-emerald-400">✅</span>
+                                      : <HandHeart className="size-3.5 text-primary" />
+                                    }
+                                    <span className={`text-[11px] font-semibold uppercase tracking-wider ${isDone ? 'text-emerald-400' : 'text-foreground/90'}`}>
+                                      {isDone ? "Quota Complete" : "Help Needed"}
+                                    </span>
+                                  </div>
+                                  {status && (
+                                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full ${isDone ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/10 text-primary'}`}>
+                                      {ticketsDone}/{totalTickets}
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Description */}
+                                <p className="text-[11px] text-muted-foreground leading-snug">
+                                  {isDone ? (
+                                    <>
+                                      <span className="text-emerald-400 font-semibold">{refData.name}</span>{" "}
+                                      has reached their referral quota. No more help needed!
+                                    </>
+                                  ) : (
                                     <>
                                       Help{" "}
-                                      <span className="text-primary font-semibold">
-                                        {data.name}
-                                      </span>{" "}
+                                      <span className="text-primary font-semibold">{refData.name}</span>{" "}
                                       by using their referral link!
                                     </>
-                                  );
-                                } catch {
-                                  return "Invalid request";
-                                }
-                              })()}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const data = JSON.parse(msg.message!);
-                                    if (data.link)
-                                      handleReferralClick(data.link);
-                                  } catch {}
-                                }}
-                                className="flex-[2] bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1 border border-primary/20"
-                              >
-                                Go to Link <ChevronRight className="size-3" />
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const data = JSON.parse(msg.message!);
-                                    const { error } = await supabase.rpc(
-                                      "increment_referral_tickets",
-                                      { target_account_id: data.accountId },
-                                    );
-                                    if (error)
-                                      toast.error("Error updating account.");
-                                    else
-                                      toast.success("Help marked as Done! 💖");
-                                  } catch {}
-                                }}
-                                title="Mark as Done"
-                                className="flex-1 flex justify-center items-center py-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 rounded-md transition-all border border-rose-500/20"
-                              >
-                                <Heart className="size-3.5 fill-current" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                                  )}
+                                </p>
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <button
+                                    disabled={isDone}
+                                    onClick={async () => {
+                                      if (refData.link) handleReferralClick(refData.link);
+                                    }}
+                                    className={`flex-[2] text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1 border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20'}`}
+                                  >
+                                    Go to Link <ChevronRight className="size-3" />
+                                  </button>
+                                  <button
+                                    disabled={isDone}
+                                    onClick={async () => {
+                                      try {
+                                        const result = await supabase.rpc(
+                                          "increment_referral_tickets",
+                                          { target_account_id: refData.accountId },
+                                        );
+                                        if (result.error) {
+                                          toast.error("Error updating account.");
+                                        } else if (result.data === "quota_reached") {
+                                          toast.info("This account has already reached its quota!");
+                                          // Force-update local status so UI updates immediately
+                                          fetchAccountStatuses([refData.accountId]);
+                                        } else if (result.data === "incremented") {
+                                          toast.success("Help marked as Done! 💖");
+                                          fetchAccountStatuses([refData.accountId]);
+                                        }
+                                      } catch { /* ignore */ }
+                                    }}
+                                    title={isDone ? "Quota already reached" : "Mark as Done"}
+                                    className={`flex-1 flex justify-center items-center py-1.5 rounded-md transition-all border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 border-rose-500/20'}`}
+                                  >
+                                    {isDone ? <span className="text-[9px]">Done</span> : <Heart className="size-3.5 fill-current" />}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          } catch {
+                            return null;
+                          }
+                        })()}
                       </div>
 
                       <AnimatePresence>
@@ -1243,20 +1333,34 @@ export function GlobalChatbox() {
                     No active accounts found.
                   </div>
                 ) : (
-                  myAccounts.map((acc) => (
-                    <button
-                      key={acc.id}
-                      onClick={() => sendReferral(acc)}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-foreground/5 text-left border border-transparent hover:border-border transition-colors"
-                    >
-                      <span className="text-sm font-semibold truncate">
-                        {acc.name}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {acc.tickets_done}/{acc.total_tickets}
-                      </span>
-                    </button>
-                  ))
+                  myAccounts
+                    .slice()
+                    .sort((a, b) => {
+                      const aDone = a.tickets_done >= a.total_tickets;
+                      const bDone = b.tickets_done >= b.total_tickets;
+                      return aDone === bDone ? 0 : aDone ? 1 : -1;
+                    })
+                    .map((acc) => {
+                      const isDone = acc.tickets_done >= acc.total_tickets;
+                      return (
+                        <button
+                          key={acc.id}
+                          onClick={() => !isDone && sendReferral(acc)}
+                          disabled={isDone}
+                          className={`flex items-center justify-between p-2 rounded-lg text-left border transition-colors ${isDone ? 'opacity-50 cursor-not-allowed border-transparent' : 'hover:bg-foreground/5 border-transparent hover:border-border'}`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {isDone && <span className="text-emerald-500 text-[10px]">✅</span>}
+                            <span className={`text-sm font-semibold truncate ${isDone ? 'text-muted-foreground line-through' : ''}`}>
+                              {acc.name}
+                            </span>
+                          </div>
+                          <span className={`text-[10px] shrink-0 ml-2 px-1.5 py-0.5 rounded-full font-mono ${isDone ? 'bg-emerald-500/10 text-emerald-500' : 'text-muted-foreground'}`}>
+                            {acc.tickets_done}/{acc.total_tickets}
+                          </span>
+                        </button>
+                      );
+                    })
                 )}
               </div>
             </motion.div>
