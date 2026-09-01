@@ -3,6 +3,8 @@
 -- Atomically increments tickets_done on user_accounts.
 -- Returns 'incremented' if successful, 'quota_reached' if already at/over quota.
 -- -----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.increment_referral_tickets(BIGINT);
+
 CREATE OR REPLACE FUNCTION public.increment_referral_tickets(target_account_id BIGINT)
 RETURNS TEXT
 LANGUAGE plpgsql
