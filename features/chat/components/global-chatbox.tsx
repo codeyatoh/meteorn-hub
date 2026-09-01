@@ -278,11 +278,11 @@ export function GlobalChatbox() {
   const sendBump = async (msg: GlobalChat) => {
     if (!currentUserId || !msg.message) return;
     try {
-      const refData = JSON.parse(msg.message);
-      if (!refData.accountId) return;
+      const referralData = JSON.parse(msg.message);
+      if (!referralData.accountId) return;
 
       const result = await supabase.rpc("bump_referral_account", {
-        p_account_id: refData.accountId,
+        p_account_id: referralData.accountId,
         p_cooldown_minutes: 60,
       });
 
@@ -462,8 +462,8 @@ export function GlobalChatbox() {
           // If it's a referral message, fetch its account status so the card is immediately accurate
           if ((newMsg.type === "referral" || newMsg.type === "referral_bump") && newMsg.message) {
             try {
-              const refData = JSON.parse(newMsg.message);
-              if (refData.accountId) fetchAccountStatuses([refData.accountId]);
+              const referralData = JSON.parse(newMsg.message);
+              if (referralData.accountId) fetchAccountStatuses([referralData.accountId]);
             } catch { /* ignore parse errors */ }
           }
 
@@ -991,6 +991,7 @@ export function GlobalChatbox() {
               </p>
             </div>
           ) : (
+            // eslint-disable-next-line react-hooks/refs
             messages.map((msg) => {
               const isMe = msg.user_id === currentUserId;
 
@@ -1096,8 +1097,8 @@ export function GlobalChatbox() {
                         )}
                         {(msg.type === "referral" || msg.type === "referral_bump") && msg.message && (() => {
                           try {
-                            const refData = JSON.parse(msg.message);
-                            const status = accountStatuses.get(refData.accountId);
+                            const referralData = JSON.parse(msg.message);
+                            const status = accountStatuses.get(referralData.accountId);
                             const isDone = status?.done ?? false;
                             const ticketsDone = status?.ticketsDone ?? 0;
                             const totalTickets = status?.totalTickets ?? 0;
@@ -1125,13 +1126,13 @@ export function GlobalChatbox() {
                                 <p className="text-[11px] text-muted-foreground leading-snug">
                                   {isDone ? (
                                     <>
-                                      <span className="text-emerald-400 font-semibold">{refData.name}</span>{" "}
+                                      <span className="text-emerald-400 font-semibold">{referralData.name}</span>{" "}
                                       has reached their referral quota. No more help needed!
                                     </>
                                   ) : (
                                     <>
                                       Help{" "}
-                                      <span className="text-primary font-semibold">{refData.name}</span>{" "}
+                                      <span className="text-primary font-semibold">{referralData.name}</span>{" "}
                                       by using their referral link!
                                     </>
                                   )}
@@ -1142,7 +1143,7 @@ export function GlobalChatbox() {
                                     <button
                                       disabled={isDone}
                                       onClick={async () => {
-                                        if (refData.link) handleReferralClick(refData.link);
+                                        if (referralData.link) handleReferralClick(referralData.link);
                                       }}
                                       className={`flex-[2] text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1 border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20'}`}
                                     >
@@ -1154,17 +1155,17 @@ export function GlobalChatbox() {
                                         try {
                                           const result = await supabase.rpc(
                                             "increment_referral_tickets",
-                                            { target_account_id: refData.accountId },
+                                            { target_account_id: referralData.accountId },
                                           );
                                           if (result.error) {
                                             toast.error("Error updating account.");
                                           } else if (result.data === "quota_reached") {
                                             toast.info("This account has already reached its quota!");
                                             // Force-update local status so UI updates immediately
-                                            fetchAccountStatuses([refData.accountId]);
+                                            fetchAccountStatuses([referralData.accountId]);
                                           } else if (result.data === "incremented") {
                                             toast.success("Help marked as Done! 💖");
-                                            fetchAccountStatuses([refData.accountId]);
+                                            fetchAccountStatuses([referralData.accountId]);
                                           }
                                         } catch { /* ignore */ }
                                       }}
