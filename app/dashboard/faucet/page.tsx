@@ -678,7 +678,7 @@ export default function FaucetPage() {
           </div>
           
           {/* ── Right Column: Donut Chart & Claim History ── */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="lg:col-span-4 flex flex-col gap-6 h-full">
             <LiquidFlaskChart claimable={globalStats.claimable} total={globalStats.total_donated} />
 
         {/* ── Claim History ── */}
