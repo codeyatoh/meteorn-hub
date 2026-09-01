@@ -10,7 +10,9 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    let { txHash, userId } = await req.json();
+    const data = await req.json();
+    let txHash = data.txHash;
+    const userId = data.userId;
     txHash = txHash?.toLowerCase().trim();
 
     if (!txHash || !userId) {
