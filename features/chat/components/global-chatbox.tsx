@@ -18,6 +18,8 @@ import {
   AtSign,
   Sparkles,
   Users,
+  CheckCircle,
+  RefreshCw,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1109,7 +1111,7 @@ export function GlobalChatbox() {
                                 <div className="flex items-center justify-between gap-1.5 border-b border-border/50 pb-1.5">
                                   <div className="flex items-center gap-1.5">
                                     {isDone
-                                      ? <span className="text-emerald-400">✅</span>
+                                      ? <CheckCircle className="size-3.5 text-emerald-400" />
                                       : <HandHeart className={`size-3.5 ${isBump ? 'text-amber-500' : 'text-primary'}`} />
                                     }
                                     <span className={`text-[11px] font-semibold uppercase tracking-wider ${isDone ? 'text-emerald-400' : isBump ? 'text-amber-500' : 'text-foreground/90'}`}>
@@ -1164,7 +1166,7 @@ export function GlobalChatbox() {
                                             // Force-update local status so UI updates immediately
                                             fetchAccountStatuses([referralData.accountId]);
                                           } else if (result.data === "incremented") {
-                                            toast.success("Help marked as Done! 💖");
+                                            toast.success("Help marked as Done!");
                                             fetchAccountStatuses([referralData.accountId]);
                                           }
                                         } catch { /* ignore */ }
@@ -1180,7 +1182,7 @@ export function GlobalChatbox() {
                                       onClick={() => sendBump(msg)}
                                       className="w-full bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1"
                                     >
-                                      🔁 Bump
+                                      <RefreshCw className="size-3" /> Bump
                                     </button>
                                   )}
                                 </div>
