@@ -296,6 +296,8 @@ export function GlobalChatbox() {
         toast.info("✅ This account is already complete!");
       } else if (result.data === "not_owner") {
         toast.error("Only the account owner can bump this card.");
+      } else if (result.data === "not_found") {
+        toast.error("This referral account no longer exists.");
       } else if (result.data === "bumped") {
         const { error } = await supabase
           .from("global_chats")
@@ -303,6 +305,8 @@ export function GlobalChatbox() {
         if (error) toast.error("Failed to bump help request.");
         else toast.success("Bumped! 🔁");
         setTimeout(() => scrollToBottom("smooth"), 100);
+      } else {
+        toast.error("Unexpected error occurred.");
       }
     } catch {}
   };
@@ -1170,6 +1174,10 @@ export function GlobalChatbox() {
                                           } else if (result.data === "incremented") {
                                             toast.success("Help marked as Done!");
                                             fetchAccountStatuses([referralData.accountId]);
+                                          } else if (result.data === "not_found") {
+                                            toast.error("This referral account no longer exists.");
+                                          } else {
+                                            toast.error("Unexpected error occurred.");
                                           }
                                         } catch { /* ignore */ } finally {
                                           setProcessingReferrals(prev => {
