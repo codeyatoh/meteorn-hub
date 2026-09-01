@@ -257,6 +257,7 @@ export default function FaucetPage() {
   const [isTiersModalOpen, setIsTiersModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [globalStats, setGlobalStats] = useState({ total_donated: 0, claimable: 0 });
+  const [claimAmount, setClaimAmount] = useState(0.05);
 
   // Live POL price
   const [polPrices, setPolPrices] = useState<{ usd: number; php: number; eur: number }>({ usd: 0.45, php: 25, eur: 0.41 });
@@ -298,6 +299,9 @@ export default function FaucetPage() {
           total_donated: info.global_total_donated || 0,
           claimable: info.global_pool_claimable || 0,
         });
+        if (info.faucet_claim_amount !== undefined) {
+          setClaimAmount(info.faucet_claim_amount);
+        }
       }
 
       const prices = await priceRes.json();
@@ -473,7 +477,7 @@ export default function FaucetPage() {
             <GuideModal title="How the Faucet Works">
               <p>The Faucet is a decentralized community pool that allows users to instantly fund their wallets with $POL.</p>
               <ul className="list-disc pl-4 space-y-2 mt-2">
-                <li><strong>Claiming:</strong> Each wallet address can receive 0.05 $POL. Your daily claim count depends on your Tier.</li>
+                <li><strong>Claiming:</strong> Each wallet address can receive {claimAmount} $POL. Your daily claim count depends on your Tier.</li>
                 <li><strong>Tiers & Limits:</strong> Contributing to the Hot Wallet pool upgrades your Tier, increasing how many addresses you can fund per day.</li>
                 <li><strong>Claimable Balance:</strong> You can claim back up to 70% of your total lifetime donations to the pool.</li>
               </ul>
@@ -552,7 +556,7 @@ export default function FaucetPage() {
                 <h2 className="text-lg font-heading text-foreground">Auto-Claim $POL</h2>
               </div>
               <p className="text-xs text-muted-foreground max-w-md">
-                Enter your Polygon address to instantly receive 0.05 $POL for gas fees. No manual approval required.
+                Enter your Polygon address to instantly receive {claimAmount} $POL for gas fees. No manual approval required.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
@@ -579,11 +583,11 @@ export default function FaucetPage() {
                 <div className="sm:w-[160px]">
                   <Button
                     onClick={handleClaim}
-                    disabled={isClaiming || addressValidation.status !== 'valid' || claimsLeftToday <= 0 || claimableBalance < 0.05}
+                    disabled={isClaiming || addressValidation.status !== 'valid' || claimsLeftToday <= 0 || claimableBalance < claimAmount}
                     className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                   >
                     {isClaiming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {claimableBalance < 0.05 ? "Insufficient Balance" : claimsLeftToday <= 0 ? "Daily Limit Reached" : "Claim 0.05 $POL"}
+                    {claimableBalance < claimAmount ? "Insufficient Balance" : claimsLeftToday <= 0 ? "Daily Limit Reached" : `Claim ${claimAmount} $POL`}
                   </Button>
                 </div>
               </div>
@@ -674,13 +678,13 @@ export default function FaucetPage() {
           </div>
           
           {/* ── Right Column: Donut Chart & Claim History ── */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 flex flex-col gap-6">
             <LiquidFlaskChart claimable={globalStats.claimable} total={globalStats.total_donated} />
 
         {/* ── Claim History ── */}
         {claimHistory.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-end justify-between gap-4">
+          <div className="flex-1 flex flex-col space-y-3">
+            <div className="flex items-end justify-between gap-4 shrink-0">
               <div>
                 <h2 className="font-heading text-lg text-foreground">Claim History</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">Your past $POL claims from the faucet pool.</p>
@@ -691,8 +695,8 @@ export default function FaucetPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden pb-1">
-              <div className="divide-y divide-border/30">
+            <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden pb-1 flex-1 flex flex-col">
+              <div className="divide-y divide-border/30 flex-1">
                 {pagedHistory.map((c) => {
                   const status = c.status ?? 'success';
                   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SlidersIcon, Loader2, SaveIcon, TicketIcon, ClockIcon, Mail, Lock, CoffeeIcon } from "lucide-react";
+import { SlidersIcon, Loader2, SaveIcon, TicketIcon, ClockIcon, Mail, Lock, CoffeeIcon, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ type PlatformSettings = {
   id: number;
   daily_ticket_limit: number;
   donation_wallet_address: string;
+  faucet_claim_amount: number;
   updated_at: string;
 };
 
@@ -22,6 +23,7 @@ export default function AdminSettingsPage() {
 
   const [ticketLimit, setTicketLimit] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
+  const [faucetClaimAmount, setFaucetClaimAmount] = useState("");
 
   const [email, setEmail] = useState("");
   const [originalEmail, setOriginalEmail] = useState("");
@@ -40,6 +42,7 @@ export default function AdminSettingsPage() {
           setSettings(data);
           setTicketLimit(String(data.daily_ticket_limit));
           setWalletAddress(data.donation_wallet_address || "");
+          setFaucetClaimAmount(String(data.faucet_claim_amount || "0.05"));
         }
       })
       .catch(() => toast.error("Failed to load settings.", { classNames: { icon: "text-destructive" } }))
@@ -63,6 +66,12 @@ export default function AdminSettingsPage() {
       return;
     }
 
+    const claimAmt = parseFloat(faucetClaimAmount);
+    if (isNaN(claimAmt) || claimAmt < 0.0001 || claimAmt > 10) {
+      toast.error("Faucet claim amount must be between 0.0001 and 10.", { classNames: { icon: "text-destructive" } });
+      return;
+    }
+
     if (newPassword && newPassword !== confirmPassword) {
       toast.error("New passwords do not match.", { classNames: { icon: "text-destructive" } });
       return;
@@ -72,12 +81,16 @@ export default function AdminSettingsPage() {
     const res = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daily_ticket_limit: limit, donation_wallet_address: walletAddress.trim() }),
+      body: JSON.stringify({ 
+        daily_ticket_limit: limit, 
+        donation_wallet_address: walletAddress.trim(),
+        faucet_claim_amount: claimAmt
+      }),
     });
 
     if (res.ok) {
       setSettings((prev) =>
-        prev ? { ...prev, daily_ticket_limit: limit, donation_wallet_address: walletAddress.trim(), updated_at: new Date().toISOString() } : prev
+        prev ? { ...prev, daily_ticket_limit: limit, donation_wallet_address: walletAddress.trim(), faucet_claim_amount: claimAmt, updated_at: new Date().toISOString() } : prev
       );
       
       // Update Auth if needed
@@ -249,6 +262,33 @@ export default function AdminSettingsPage() {
                   className="w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors hover:border-border"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Faucet Configuration */}
+          <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-4">
+            <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.25em]">
+              Faucet Configuration
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Droplets className="size-4 text-muted-foreground" />
+                Claim Amount (POL)
+              </label>
+              <input
+                type="number"
+                step="0.0001"
+                min={0.0001}
+                max={10}
+                required
+                value={faucetClaimAmount}
+                onChange={(e) => setFaucetClaimAmount(e.target.value)}
+                className="w-32 rounded-md border border-input bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors hover:border-border font-mono"
+              />
+              <p className="text-[11px] text-muted-foreground max-w-xl leading-relaxed">
+                The fixed amount of $POL sent per requested address in the community faucet.
+              </p>
             </div>
           </div>
           </div>

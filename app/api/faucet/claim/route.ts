@@ -7,8 +7,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-const CLAIM_AMOUNT = 0.05;
-
 function getMaxDailyClaims(totalDonated: number) {
   if (totalDonated >= 10) return 60;
   if (totalDonated >= 5) return 30;
@@ -32,6 +30,15 @@ export async function POST(req: NextRequest) {
     if (!rpcUrl || !privateKey) {
       return NextResponse.json({ error: "Faucet not configured." }, { status: 500 });
     }
+
+    // 0. Fetch Platform Settings for Faucet Claim Amount
+    const { data: platformSettings } = await supabaseAdmin
+      .from("platform_settings")
+      .select("faucet_claim_amount")
+      .eq("id", 1)
+      .single();
+      
+    const CLAIM_AMOUNT = platformSettings?.faucet_claim_amount || 0.05;
 
     // 1. Fetch User Stats
     const { data: stats } = await supabaseAdmin

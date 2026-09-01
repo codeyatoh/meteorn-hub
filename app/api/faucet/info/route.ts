@@ -23,19 +23,24 @@ export async function GET() {
     // We'll just return these raw global numbers for the UI to represent the "Global Pool".
     const global_pool_claimable = Math.max(0, global_total_donated - global_total_claimed);
 
+    const { data: platformSettings } = await supabase.from("platform_settings").select("faucet_claim_amount").eq("id", 1).single();
+    const faucet_claim_amount = platformSettings?.faucet_claim_amount || 0.05;
+
     const privateKey = process.env.FAUCET_HOT_WALLET_PRIVATE_KEY;
     if (!privateKey) {
       return NextResponse.json({ 
         address: "Not configured",
         global_total_donated,
-        global_pool_claimable
+        global_pool_claimable,
+        faucet_claim_amount
       });
     }
     const wallet = new ethers.Wallet(privateKey);
     return NextResponse.json({ 
       address: wallet.address,
       global_total_donated,
-      global_pool_claimable
+      global_pool_claimable,
+      faucet_claim_amount
     });
   } catch (error) {
     console.error("Faucet info error:", error);

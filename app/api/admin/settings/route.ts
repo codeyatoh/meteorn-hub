@@ -36,6 +36,7 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json() as {
     daily_ticket_limit?: number;
     donation_wallet_address?: string;
+    faucet_claim_amount?: number;
   };
 
   const updates: Record<string, unknown> = {
@@ -51,6 +52,13 @@ export async function PATCH(request: NextRequest) {
 
   if (typeof body.donation_wallet_address === 'string') {
     updates.donation_wallet_address = body.donation_wallet_address;
+  }
+
+  if (typeof body.faucet_claim_amount === 'number') {
+    if (body.faucet_claim_amount < 0.0001 || body.faucet_claim_amount > 10) {
+      return NextResponse.json({ error: 'faucet_claim_amount must be between 0.0001 and 10.' }, { status: 400 });
+    }
+    updates.faucet_claim_amount = body.faucet_claim_amount;
   }
 
   if (Object.keys(updates).length <= 1) {
