@@ -227,6 +227,8 @@ export function GlobalChatbox() {
   const [targetOptions, setTargetOptions] = useState<string[]>([]);
   const [dbMentionOptions, setDbMentionOptions] = useState<string[]>([]);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [longPressedMsgId, setLongPressedMsgId] = useState<number | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [editInput, setEditInput] = useState("");
   // Map of accountId -> { done: boolean } for live status tracking
   const [accountStatuses, setAccountStatuses] = useState<Map<number, { done: boolean; ticketsDone: number; totalTickets: number }>>(new Map());
@@ -1128,9 +1130,40 @@ export function GlobalChatbox() {
                     animate={{ opacity: 1, scale: 1, height: 'auto', overflow: 'visible' }}
                     exit={{ opacity: 0, scale: 0.8, height: 0, overflow: 'hidden' }}
                     transition={{ duration: 0.3 }}
-                    className="flex flex-col gap-0.5 group relative"
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.15}
+                    onDragEnd={(e, info) => {
+                      if (Math.abs(info.offset.x) > 50) {
+                        setReplyingTo(msg);
+                        if (window.navigator && window.navigator.vibrate) {
+                          window.navigator.vibrate(50);
+                        }
+                      }
+                    }}
+                    onPointerDown={() => {
+                      longPressTimer.current = setTimeout(() => {
+                        setLongPressedMsgId(msg.id);
+                        if (window.navigator && window.navigator.vibrate) {
+                          window.navigator.vibrate(50);
+                        }
+                      }, 500);
+                    }}
+                    onPointerUp={() => {
+                      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                    }}
+                    onPointerCancel={() => {
+                      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                    }}
+                    onPanStart={() => {
+                      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+                    }}
+                    className="flex flex-col gap-0.5 group relative touch-pan-y"
                     onMouseEnter={() => setHoveredMsg(msg.id)}
-                    onMouseLeave={() => setHoveredMsg(null)}
+                    onMouseLeave={() => {
+                      setHoveredMsg(null);
+                      if (longPressedMsgId === msg.id) setLongPressedMsgId(null);
+                    }}
                   >
                     <div
                     className={`flex items-center gap-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`}
@@ -1379,40 +1412,35 @@ export function GlobalChatbox() {
                       </div>
 
                       <AnimatePresence>
-                        {hoveredMsg === msg.id && msg.type !== "referral" && msg.type !== "referral_bump" && editingMessageId !== msg.id && (
+                        {(hoveredMsg === msg.id || longPressedMsgId === msg.id) && msg.type !== "referral" && msg.type !== "referral_bump" && editingMessageId !== msg.id && (
                           <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                            className={`absolute -top-10 ${isMe ? "right-0" : "left-0"} z-10 flex gap-0.5 bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-1 shadow-xl shadow-background/50 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className={`absolute top-1/2 -translate-y-1/2 ${isMe ? "right-full mr-2" : "left-full ml-2"} z-10 flex gap-0.5 bg-background/95 backdrop-blur-md border border-border/50 rounded-full p-1 shadow-xl shadow-background/50 ${isMe ? "flex-row-reverse" : "flex-row"}`}
                           >
-                            {msg.type !== "gif" && (
+                            {msg.type !== "gif" && isMe && longPressedMsgId === msg.id && (
                               <>
                                 <button
-                                  onClick={() => setReplyingTo(msg)}
+                                  onClick={() => {
+                                    startEdit(msg);
+                                    setLongPressedMsgId(null);
+                                  }}
                                   className="text-muted-foreground hover:text-foreground text-xs hover:bg-foreground/10 transition-colors rounded-full p-1"
-                                  title="Reply"
+                                  title="Edit"
                                 >
-                                  <Reply className={`size-3.5 ${isMe ? 'scale-x-[-1]' : ''}`} />
+                                  <Pencil className="size-3.5" />
                                 </button>
-                                {isMe && (
-                                  <>
-                                    <button
-                                      onClick={() => startEdit(msg)}
-                                      className="text-muted-foreground hover:text-foreground text-xs hover:bg-foreground/10 transition-colors rounded-full p-1"
-                                      title="Edit"
-                                    >
-                                      <Pencil className="size-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={() => deleteMessage(msg.id)}
-                                      className="text-muted-foreground hover:text-destructive text-xs hover:bg-destructive/10 transition-colors rounded-full p-1"
-                                      title="Unsend"
-                                    >
-                                      <Trash2 className="size-3.5" />
-                                    </button>
-                                  </>
-                                )}
+                                <button
+                                  onClick={() => {
+                                    deleteMessage(msg.id);
+                                    setLongPressedMsgId(null);
+                                  }}
+                                  className="text-muted-foreground hover:text-destructive text-xs hover:bg-destructive/10 transition-colors rounded-full p-1"
+                                  title="Unsend"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
                                 <div className="w-px h-3 bg-border/50 self-center mx-0.5" />
                               </>
                             )}
@@ -1420,7 +1448,10 @@ export function GlobalChatbox() {
                               {QUICK_REACTIONS.map((emoji) => (
                                 <button
                                   key={emoji}
-                                  onClick={() => toggleReaction(msg.id, emoji)}
+                                  onClick={() => {
+                                    toggleReaction(msg.id, emoji);
+                                    setLongPressedMsgId(null);
+                                  }}
                                   className="text-sm hover:scale-125 transition-transform leading-none"
                                 >
                                   {emoji}
