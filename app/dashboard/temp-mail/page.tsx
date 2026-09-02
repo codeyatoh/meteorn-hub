@@ -179,7 +179,7 @@ export default function TempMailPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -720,7 +720,7 @@ export default function TempMailPage() {
                               <div className="py-1">
                                 {/* Domain list */}
                                 {domains.map((d) => {
-                                  const isUpcoming = d.available_at && new Date(d.available_at).getTime() > now;
+                                  const isUpcoming = Boolean(d.available_at && new Date(d.available_at).getTime() > now);
                                   return (
                                   <button
                                     key={d.domain}

@@ -40,7 +40,7 @@ export default function TempMailDomainsPage() {
     if (!newDomain) return;
     setIsAdding(true);
     try {
-      const payload: any = { domain: newDomain.trim() };
+      const payload: Record<string, string> = { domain: newDomain.trim() };
       if (scheduleTime) {
         payload.available_at = new Date(scheduleTime).toISOString();
       }
@@ -55,8 +55,8 @@ export default function TempMailDomainsPage() {
       setNewDomain("");
       setScheduleTime("");
       toast.success("Domain added successfully!", { classNames: { icon: "text-green-500" } });
-    } catch (err: any) {
-      toast.error(err.message, { classNames: { icon: "text-destructive" } });
+    } catch (err: unknown) {
+      toast.error((err as Error).message, { classNames: { icon: "text-destructive" } });
     } finally {
       setIsAdding(false);
     }

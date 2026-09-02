@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid domain format.' }, { status: 400 });
   }
 
-  const insertPayload: any = { 
+  const insertPayload: Record<string, string | boolean> = {
     domain: domain.toLowerCase(), 
     is_active: true,
     is_banned: false 
