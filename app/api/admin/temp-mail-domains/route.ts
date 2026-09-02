@@ -18,6 +18,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 const CUSTOM_DOMAINS = [
   "yatmail.lat",
   "threehitsmail.xyz",
+  "aluahmail.xyz",
   // add more custom domains here as you buy them
 ];
 
