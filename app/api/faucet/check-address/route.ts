@@ -19,18 +19,17 @@ export async function GET(req: NextRequest) {
     const mode = req.nextUrl.searchParams.get("mode");
 
     if (mode !== "settings") {
-      const { data: existingClaim, error } = await supabaseAdmin
+      const { data: existingClaims, error } = await supabaseAdmin
         .from("faucet_claims")
         .select("id")
-        .eq("wallet_address", address.toLowerCase())
-        .single();
+        .eq("wallet_address", address.toLowerCase());
 
-      if (error && error.code !== "PGRST116") {
+      if (error) {
         console.error("[Check Address API] Database Error:", error);
         return NextResponse.json({ error: "Database error" }, { status: 500 });
       }
 
-      if (existingClaim) {
+      if (existingClaims && existingClaims.length >= 2) {
         return NextResponse.json({ used: true, message: "Address already funded by faucet." });
       }
     }
