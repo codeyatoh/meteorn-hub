@@ -89,78 +89,80 @@ export function DateTimePicker({ value, onChange, className }: DateTimePickerPro
         />
         
         {/* Time Picker Sidebar */}
-        <div className="w-full sm:w-[160px] border-t sm:border-t-0 sm:border-l border-border bg-muted/10 flex flex-col">
-          <div className="px-3 py-2.5 text-xs font-semibold text-muted-foreground flex items-center justify-center gap-1.5 border-b border-border bg-muted/20">
-            <Clock className="size-3.5" />
-            Time
-          </div>
-          
-          <div className="flex-1 flex p-2 gap-1.5 min-h-0">
-            {/* Hours */}
-            <ScrollArea className="flex-1 bg-background rounded-md border border-border/40 shadow-inner">
-              <div className="flex flex-col p-1 gap-1">
-                {Array.from({ length: 12 }).map((_, i) => {
-                  const h = i === 0 ? 12 : i;
-                  const isSelected = date ? (date.getHours() % 12 || 12) === h : (h === 12);
-                  return (
-                    <button 
-                      key={h}
-                      type="button"
-                      onClick={() => handleTimeChange("hour", h)}
-                      className={cn(
-                        "py-1.5 text-xs rounded-sm transition-colors font-mono",
-                        isSelected ? "bg-primary text-primary-foreground shadow-sm font-semibold" : "hover:bg-muted text-foreground/80"
-                      )}
-                    >
-                      {h.toString().padStart(2, '0')}
-                    </button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+        <div className="w-full sm:w-[160px] border-t sm:border-t-0 sm:border-l border-border bg-muted/10 sm:relative">
+          <div className="flex flex-col sm:absolute sm:inset-0">
+            <div className="px-3 py-2.5 text-xs font-semibold text-muted-foreground flex items-center justify-center gap-1.5 border-b border-border bg-muted/20">
+              <Clock className="size-3.5" />
+              Time
+            </div>
             
-            {/* Minutes */}
-            <ScrollArea className="flex-1 bg-background rounded-md border border-border/40 shadow-inner">
-              <div className="flex flex-col p-1 gap-1">
-                {Array.from({ length: 60 }).map((_, i) => {
-                  if (i % 5 !== 0) return null; // Step by 5
-                  const isSelected = date ? Math.floor(date.getMinutes() / 5) * 5 === i : (i === 0);
+            <div className="flex-1 flex p-2 gap-1.5 min-h-0">
+              {/* Hours */}
+              <ScrollArea className="flex-1 bg-background rounded-md border border-border/40 shadow-inner">
+                <div className="flex flex-col p-1 gap-1">
+                  {Array.from({ length: 12 }).map((_, i) => {
+                    const h = i === 0 ? 12 : i;
+                    const isSelected = date ? (date.getHours() % 12 || 12) === h : (h === 12);
+                    return (
+                      <button 
+                        key={h}
+                        type="button"
+                        onClick={() => handleTimeChange("hour", h)}
+                        className={cn(
+                          "py-1.5 text-xs rounded-sm transition-colors font-mono",
+                          isSelected ? "bg-primary text-primary-foreground shadow-sm font-semibold" : "hover:bg-muted text-foreground/80"
+                        )}
+                      >
+                        {h.toString().padStart(2, '0')}
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              
+              {/* Minutes */}
+              <ScrollArea className="flex-1 bg-background rounded-md border border-border/40 shadow-inner">
+                <div className="flex flex-col p-1 gap-1">
+                  {Array.from({ length: 60 }).map((_, i) => {
+                    if (i % 5 !== 0) return null; // Step by 5
+                    const isSelected = date ? Math.floor(date.getMinutes() / 5) * 5 === i : (i === 0);
+                    return (
+                      <button 
+                        key={i}
+                        type="button"
+                        onClick={() => handleTimeChange("minute", i)}
+                        className={cn(
+                          "py-1.5 text-xs rounded-sm transition-colors font-mono",
+                          isSelected ? "bg-primary text-primary-foreground shadow-sm font-semibold" : "hover:bg-muted text-foreground/80"
+                        )}
+                      >
+                        {i.toString().padStart(2, '0')}
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+
+              {/* AM/PM */}
+              <div className="flex flex-col gap-1.5 w-10">
+                {['AM', 'PM'].map((ampm) => {
+                  const isPM = date ? date.getHours() >= 12 : false;
+                  const isSelected = (ampm === 'PM') === isPM;
                   return (
-                    <button 
-                      key={i}
+                    <button
+                      key={ampm}
                       type="button"
-                      onClick={() => handleTimeChange("minute", i)}
+                      onClick={() => handleTimeChange("ampm", ampm)}
                       className={cn(
-                        "py-1.5 text-xs rounded-sm transition-colors font-mono",
-                        isSelected ? "bg-primary text-primary-foreground shadow-sm font-semibold" : "hover:bg-muted text-foreground/80"
+                        "flex-1 text-[10px] font-bold rounded-md transition-colors flex items-center justify-center border shadow-sm",
+                        isSelected ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border/40 hover:bg-muted text-foreground/70"
                       )}
                     >
-                      {i.toString().padStart(2, '0')}
+                      {ampm}
                     </button>
-                  );
+                  )
                 })}
               </div>
-            </ScrollArea>
-
-            {/* AM/PM */}
-            <div className="flex flex-col gap-1.5 w-10">
-              {['AM', 'PM'].map((ampm) => {
-                const isPM = date ? date.getHours() >= 12 : false;
-                const isSelected = (ampm === 'PM') === isPM;
-                return (
-                  <button
-                    key={ampm}
-                    type="button"
-                    onClick={() => handleTimeChange("ampm", ampm)}
-                    className={cn(
-                      "flex-1 text-[10px] font-bold rounded-md transition-colors flex items-center justify-center border shadow-sm",
-                      isSelected ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border/40 hover:bg-muted text-foreground/70"
-                    )}
-                  >
-                    {ampm}
-                  </button>
-                )
-              })}
             </div>
           </div>
         </div>
