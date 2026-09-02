@@ -1,9 +1,10 @@
 -- ============================================================
--- Supabase Faucet Stats Fix
--- Run this script to resolve the "Could not fetch Faucet pool balance" error
+-- Supabase Faucet Stats PHT Fix
+-- Updates the claims_today calculation to use Philippine Time (PHT)
+-- instead of UTC for the 12 AM daily reset.
 -- ============================================================
 
--- Drop the old view that relied on auth.users and security_invoker
+-- Drop the old view
 DROP VIEW IF EXISTS public.faucet_user_stats;
 
 -- Create the new fully public view that exclusively relies on public tables
