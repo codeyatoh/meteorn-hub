@@ -1444,20 +1444,22 @@ export function GlobalChatbox() {
                                 <div className="w-px h-3 bg-border/50 self-center mx-0.5" />
                               </>
                             )}
-                            <div className="flex gap-0.5">
-                              {QUICK_REACTIONS.map((emoji) => (
-                                <button
-                                  key={emoji}
-                                  onClick={() => {
-                                    toggleReaction(msg.id, emoji);
-                                    setLongPressedMsgId(null);
-                                  }}
-                                  className="text-sm hover:scale-125 transition-transform leading-none"
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </div>
+                            {longPressedMsgId !== msg.id && (
+                              <div className="flex gap-0.5">
+                                {QUICK_REACTIONS.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => {
+                                      toggleReaction(msg.id, emoji);
+                                      setLongPressedMsgId(null);
+                                    }}
+                                    className="text-sm hover:scale-125 transition-transform leading-none"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
