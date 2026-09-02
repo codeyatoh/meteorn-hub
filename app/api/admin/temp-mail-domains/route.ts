@@ -4,23 +4,12 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 /**
  * GET /api/admin/temp-mail-domains
- * Returns all custom domains for admin management.
- * Syncs CUSTOM_DOMAINS list with DB — removes any non-custom domains.
+ * Returns all custom domains for admin management from the database.
  *
  * POST /api/admin/temp-mail-domains
- * Body: { domain: string }
+ * Body: { domain: string, available_at: string | null }
  * Adds a new custom domain.
  */
-
-// ── Custom domains only ──────────────────────────────────────────────────────
-// All domains here use Cloudflare Email Routing → Worker → Supabase.
-// To add a new domain: buy it, set up Cloudflare, then add it here.
-const CUSTOM_DOMAINS = [
-  "yatmail.lat",
-  "threehitsmail.xyz",
-  "aluahmail.xyz",
-  // add more custom domains here as you buy them
-];
 
 export const dynamic = 'force-dynamic';
 
@@ -40,23 +29,6 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-
-    const insertData = CUSTOM_DOMAINS.map(domain => ({
-      domain,
-      is_active: true,
-      is_banned: false
-    }));
-
-    await adminSupabase.from('temp_mail_allowed_domains').upsert(insertData, {
-      onConflict: 'domain',
-      ignoreDuplicates: true
-    });
-
-    // Remove any stale domains that are no longer in our custom list
-    await adminSupabase
-      .from('temp_mail_allowed_domains')
-      .delete()
-      .not('domain', 'in', `(${CUSTOM_DOMAINS.map(d => `"${d}"`).join(',')})`);
 
     const { data, error } = await adminSupabase
       .from('temp_mail_allowed_domains')
@@ -81,17 +53,32 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { domain } = await request.json();
+  const { domain, available_at } = await request.json();
   if (!domain || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) {
     return NextResponse.json({ error: 'Invalid domain format.' }, { status: 400 });
   }
 
+  const insertPayload: any = { 
+    domain: domain.toLowerCase(), 
+    is_active: true,
+    is_banned: false 
+  };
+  
+  if (available_at) {
+    insertPayload.available_at = available_at;
+  }
+
   const { data, error } = await adminSupabase
     .from('temp_mail_allowed_domains')
-    .insert({ domain: domain.toLowerCase(), is_active: true })
+    .insert(insertPayload)
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (error.code === '23505') { // Unique violation
+      return NextResponse.json({ error: 'Domain already exists.' }, { status: 400 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json(data, { status: 201 });
 }

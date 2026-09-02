@@ -49,6 +49,7 @@ type Session = {
 type DomainInfo = {
   domain: string;
   is_banned: boolean;
+  available_at?: string;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -178,6 +179,12 @@ export default function TempMailPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // ── Load existing session + domains + access on mount ──
   useEffect(() => {
     Promise.all([
@@ -204,7 +211,8 @@ export default function TempMailPage() {
         );
         setDomains(sortedDomains);
         if (!sessionData.session) {
-          setDomain(sortedDomains[0]?.domain || ''); // Default only if no session
+          const firstAvailable = sortedDomains.find((d: DomainInfo) => !(d.available_at && new Date(d.available_at).getTime() > Date.now()));
+          setDomain(firstAvailable?.domain || sortedDomains[0]?.domain || '');
         }
       }
     }).finally(() => setPageLoading(false));
@@ -711,15 +719,18 @@ export default function TempMailPage() {
                             >
                               <div className="py-1">
                                 {/* Domain list */}
-                                {domains.map((d) => (
+                                {domains.map((d) => {
+                                  const isUpcoming = d.available_at && new Date(d.available_at).getTime() > now;
+                                  return (
                                   <button
                                     key={d.domain}
                                     type="button"
+                                    disabled={isUpcoming}
                                     onClick={() => { setDomain(d.domain); setDomainOpen(false); }}
                                     className={`w-full px-4 py-2.5 text-sm text-left font-mono transition-colors flex items-center justify-between ${
                                       domain === d.domain
                                         ? "bg-primary/10 text-primary"
-                                        : "text-foreground hover:bg-foreground/[0.04]"
+                                        : isUpcoming ? "opacity-50 cursor-not-allowed bg-background" : "text-foreground hover:bg-foreground/[0.04]"
                                     }`}
                                   >
                                     <div className="flex items-center gap-2 truncate">
@@ -729,10 +740,23 @@ export default function TempMailPage() {
                                           Banned in Game
                                         </span>
                                       )}
+                                      {isUpcoming && (
+                                        <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 rounded flex items-center gap-1 flex-shrink-0">
+                                          <Clock className="size-3" />
+                                          {(() => {
+                                            const diff = new Date(d.available_at!).getTime() - now;
+                                            const h = Math.floor(diff / (1000 * 60 * 60));
+                                            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                                            const s = Math.floor((diff % (1000 * 60)) / 1000);
+                                            if (h > 0) return `${h}h ${m}m`;
+                                            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                                          })()}
+                                        </span>
+                                      )}
                                     </div>
                                     {domain === d.domain && <CheckIcon className="size-3.5 flex-shrink-0" />}
                                   </button>
-                                ))}
+                                )})}
                               </div>
                             </motion.div>
                           </>
@@ -749,7 +773,7 @@ export default function TempMailPage() {
                       <GenerateButton 
                         onClick={handleGenerate}
                         isGenerating={generating}
-                        disabled={generating || !username || !domain}
+                        disabled={generating || !username || !domain || (domains.find(d => d.domain === domain)?.available_at ? new Date(domains.find(d => d.domain === domain)!.available_at!).getTime() > now : false)}
                         hue={210}
                       />
                     </div>

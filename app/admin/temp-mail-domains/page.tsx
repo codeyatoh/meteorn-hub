@@ -18,6 +18,7 @@ type Domain = {
   domain: string;
   is_active: boolean;
   is_banned: boolean;
+  available_at: string | null;
   created_at: string;
 };
 
@@ -29,6 +30,37 @@ export default function TempMailDomainsPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 8;
+
+  const [newDomain, setNewDomain] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddDomain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDomain) return;
+    setIsAdding(true);
+    try {
+      const payload: any = { domain: newDomain.trim() };
+      if (scheduleTime) {
+        payload.available_at = new Date(scheduleTime).toISOString();
+      }
+      const res = await fetch("/api/admin/temp-mail-domains", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to add domain.");
+      const data = await res.json();
+      setDomains((prev) => [data, ...prev]);
+      setNewDomain("");
+      setScheduleTime("");
+      toast.success("Domain added successfully!", { classNames: { icon: "text-green-500" } });
+    } catch (err: any) {
+      toast.error(err.message, { classNames: { icon: "text-destructive" } });
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -120,18 +152,56 @@ export default function TempMailDomainsPage() {
           </div>
           <div className="flex items-center gap-4">
             <h1 className="font-heading text-3xl sm:text-4xl text-foreground">Domain Management</h1>
-</div>
+          </div>
           <p className="mt-2 text-muted-foreground text-sm">
-            Domains are automatically synced from your custom domains list. You can manage which ones are active.
+            Manage your custom domains and schedule when they become available to users.
           </p>
         </div>
 
+        {/* Add Domain Form */}
+        <form onSubmit={handleAddDomain} className="mb-8 rounded-xl border border-border/60 bg-background/40 p-5 space-y-4 shadow-sm">
+          <h2 className="font-heading text-lg text-foreground">Add New Domain</h2>
+          
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Domain</label>
+              <input
+                type="text"
+                placeholder="e.g. yourdomain.com"
+                value={newDomain}
+                onChange={(e) => setNewDomain(e.target.value)}
+                required
+                className="w-full h-10 rounded-md border border-border/60 bg-background/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
+              />
+            </div>
+            
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Launch Schedule (Optional)</label>
+              <input
+                type="datetime-local"
+                value={scheduleTime}
+                onChange={(e) => setScheduleTime(e.target.value)}
+                className="w-full h-10 rounded-md border border-border/60 bg-background/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isAdding || !newDomain}
+            className="h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
+          >
+            {isAdding ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+            Add Domain
+          </button>
+        </form>
+
         {/* Domain List */}
-        <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden">
+        <div className="rounded-xl border border-border/60 bg-background/40 overflow-hidden shadow-sm">
           {domains.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-2 text-center px-6">
               <GlobeIcon className="size-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">No domains have been auto-synced yet.</p>
+              <p className="text-sm text-muted-foreground">No domains found.</p>
             </div>
           ) : (
             <div className="divide-y divide-border/30">
@@ -146,12 +216,19 @@ export default function TempMailDomainsPage() {
                 >
                   <div className="min-w-0">
                     <p className="font-mono text-sm font-medium text-foreground">@{d.domain}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Added{" "}
-                      {new Date(d.created_at).toLocaleDateString("en-US", {
-                        month: "short", day: "numeric", year: "numeric",
-                      })}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <p className="text-[11px] text-muted-foreground">
+                        Added{" "}
+                        {new Date(d.created_at).toLocaleDateString("en-US", {
+                          month: "short", day: "numeric", year: "numeric",
+                        })}
+                      </p>
+                      {d.available_at && new Date(d.available_at) > new Date() && (
+                        <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-1.5 rounded uppercase tracking-wider font-mono">
+                          Launches: {new Date(d.available_at).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -249,10 +326,6 @@ export default function TempMailDomainsPage() {
             )}
           </div>
         </div>
-
-        <p className="mt-4 text-[11px] text-muted-foreground">
-          💡 Tip: Domains listed here are your custom domains. They are automatically synced every time this page loads.
-        </p>
     </PageContainer>
   );
 }

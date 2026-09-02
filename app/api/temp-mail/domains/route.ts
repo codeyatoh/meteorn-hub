@@ -12,7 +12,7 @@ export async function GET() {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('temp_mail_allowed_domains')
-      .select('domain, is_banned')
+      .select('domain, is_banned, available_at')
       .eq('is_active', true)
       .order('created_at', { ascending: true });
 
