@@ -95,7 +95,7 @@ export function DateTimePicker({ value, onChange, className }: DateTimePickerPro
             Time
           </div>
           
-          <div className="flex-1 flex p-2 gap-1.5 h-[230px]">
+          <div className="flex-1 flex p-2 gap-1.5 min-h-0">
             {/* Hours */}
             <ScrollArea className="flex-1 bg-background rounded-md border border-border/40 shadow-inner">
               <div className="flex flex-col p-1 gap-1">
