@@ -20,6 +20,8 @@ import {
   Users,
   CheckCircle,
   RefreshCw,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,6 +52,7 @@ type GlobalChat = {
   created_at: string;
   user_profile?: { full_name?: string; role?: string } | null;
   reply_to_id?: number | null;
+  is_edited?: boolean;
 };
 
 type UserAccount = {
@@ -223,6 +226,8 @@ export function GlobalChatbox() {
   const [targetSearch, setTargetSearch] = useState<string>("");
   const [targetOptions, setTargetOptions] = useState<string[]>([]);
   const [dbMentionOptions, setDbMentionOptions] = useState<string[]>([]);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editInput, setEditInput] = useState("");
   // Map of accountId -> { done: boolean } for live status tracking
   const [accountStatuses, setAccountStatuses] = useState<Map<number, { done: boolean; ticketsDone: number; totalTickets: number }>>(new Map());
 
@@ -501,6 +506,27 @@ export function GlobalChatbox() {
             }
           }
         },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "global_chats" },
+        (payload) => {
+          const updated = payload.new as GlobalChat;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === updated.id
+                ? { ...m, message: updated.message, is_edited: updated.is_edited }
+                : m
+            )
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "global_chats" },
+        (payload) => {
+          setMessages((prev) => prev.filter((m) => m.id !== payload.old.id));
+        }
       )
       .on("presence", { event: "sync" }, () => {
         const state = chatSub.presenceState();
@@ -827,6 +853,36 @@ export function GlobalChatbox() {
     }
   };
 
+  const deleteMessage = async (id: number) => {
+    const { error } = await supabase.from("global_chats").delete().eq("id", id);
+    if (error) toast.error("Failed to delete message.");
+  };
+
+  const startEdit = (msg: GlobalChat) => {
+    if (msg.type !== "text" || !msg.message) return;
+    setEditingMessageId(msg.id);
+    setEditInput(msg.message);
+  };
+
+  const cancelEdit = () => {
+    setEditingMessageId(null);
+    setEditInput("");
+  };
+
+  const saveEdit = async (id: number) => {
+    if (!editInput.trim()) return;
+    const { error } = await supabase
+      .from("global_chats")
+      .update({ message: editInput.trim(), is_edited: true })
+      .eq("id", id);
+    if (error) {
+      toast.error("Failed to edit message.");
+    } else {
+      setEditingMessageId(null);
+      setEditInput("");
+    }
+  };
+
   const sendText = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !currentUserId) return;
@@ -1030,35 +1086,53 @@ export function GlobalChatbox() {
               </p>
             </div>
           ) : (
-            messages.map((msg) => {
-              const isMe = msg.user_id === currentUserId;
+            <AnimatePresence initial={false}>
+              {messages.map((msg) => {
+                const isMe = msg.user_id === currentUserId;
 
-              let mentionType: "none" | "direct" | "highlight" | "everyone" = "none";
-              if (!isMe && msg.message) {
-                const text = msg.message.toLowerCase();
-                const mySafeName = currentUserProfileName?.replace(/\s+/g, "") ?? "";
-                if (text.includes("@everyone")) mentionType = "everyone";
-                else if (text.includes("@highlight")) mentionType = "highlight";
-                else if (mySafeName && text.includes(`@${mySafeName.toLowerCase()}`)) mentionType = "direct";
-              }
+                let mentionType: "none" | "direct" | "highlight" | "everyone" = "none";
+                if (!isMe && msg.message) {
+                  const text = msg.message.toLowerCase();
+                  const mySafeName = currentUserProfileName?.replace(/\s+/g, "") ?? "";
+                  if (text.includes("@everyone")) mentionType = "everyone";
+                  else if (text.includes("@highlight")) mentionType = "highlight";
+                  else if (mySafeName && text.includes(`@${mySafeName.toLowerCase()}`)) mentionType = "direct";
+                }
 
-              const msgRx = reactions.filter((r) => r.message_id === msg.id);
-              const grouped = msgRx.reduce(
-                (acc, r) => {
-                  acc[r.emoji] = (acc[r.emoji] || 0) + 1;
-                  return acc;
-                },
-                {} as Record<string, number>,
-              );
+                const msgRx = reactions.filter((r) => r.message_id === msg.id);
+                const grouped = msgRx.reduce(
+                  (acc, r) => {
+                    acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                    return acc;
+                  },
+                  {} as Record<string, number>,
+                );
+                
+                // Determine if this is a completed referral request
+                let isCompletedReferral = false;
+                if ((msg.type === "referral" || msg.type === "referral_bump") && msg.message) {
+                  try {
+                    const referralData = JSON.parse(msg.message);
+                    const status = accountStatuses.get(referralData.accountId);
+                    if (status?.done) isCompletedReferral = true;
+                  } catch { /* ignore */ }
+                }
 
-              return (
-                <div
-                  key={msg.id}
-                  className="flex flex-col gap-0.5 group relative"
-                  onMouseEnter={() => setHoveredMsg(msg.id)}
-                  onMouseLeave={() => setHoveredMsg(null)}
-                >
-                  <div
+                if (isCompletedReferral) return null;
+
+                return (
+                  <motion.div
+                    key={msg.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9, height: 0, overflow: 'hidden' }}
+                    animate={{ opacity: 1, scale: 1, height: 'auto', overflow: 'visible' }}
+                    exit={{ opacity: 0, scale: 0.8, height: 0, overflow: 'hidden' }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col gap-0.5 group relative"
+                    onMouseEnter={() => setHoveredMsg(msg.id)}
+                    onMouseLeave={() => setHoveredMsg(null)}
+                  >
+                    <div
                     className={`flex items-center gap-1.5 px-1 ${isMe ? "justify-end" : "justify-start"}`}
                   >
                     <span className="text-[10px] font-semibold text-muted-foreground">
@@ -1121,9 +1195,50 @@ export function GlobalChatbox() {
                         ].join(" ")}
                       >
                         {msg.type === "text" && (
-                          <span className="whitespace-pre-wrap break-words">
-                            {parseMentions(msg.message || "")}
-                          </span>
+                          editingMessageId === msg.id ? (
+                            <div className="flex flex-col gap-1 w-[200px] sm:w-[250px]">
+                              <textarea
+                                autoFocus
+                                value={editInput}
+                                onChange={(e) => setEditInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    saveEdit(msg.id);
+                                  } else if (e.key === "Escape") {
+                                    cancelEdit();
+                                  }
+                                }}
+                                className="w-full min-h-[40px] text-xs bg-background/50 border border-primary/30 rounded-md p-1.5 focus:outline-none focus:border-primary resize-none"
+                                placeholder="Edit message..."
+                              />
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={cancelEdit}
+                                  className="text-[10px] bg-foreground/10 hover:bg-foreground/20 text-foreground px-2 py-0.5 rounded-sm transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => saveEdit(msg.id)}
+                                  className="text-[10px] bg-primary hover:bg-primary/90 text-primary-foreground px-2 py-0.5 rounded-sm transition-colors"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-end justify-between gap-2">
+                              <span className="whitespace-pre-wrap break-words">
+                                {parseMentions(msg.message || "")}
+                              </span>
+                              {msg.is_edited && (
+                                <span className="text-[9px] text-muted-foreground/60 select-none whitespace-nowrap">
+                                  (edited)
+                                </span>
+                              )}
+                            </div>
+                          )
                         )}
                         {msg.type === "gif" && msg.gif_url && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -1239,12 +1354,20 @@ export function GlobalChatbox() {
                                     </button>
                                   </div>
                                   {isMe && !isDone && (
-                                    <button
-                                      onClick={() => sendBump(msg)}
-                                      className="w-full bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1"
-                                    >
-                                      <RefreshCw className="size-3" /> Bump
-                                    </button>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        onClick={() => sendBump(msg)}
+                                        className="flex-1 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1"
+                                      >
+                                        <RefreshCw className="size-3" /> Bump
+                                      </button>
+                                      <button
+                                        onClick={() => deleteMessage(msg.id)}
+                                        className="flex-1 bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20 text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1"
+                                      >
+                                        <Trash2 className="size-3" /> Unsend
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -1256,7 +1379,7 @@ export function GlobalChatbox() {
                       </div>
 
                       <AnimatePresence>
-                        {hoveredMsg === msg.id && msg.type !== "referral" && msg.type !== "referral_bump" && (
+                        {hoveredMsg === msg.id && msg.type !== "referral" && msg.type !== "referral_bump" && editingMessageId !== msg.id && (
                           <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -1272,6 +1395,24 @@ export function GlobalChatbox() {
                                 >
                                   <Reply className={`size-3.5 ${isMe ? 'scale-x-[-1]' : ''}`} />
                                 </button>
+                                {isMe && (
+                                  <>
+                                    <button
+                                      onClick={() => startEdit(msg)}
+                                      className="text-muted-foreground hover:text-foreground text-xs hover:bg-foreground/10 transition-colors rounded-full p-1"
+                                      title="Edit"
+                                    >
+                                      <Pencil className="size-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => deleteMessage(msg.id)}
+                                      className="text-muted-foreground hover:text-destructive text-xs hover:bg-destructive/10 transition-colors rounded-full p-1"
+                                      title="Unsend"
+                                    >
+                                      <Trash2 className="size-3.5" />
+                                    </button>
+                                  </>
+                                )}
                                 <div className="w-px h-3 bg-border/50 self-center mx-0.5" />
                               </>
                             )}
@@ -1325,9 +1466,10 @@ export function GlobalChatbox() {
                   >
                     {format(new Date(msg.created_at), "h:mm a")}
                   </span>
-                </div>
+                </motion.div>
               );
-            })
+            })}
+            </AnimatePresence>
           )}
           <div ref={messagesEndRef} />
         </div>
