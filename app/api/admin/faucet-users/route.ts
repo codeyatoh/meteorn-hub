@@ -14,13 +14,25 @@ export async function GET() {
       }
     });
 
-    const { data: usersData, error } = await supabase.from("faucet_user_stats").select("*");
+    // Fetch faucet stats
+    const { data: usersData, error: statsError } = await supabase.from("faucet_user_stats").select("*");
+    if (statsError) throw statsError;
 
-    if (error) {
-      throw error;
-    }
+    // Fetch auth users using admin API
+    const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) throw authError;
 
-    return NextResponse.json(usersData);
+    // Merge the data
+    const mergedData = (usersData || []).map((stat: any) => {
+      const user = authData.users.find((u) => u.id === stat.user_id);
+      return {
+        ...stat,
+        email: user?.email || null,
+        nickname: user?.user_metadata?.nickname || null,
+      };
+    });
+
+    return NextResponse.json(mergedData);
   } catch (error) {
     console.error("Error fetching faucet users:", error);
     return NextResponse.json({ error: "Failed to fetch faucet users" }, { status: 500 });
