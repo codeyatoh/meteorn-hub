@@ -219,6 +219,10 @@ export function GlobalChatbox() {
   const [showReferralPicker, setShowReferralPicker] = useState(false);
   const [myAccounts, setMyAccounts] = useState<UserAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [targetUsername, setTargetUsername] = useState<string>("");
+  const [targetSearch, setTargetSearch] = useState<string>("");
+  const [targetOptions, setTargetOptions] = useState<string[]>([]);
+  const [dbMentionOptions, setDbMentionOptions] = useState<string[]>([]);
   // Map of accountId -> { done: boolean } for live status tracking
   const [accountStatuses, setAccountStatuses] = useState<Map<number, { done: boolean; ticketsDone: number; totalTickets: number }>>(new Map());
 
@@ -269,7 +273,10 @@ export function GlobalChatbox() {
       name: acc.name,
       avatar: acc.avatar,
       link: acc.referral_link,
+      targetUsername: targetUsername.trim().toLowerCase() || null,
     });
+    setTargetUsername("");
+    setTargetSearch("");
     const { error } = await supabase
       .from("global_chats")
       .insert({ user_id: currentUserId, message: payload, type: "referral" });
@@ -755,16 +762,30 @@ export function GlobalChatbox() {
     return Array.from(names);
   }, [messages, currentUserId]);
 
+  useEffect(() => {
+    if (mentionSearch === null) {
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase.rpc("search_chat_profiles", { search_query: mentionSearch });
+      if (data) {
+        setDbMentionOptions(data.map((u: { full_name: string }) => u.full_name.replace(/\s+/g, "")));
+      }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [mentionSearch]);
+
   const mentionOptions = React.useMemo(() => {
     if (mentionSearch === null) return [];
     const search = mentionSearch.toLowerCase();
-    const allOptions = [
+    const allOptions = Array.from(new Set([
       "everyone",
       "highlight",
       ...uniqueNames.map((n) => n.replace(/\s+/g, "")),
-    ];
+      ...dbMentionOptions
+    ]));
     return allOptions.filter((opt) => opt.toLowerCase().includes(search));
-  }, [mentionSearch, uniqueNames]);
+  }, [mentionSearch, uniqueNames, dbMentionOptions]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -866,6 +887,18 @@ export function GlobalChatbox() {
     setShowReferralPicker(false);
     setActivePanel((prev) => (prev === panel ? null : panel));
   };
+
+  useEffect(() => {
+    const timeout = setTimeout(async () => {
+      if (targetSearch.trim().length > 0) {
+        const { data } = await supabase.rpc("search_chat_profiles", { search_query: targetSearch });
+        if (data) setTargetOptions(data.map((u: { full_name: string }) => u.full_name.replace(/\s+/g, "")));
+      } else {
+        setTargetOptions(uniqueNames.map((n) => n.replace(/\s+/g, "")));
+      }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [targetSearch, uniqueNames]);
 
   const fetchGifs = useCallback(
     (offset: number) =>
@@ -997,7 +1030,6 @@ export function GlobalChatbox() {
               </p>
             </div>
           ) : (
-            // eslint-disable-next-line react-hooks/refs
             messages.map((msg) => {
               const isMe = msg.user_id === currentUserId;
 
@@ -1109,6 +1141,12 @@ export function GlobalChatbox() {
                             const ticketsDone = status?.ticketsDone ?? 0;
                             const totalTickets = status?.totalTickets ?? 0;
                             const isBump = msg.type === "referral_bump";
+                            
+                            const isTargeted = referralData.targetUsername && referralData.targetUsername.length > 0;
+                            const mySafeName = currentUserProfileName?.replace(/\s+/g, "").toLowerCase() ?? "";
+                            const amITarget = isTargeted && mySafeName === referralData.targetUsername;
+                            const canHelp = !isTargeted || amITarget;
+
                             return (
                               <div className={`backdrop-blur border rounded-xl p-3 max-w-[220px] w-full shadow-sm flex flex-col gap-2.5 transition-all ${isDone ? 'bg-emerald-950/30 border-emerald-800/40' : isBump ? 'bg-amber-950/20 border-amber-800/30' : 'bg-background/95 border-border/50'}`}>
                                 {/* Header */}
@@ -1128,6 +1166,13 @@ export function GlobalChatbox() {
                                     </span>
                                   )}
                                 </div>
+                                
+                                {isTargeted && !isDone && (
+                                  <div className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center justify-center gap-1 self-start">
+                                    <AtSign className="size-3" /> Assigned to @{referralData.targetUsername}
+                                  </div>
+                                )}
+
                                 {/* Description */}
                                 <p className="text-[11px] text-muted-foreground leading-snug">
                                   {isDone ? (
@@ -1156,7 +1201,7 @@ export function GlobalChatbox() {
                                       Go to Link <ChevronRight className="size-3" />
                                     </button>
                                     <button
-                                      disabled={isDone || processingReferrals.has(msg.id)}
+                                      disabled={isDone || processingReferrals.has(msg.id) || !canHelp}
                                       onClick={async () => {
                                         if (processingReferrals.has(msg.id)) return;
                                         setProcessingReferrals(prev => new Set(prev).add(msg.id));
@@ -1187,10 +1232,10 @@ export function GlobalChatbox() {
                                           });
                                         }
                                       }}
-                                      title={isDone ? "Quota already reached" : "Mark as Done"}
-                                      className={`flex-1 flex justify-center items-center py-1.5 rounded-md transition-all border ${isDone || processingReferrals.has(msg.id) ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 border-rose-500/20'}`}
+                                      title={isDone ? "Quota already reached" : (!canHelp ? `Only @${referralData.targetUsername} can help!` : "Mark as Done")}
+                                      className={`flex-1 flex justify-center items-center py-1.5 rounded-md transition-all border ${isDone || processingReferrals.has(msg.id) || !canHelp ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 hover:scale-105 active:scale-95 border-rose-500/20'}`}
                                     >
-                                      {processingReferrals.has(msg.id) ? <Loader2 className="size-3.5 animate-spin" /> : isDone ? <span className="text-[9px]">Done</span> : <Heart className="size-3.5 fill-current" />}
+                                      {processingReferrals.has(msg.id) ? <Loader2 className="size-3.5 animate-spin" /> : isDone ? <span className="text-[9px]">Done</span> : <Heart className={`size-3.5 ${!canHelp ? 'text-muted-foreground/40' : 'fill-current'}`} />}
                                     </button>
                                   </div>
                                   {isMe && !isDone && (
@@ -1383,7 +1428,40 @@ export function GlobalChatbox() {
                   <X className="size-3.5" />
                 </button>
               </div>
-              <div className="overflow-y-auto flex-1 flex flex-col gap-1">
+              <div className="px-2 pb-2 border-b border-border/50">
+                <label className="text-[10px] font-semibold text-muted-foreground mb-1 block">
+                  Assign to user (optional):
+                </label>
+                <div className="relative">
+                  <AtSign className="size-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={targetSearch}
+                    onChange={(e) => setTargetSearch(e.target.value)}
+                    placeholder="Search username..."
+                    className="w-full bg-background border border-border/60 rounded-md py-1 pl-6 pr-2 text-xs focus:outline-none focus:border-primary/50"
+                  />
+                  {targetSearch && targetOptions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 max-h-[100px] overflow-y-auto bg-background border border-border rounded-md shadow-lg z-10 flex flex-col p-1">
+                      {targetOptions.map((opt) => (
+                        <button
+                          key={opt}
+                          onClick={() => {
+                            setTargetUsername(opt);
+                            setTargetSearch(opt);
+                          }}
+                          className={`text-left text-xs px-2 py-1.5 rounded-sm transition-colors ${
+                            targetUsername === opt ? "bg-primary/20 text-primary font-medium" : "hover:bg-foreground/10"
+                          }`}
+                        >
+                          @{opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="overflow-y-auto flex-1 flex flex-col gap-1 p-2 pt-1">
                 {loadingAccounts ? (
                   <div className="py-4 flex justify-center">
                     <Loader2 className="size-4 animate-spin" />
