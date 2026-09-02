@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   GlobeIcon,
   Loader2,
@@ -177,10 +178,9 @@ export default function TempMailDomainsPage() {
             
             <div className="flex-1 space-y-1.5">
               <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Launch Schedule (Optional)</label>
-              <input
-                type="datetime-local"
-                value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
+              <DateTimePicker
+                value={scheduleTime ? new Date(scheduleTime) : undefined}
+                onChange={(date) => setScheduleTime(date ? date.toISOString() : "")}
                 className="w-full h-10 rounded-md border border-border/60 bg-background/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
               />
             </div>
