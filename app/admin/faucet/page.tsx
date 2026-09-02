@@ -111,8 +111,13 @@ export default function AdminFaucetPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const { data: usersData } = await supabase.from("faucet_user_stats").select("*");
-      if (usersData) setUsers(usersData as FaucetUser[]);
+      const response = await fetch("/api/admin/faucet-users");
+      if (response.ok) {
+        const usersData = await response.json();
+        setUsers(usersData as FaucetUser[]);
+      } else {
+        console.error("Failed to fetch users data");
+      }
 
       const { data: claimsData } = await supabase
         .from("faucet_claims")
