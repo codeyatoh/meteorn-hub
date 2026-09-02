@@ -166,138 +166,173 @@
 @layer utilities {
   /* Tier Effects */
 
-  /* 1. Shoshin (Beginner) */
+  /* 1. Shoshin (Beginner) - Soft anime mist / aura */
   .effect-mist {
-    animation: mist-fade 3s ease-in-out infinite alternate;
-    display: inline-block;
     position: relative;
+    color: transparent;
+    background: linear-gradient(90deg, #9ca3af, #f3f4f6, #9ca3af);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: mist-flow 4s ease-in-out infinite;
   }
-  @keyframes mist-fade {
-    0% { opacity: 0.6; filter: blur(0.5px); text-shadow: 0 0 4px rgba(161,161,170,0.3); }
-    100% { opacity: 1; filter: blur(0px); text-shadow: 0 0 12px rgba(161,161,170,0.6); }
+  .effect-mist::after {
+    content: '';
+    position: absolute;
+    inset: -4px -10px;
+    background: radial-gradient(ellipse at center, rgba(156, 163, 175, 0.35) 0%, transparent 60%);
+    filter: blur(6px);
+    animation: mist-breathe 4s ease-in-out infinite;
+    z-index: -1;
+    pointer-events: none;
+  }
+  @keyframes mist-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes mist-breathe {
+    0%, 100% { opacity: 0.3; transform: scale(1) translateY(0); }
+    50% { opacity: 0.8; transform: scale(1.05) translateY(-1px); }
   }
 
-  /* 2. Minarai (Apprentice) */
+  /* 2. Minarai (Apprentice) - Energy charge / pulse */
   .effect-pulse {
-    animation: tier-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    display: inline-block;
-    text-shadow: 0 0 8px rgba(16,185,129,0.4);
-  }
-  @keyframes tier-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); text-shadow: 0 0 8px rgba(16,185,129,0.4); }
-    50% { opacity: 0.8; transform: scale(1.04); text-shadow: 0 0 16px rgba(16,185,129,0.9); }
-  }
-
-  /* 3. Tatsujin (Expert) */
-  .effect-glitch {
-    display: inline-block;
-    animation: expert-glitch 3s infinite;
     position: relative;
+    color: #10b981;
+    text-shadow: 0 0 5px rgba(16, 185, 129, 0.4);
+    animation: anime-charge 2s ease-in-out infinite;
   }
-  @keyframes expert-glitch {
-    0%, 14%, 100% { text-shadow: 0 0 8px rgba(249,115,22,0.5); transform: none; }
-    15% { text-shadow: 3px 0 0 rgba(249,115,22,0.8), -3px 0 0 rgba(14,165,233,0.8); transform: translate(-1px, 1px) skewX(-10deg); }
-    16% { text-shadow: -3px 0 0 rgba(249,115,22,0.8), 3px 0 0 rgba(14,165,233,0.8); transform: translate(1px, -1px) skewX(10deg); }
-    17% { text-shadow: 0 0 8px rgba(249,115,22,0.5); transform: none; }
-    45% { text-shadow: 2px 0 0 rgba(249,115,22,0.8), -2px 0 0 rgba(14,165,233,0.8); transform: translate(1px, 1px); }
-    46% { text-shadow: 0 0 8px rgba(249,115,22,0.5); transform: none; }
+  @keyframes anime-charge {
+    0%, 100% { filter: brightness(1) drop-shadow(0 0 2px rgba(16,185,129,0.3)); transform: scale(1); }
+    50% { filter: brightness(1.3) drop-shadow(0 0 8px rgba(16,185,129,0.8)); transform: scale(1.03); }
   }
 
-  /* 4. Kakusei (Awakening) */
+  /* 3. Tatsujin (Expert) - Cyberpunk / Anime speedster glitch */
+  .effect-glitch {
+    color: #f97316;
+    animation: chromatic-glitch 4s infinite linear;
+    display: inline-block;
+  }
+  @keyframes chromatic-glitch {
+    0%, 91%, 100% { text-shadow: none; transform: none; filter: brightness(1); }
+    92% { text-shadow: -3px 0 #0ea5e9, 3px 0 #ef4444; transform: skewX(-10deg); filter: brightness(1.5); }
+    94% { text-shadow: 3px 0 #0ea5e9, -3px 0 #ef4444; transform: skewX(10deg); filter: brightness(1.5); }
+    96% { text-shadow: -1px 0 #0ea5e9, 1px 0 #ef4444; transform: skewX(-3deg); filter: brightness(1.2); }
+    98% { text-shadow: 2px 0 #0ea5e9, -2px 0 #ef4444; transform: skewX(3deg); filter: brightness(1.2); }
+  }
+
+  /* 4. Kakusei (Awakening) - Anime Lightning */
   .effect-lightning {
     position: relative;
-    display: inline-block;
-    animation: text-flicker 3s linear infinite;
+    color: #ef4444;
+    text-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+    animation: lightning-base 3s infinite;
   }
   .effect-lightning::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 150%;
-    height: 150%;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(circle, rgba(239,68,68,0.25) 0%, transparent 60%);
-    animation: lightning-flash 3s linear infinite;
+    inset: -5px -10px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      transparent 45%,
+      rgba(255, 255, 255, 0.9) 50%,
+      transparent 55%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+    mask-image: linear-gradient(to bottom, black, transparent);
+    opacity: 0;
+    z-index: 1;
+    animation: strike 3s infinite;
     pointer-events: none;
-    z-index: -1;
   }
-  @keyframes text-flicker {
-    0%, 95%, 100% { text-shadow: 0 0 8px rgba(239,68,68,0.5); color: inherit; }
-    96% { text-shadow: 0 0 15px rgba(239,68,68,1), 0 0 30px rgba(239,68,68,1); color: #fff; }
-    97% { text-shadow: 0 0 8px rgba(239,68,68,0.5); color: inherit; }
-    98% { text-shadow: 0 0 20px rgba(239,68,68,1), 0 0 40px rgba(239,68,68,1); color: #fff; transform: scale(1.02); }
+  .effect-lightning::after {
+    content: '';
+    position: absolute;
+    inset: -4px -10px;
+    box-shadow: inset 0 0 15px rgba(239, 68, 68, 0);
+    border-radius: 8px;
+    animation: electric-surge 3s infinite;
+    pointer-events: none;
   }
-  @keyframes lightning-flash {
-    0%, 95%, 100% { opacity: 0.3; }
-    96% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-    97% { opacity: 0.3; }
-    98% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  @keyframes lightning-base {
+    0%, 93%, 100% { filter: brightness(1); }
+    94%, 96%, 98% { filter: brightness(1.8) contrast(1.2); text-shadow: 0 0 10px #fff, 0 0 20px #ef4444, 0 0 30px #ef4444; }
+    95%, 97% { filter: brightness(1); text-shadow: 0 0 5px rgba(239, 68, 68, 0.8); }
+  }
+  @keyframes strike {
+    0%, 93%, 100% { opacity: 0; background-position: 150% 0; }
+    94% { opacity: 1; background-position: -50% 0; }
+    96% { opacity: 1; background-position: 50% 0; }
+    98% { opacity: 1; background-position: -150% 0; }
+  }
+  @keyframes electric-surge {
+    0%, 93%, 100% { box-shadow: inset 0 0 0 rgba(239, 68, 68, 0), 0 0 0 rgba(239, 68, 68, 0); }
+    94%, 96%, 98% { box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.5), 0 0 15px rgba(239, 68, 68, 0.8); }
   }
 
-  /* 5. Mugen (Infinity) */
+  /* 5. Mugen (Infinity) - Flowing Cosmic Aura */
   .effect-rgb-glitch {
     position: relative;
-    display: inline-block;
-    background: linear-gradient(90deg, #3b82f6, #0ea5e9, #6366f1, #3b82f6);
-    background-size: 300% auto;
-    color: transparent;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #0ea5e9, #3b82f6);
+    background-size: 200% 100%;
     -webkit-background-clip: text;
     background-clip: text;
-    animation: infinity-flow 4s linear infinite;
-    font-weight: 700;
+    color: transparent;
+    font-weight: 800;
+    animation: cosmic-flow 3s linear infinite;
   }
   .effect-rgb-glitch::after {
     content: '';
     position: absolute;
-    top: 50%; left: 50%;
-    width: 100%; height: 100%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 20px rgba(59,130,246,0.6);
-    opacity: 0.5;
+    inset: -2px -10px;
+    background: linear-gradient(90deg, rgba(59,130,246,0), rgba(139,92,246,0.6), rgba(236,72,153,0.6), rgba(14,165,233,0.6), rgba(59,130,246,0));
+    background-size: 200% 100%;
+    filter: blur(8px);
     z-index: -1;
-    border-radius: 50%;
-    filter: blur(10px);
-    animation: infinity-glow 2s ease-in-out infinite alternate;
+    animation: cosmic-flow 3s linear infinite, cosmic-breathe 2s ease-in-out infinite alternate;
+    pointer-events: none;
   }
-  @keyframes infinity-flow {
-    0% { background-position: 0% center; }
-    100% { background-position: 300% center; }
+  @keyframes cosmic-flow {
+    0% { background-position: 0% 0; }
+    100% { background-position: -200% 0; }
   }
-  @keyframes infinity-glow {
-    0% { opacity: 0.4; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
-    100% { opacity: 0.8; box-shadow: 0 0 30px rgba(14,165,233,0.9); }
+  @keyframes cosmic-breathe {
+    0% { opacity: 0.5; transform: scale(0.98); }
+    100% { opacity: 0.9; transform: scale(1.05); }
   }
 
-  /* 6. Shinwa (Myth) */
+  /* 6. Shinwa (Myth) - Divine God Aura (Gold & Fire) */
   .effect-mythic {
     position: relative;
-    display: inline-block;
-    background: linear-gradient(to right, #a855f7, #ec4899, #eab308, #ec4899, #a855f7);
-    background-size: 200% auto;
-    color: transparent;
+    background: linear-gradient(to bottom, #fef08a 0%, #eab308 50%, #ea580c 100%);
     -webkit-background-clip: text;
     background-clip: text;
-    font-weight: 800;
-    animation: mythic-shine 3s linear infinite;
+    color: transparent;
+    font-weight: 900;
+    filter: drop-shadow(0 0 2px rgba(234, 179, 8, 0.3));
+    animation: divine-float 3s ease-in-out infinite alternate;
   }
-  .effect-mythic::before {
+  .effect-mythic::after {
     content: '';
     position: absolute;
-    inset: -2px;
-    background: linear-gradient(to right, #a855f7, #ec4899, #eab308, #ec4899, #a855f7);
-    background-size: 200% auto;
-    filter: blur(12px);
-    opacity: 0.7;
+    inset: -6px -20px;
+    background: radial-gradient(ellipse, rgba(234,179,8,0.7) 0%, rgba(249,115,22,0.3) 40%, transparent 70%);
+    filter: blur(8px);
     z-index: -1;
-    animation: mythic-pulse 2s ease-in-out infinite alternate, mythic-shine 3s linear infinite;
-    border-radius: 10px;
+    animation: aura-flare 2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+    mix-blend-mode: screen;
+    pointer-events: none;
   }
-  @keyframes mythic-shine {
-    to { background-position: 200% center; }
+  @keyframes divine-float {
+    0% { filter: drop-shadow(0 0 2px rgba(234, 179, 8, 0.3)); transform: translateY(0); }
+    100% { filter: drop-shadow(0 0 8px rgba(234, 179, 8, 0.8)); transform: translateY(-1px); }
   }
-  @keyframes mythic-pulse {
-    0% { opacity: 0.5; filter: blur(8px); }
-    100% { opacity: 1; filter: blur(16px); }
+  @keyframes aura-flare {
+    0% { opacity: 0.5; transform: scaleY(0.9) scaleX(0.95); }
+    100% { opacity: 1; transform: scaleY(1.3) scaleX(1.15); }
   }
 }
