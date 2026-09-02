@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
       }, { status: 429 });
     }
 
-    // 4. Verify Addresses haven't been claimed before
-    const lowerAddresses = addresses.map((a: string) => a.toLowerCase());
+    // 4. Verify Addresses haven't been claimed too many times
+    const lowerAddresses = Array.from(new Set(addresses.map((a: string) => a.toLowerCase())));
     
     const hotWalletAddress = new ethers.Wallet(privateKey).address.toLowerCase();
     if (lowerAddresses.includes(hotWalletAddress)) {
@@ -97,10 +97,20 @@ export async function POST(req: NextRequest) {
       .in("wallet_address", lowerAddresses);
 
     if (existingClaims && existingClaims.length > 0) {
-      const duplicates = existingClaims.map((c) => c.wallet_address).join(", ");
-      return NextResponse.json({
-        error: `The following addresses have already been funded by this faucet globally: ${duplicates}`
-      }, { status: 400 });
+      const claimCounts = existingClaims.reduce((acc: Record<string, number>, curr) => {
+        acc[curr.wallet_address] = (acc[curr.wallet_address] || 0) + 1;
+        return acc;
+      }, {});
+
+      const overLimitAddresses = Object.entries(claimCounts)
+        .filter(([, count]) => count >= 2)
+        .map(([addr]) => addr);
+
+      if (overLimitAddresses.length > 0) {
+        return NextResponse.json({
+          error: `The following addresses have already reached the maximum limit of 2 claims per address globally: ${overLimitAddresses.join(", ")}`
+        }, { status: 400 });
+      }
     }
 
     // 5. Insert "processing" records FIRST (one per address)

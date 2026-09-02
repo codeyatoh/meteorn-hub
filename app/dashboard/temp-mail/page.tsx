@@ -416,7 +416,7 @@ export default function TempMailPage() {
               <ul className="list-disc pl-4 space-y-2 mt-2">
                 <li><strong>Privacy:</strong> All emails strictly expire 10 minutes after generation. Messages and addresses are permanently deleted.</li>
                 <li><strong>Limits:</strong> By default, users have a limited number of active temp mail addresses.</li>
-                <li><strong>Upgrading:</strong> Donating POL to the community Faucet increases your active address limit.</li>
+                <li><strong>Upgrading:</strong> Donating POL to the community Faucet immediately increases your daily limit. If you reach your limit and donate to reach the next tier, you instantly get the extra quota to use today! Quotas fully reset at 12 AM PHT.</li>
               </ul>
             </GuideModal>
           </div>
@@ -659,6 +659,19 @@ export default function TempMailPage() {
                         })()}
                       </div>
                     </div>
+                    {(() => {
+                      const tempMailLimit = getTierLimits(access?.total_donated ?? 0).tempMailLimit;
+                      const used = access?.daily_count || 0;
+                      const remaining = Math.max(0, tempMailLimit - used);
+                      if (remaining <= 5) {
+                        return (
+                          <div className="text-[10px] text-primary/80 text-right w-full mt-0.5 animate-pulse">
+                            💡 Hit your limit? Donate to instantly unlock more today!
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   <form onSubmit={handleGenerate} className="space-y-4">
