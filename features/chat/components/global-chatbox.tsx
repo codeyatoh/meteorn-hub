@@ -1148,7 +1148,7 @@ export function GlobalChatbox() {
                   <div
                     className={`flex items-end gap-1.5 ${isMe ? "flex-row-reverse" : "flex-row"} flex-wrap sm:flex-nowrap`}
                   >
-                    <div className="flex flex-col gap-1 max-w-[55%] relative">
+                    <div className={`flex flex-col gap-1 ${editingMessageId === msg.id ? 'max-w-[85%]' : 'max-w-[55%]'} relative`}>
                       {msg.reply_to_id && (
                         <div
                           onClick={() => {
@@ -1196,7 +1196,7 @@ export function GlobalChatbox() {
                       >
                         {msg.type === "text" && (
                           editingMessageId === msg.id ? (
-                            <div className="flex flex-col gap-1 w-[200px] sm:w-[250px]">
+                            <div className="flex flex-col gap-1 w-full min-w-[150px]">
                               <textarea
                                 autoFocus
                                 value={editInput}
@@ -1381,10 +1381,10 @@ export function GlobalChatbox() {
                       <AnimatePresence>
                         {hoveredMsg === msg.id && msg.type !== "referral" && msg.type !== "referral_bump" && editingMessageId !== msg.id && (
                           <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            className={`absolute top-1/2 -translate-y-1/2 ${isMe ? "right-full mr-2" : "left-full ml-2"} z-10 flex gap-0.5 bg-background/90 backdrop-blur-md border border-border/50 rounded-full p-1 shadow-xl shadow-background/50 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                            className={`absolute -top-10 ${isMe ? "right-0" : "left-0"} z-10 flex gap-0.5 bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-1 shadow-xl shadow-background/50 ${isMe ? "flex-row-reverse" : "flex-row"}`}
                           >
                             {msg.type !== "gif" && (
                               <>
