@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS public.temp_mail_allowed_domains (
 
 -- Seed with a default (admin will update from Mail.tm's live list)
 INSERT INTO public.temp_mail_allowed_domains (domain, is_active)
-VALUES ('mail.tm', true)
+VALUES 
+  ('mail.tm', true),
+  ('aluahmail.xyz', true)
 ON CONFLICT (domain) DO NOTHING;
 
 -- Enable RLS

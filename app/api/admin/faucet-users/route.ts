@@ -23,7 +23,7 @@ export async function GET() {
     if (authError) throw authError;
 
     // Merge the data
-    const mergedData = (usersData || []).map((stat: any) => {
+    const mergedData = (usersData || []).map((stat: { user_id: string; total_donated: number; total_claimed: number; claims_today: number }) => {
       const user = authData.users.find((u) => u.id === stat.user_id);
       return {
         ...stat,
