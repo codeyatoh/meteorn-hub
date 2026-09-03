@@ -781,12 +781,13 @@ export default function TempMailPage() {
                       </div>
 
                       <div className="rounded-lg bg-foreground/[0.03] border border-border/40 px-4 py-3 space-y-2">
-                        <p className="text-xs font-semibold text-foreground">How to get your App Password:</p>
+                        <p className="text-xs font-semibold text-foreground">How to connect your Gmail:</p>
                         <ol className="text-xs text-muted-foreground space-y-2 pl-1">
-                          <li className="flex gap-2"><span className="text-primary font-bold">1.</span><span>Make sure <strong className="text-foreground">2-Step Verification</strong> is ON in your Google account.</span></li>
-                          <li className="flex gap-2"><span className="text-primary font-bold">2.</span><span>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" className="text-primary hover:underline font-semibold">myaccount.google.com/apppasswords</a></span></li>
-                          <li className="flex gap-2"><span className="text-primary font-bold">3.</span><span>Type a name (e.g. <span className="font-mono bg-foreground/10 px-1 rounded">Meteorn Hub</span>) and click <strong className="text-foreground">Create</strong>.</span></li>
-                          <li className="flex gap-2"><span className="text-primary font-bold">4.</span><span>Copy the <strong className="text-foreground">16-letter password</strong> Google gives you and paste it below.</span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold">1.</span><span>Enable <strong className="text-foreground">IMAP</strong> in your <a href="https://mail.google.com/mail/u/0/#settings/fwdandpop" target="_blank" className="text-primary hover:underline font-semibold">Gmail Settings</a>.</span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold">2.</span><span>Make sure <strong className="text-foreground">2-Step Verification</strong> is ON in your Google account.</span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold">3.</span><span>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" className="text-primary hover:underline font-semibold">myaccount.google.com/apppasswords</a></span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold">4.</span><span>Type a name (e.g. <span className="font-mono bg-foreground/10 px-1 rounded">Meteorn Hub</span>) and click <strong className="text-foreground">Create</strong>.</span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold">5.</span><span>Copy the <strong className="text-foreground">16-letter password</strong> Google gives you and paste it below.</span></li>
                         </ol>
                       </div>
 

@@ -43,14 +43,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and App Password are required.' }, { status: 400 });
     }
 
+    const cleanEmail = email.trim();
+    // Google app passwords often contain spaces when copied from the UI
+    const cleanAppPassword = appPassword.replace(/\s+/g, '');
+
     // 1. Test IMAP Connection
     const client = new ImapFlow({
       host: 'imap.gmail.com',
       port: 993,
       secure: true,
       auth: {
-        user: email,
-        pass: appPassword,
+        user: cleanEmail,
+        pass: cleanAppPassword,
       },
       logger: false, // Disable verbose logging
     });
@@ -58,7 +62,7 @@ export async function POST(request: NextRequest) {
     try {
       await client.connect();
       await client.logout();
-    } catch (imapError: any) {
+    } catch (imapError: unknown) {
       console.error('IMAP Test Error:', imapError);
       return NextResponse.json(
         { error: 'Failed to connect. Please check your App Password and ensure IMAP is enabled in your Gmail settings.' },
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Encrypt the app password
-    const { encrypted, iv, authTag } = encrypt(appPassword);
+    const { encrypted, iv, authTag } = encrypt(cleanAppPassword);
 
     // 3. Save to Supabase
     const { data, error } = await supabase
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest) {
       .upsert(
         {
           user_id: user.id,
-          gmail_address: email,
+          gmail_address: cleanEmail,
           app_password_encrypted: encrypted,
           iv,
           auth_tag: authTag,
