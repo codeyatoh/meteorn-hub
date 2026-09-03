@@ -1340,11 +1340,12 @@ export function GlobalChatbox() {
                                 <div className="flex flex-col gap-1.5 mt-0.5">
                                   <div className="flex items-center gap-1.5">
                                     <button
-                                      disabled={isDone}
+                                      disabled={isDone || !canHelp}
                                       onClick={async () => {
                                         if (referralData.link) handleReferralClick(referralData.link);
                                       }}
-                                      className={`flex-[2] text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1 border ${isDone ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20'}`}
+                                      title={isDone ? "Quota already reached" : (!canHelp ? `Only @${referralData.targetUsername} can click this link!` : "Go to Link")}
+                                      className={`flex-[2] text-[10px] font-bold py-1.5 rounded-md transition-all flex items-center justify-center gap-1 border ${isDone || !canHelp ? 'bg-foreground/5 text-muted-foreground/40 border-border/20 cursor-not-allowed' : 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground border-primary/20'}`}
                                     >
                                       Go to Link <ChevronRight className="size-3" />
                                     </button>
