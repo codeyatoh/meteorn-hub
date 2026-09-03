@@ -141,14 +141,21 @@ export async function GET() {
               baseAddress = `${name.split('+')[0]}@${domain}`;
             }
 
-            // Single Stage: Gmail X-GM-RAW search (catches stripped +suffix via Delivered-To instantly)
+            // Multi-stage server-side search
             let uids: number[] = [];
+
+            // Stage 1: Exact To: match (fast path, works when To: header has full alias)
             try {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const gmRaw = await client.search({ rawBytes: Buffer.from(`X-GM-RAW "deliveredto:${baseAddress}"`) } as any, { uid: true });
-              if (Array.isArray(gmRaw)) uids = gmRaw;
-            } catch {
-              // Ignore
+              const exact = await client.search({ to: session.address }, { uid: true });
+              if (Array.isArray(exact) && exact.length > 0) uids = exact;
+            } catch { /* ignore */ }
+
+            // Stage 2: Standard IMAP OR search with base address (fallback if exact match fails)
+            if (uids.length === 0 && baseAddress !== addressLower) {
+              try {
+                const orSearch = await client.search({ to: baseAddress }, { uid: true });
+                if (Array.isArray(orSearch) && orSearch.length > 0) uids = orSearch;
+              } catch { /* ignore */ }
             }
 
             // Limit to the most recent 5 UIDs to prevent slow fetching of years of old emails
@@ -159,8 +166,11 @@ export async function GET() {
                   const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
                   if (msg && msg.source) {
                     const msgDate = msg.envelope && msg.envelope.date ? new Date(msg.envelope.date) : new Date();
-                    // FAST PATH: Skip messages received before this session was even created BEFORE heavy parsing
-                    if (msgDate.getTime() < new Date(session.created_at).getTime()) {
+                    
+                    // FAST PATH: Skip messages received before this session was created
+                    // Add a 5-minute buffer to account for clock skew between Supabase and Gmail
+                    const sessionTimeWithBuffer = new Date(session.created_at).getTime() - (5 * 60 * 1000);
+                    if (msgDate.getTime() < sessionTimeWithBuffer) {
                       continue;
                     }
 
