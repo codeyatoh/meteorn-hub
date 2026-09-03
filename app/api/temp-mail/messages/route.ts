@@ -27,47 +27,51 @@ export async function GET() {
 
     // Check if session expired
     if (new Date(session.expires_at) < new Date()) {
-      // Cleanup for BYOE
+      // Cleanup for BYOE (non-blocking)
       if (isByoe && session.user_gmail_connections) {
-        try {
-          const conn = session.user_gmail_connections;
-          const appPassword = decrypt({
-            encrypted: conn.app_password_encrypted,
-            iv: conn.iv,
-            authTag: conn.auth_tag,
-          });
-
-          const client = new ImapFlow({
-            host: 'imap.gmail.com',
-            port: 993,
-            secure: true,
-            auth: { user: conn.gmail_address, pass: appPassword },
-            logger: false,
-          });
-          await client.connect();
-
-          await client.mailboxOpen('INBOX');
-          let msgs = await client.search({ to: session.address });
-          if (Array.isArray(msgs) && msgs.length > 0) {
-            await client.messageDelete(msgs);
-          }
-          await client.mailboxClose();
-
+        (async () => {
           try {
-            await client.mailboxOpen('[Gmail]/Spam');
-            msgs = await client.search({ to: session.address });
+            const conn = session.user_gmail_connections;
+            const appPassword = decrypt({
+              encrypted: conn.app_password_encrypted,
+              iv: conn.iv,
+              authTag: conn.auth_tag,
+            });
+
+            const client = new ImapFlow({
+              host: 'imap.gmail.com',
+              port: 993,
+              secure: true,
+              auth: { user: conn.gmail_address, pass: appPassword },
+              logger: false,
+              socketTimeout: 15000,
+              connectionTimeout: 15000,
+            });
+            await client.connect();
+
+            await client.mailboxOpen('INBOX');
+            let msgs = await client.search({ to: session.address }, { uid: true });
             if (Array.isArray(msgs) && msgs.length > 0) {
-              await client.messageDelete(msgs);
+              await client.messageDelete(msgs, { uid: true });
             }
             await client.mailboxClose();
-          } catch {
-            // Ignore if spam folder fails
-          }
 
-          await client.logout();
-        } catch (err) {
-          console.error('Failed to cleanup expired BYOE session:', err);
-        }
+            try {
+              await client.mailboxOpen('[Gmail]/Spam');
+              msgs = await client.search({ to: session.address }, { uid: true });
+              if (Array.isArray(msgs) && msgs.length > 0) {
+                await client.messageDelete(msgs, { uid: true });
+              }
+              await client.mailboxClose();
+            } catch {
+              // Ignore if spam folder fails
+            }
+
+            await client.logout();
+          } catch (err) {
+            console.error('Failed to cleanup expired BYOE session:', err);
+          }
+        })();
       }
       
       await supabase.from('temp_mail_sessions').delete().eq('user_id', user.id);
@@ -93,6 +97,8 @@ export async function GET() {
         secure: true,
         auth: { user: conn.gmail_address, pass: appPassword },
         logger: false,
+        socketTimeout: 15000,
+        connectionTimeout: 15000,
       });
 
       try {
@@ -100,17 +106,45 @@ export async function GET() {
 
         const fetchMailbox = async (mailboxPath: string) => {
           try {
-            await client.mailboxOpen(mailboxPath);
-            // Search for messages sent TO this specific alias
-            const uids = await client.search({ to: session.address });
+            const mailboxInfo = await client.mailboxOpen(mailboxPath);
+            if (mailboxInfo.exists === 0) {
+              await client.mailboxClose();
+              return;
+            }
+
+            // Try UID-based search first (fast path)
+            let uids = await client.search({ to: session.address }, { uid: true });
             
+            // Fallback: search recent messages and filter by headers (crucial for OTPs)
+            if ((!Array.isArray(uids) || uids.length === 0) && mailboxInfo.exists > 0) {
+              const recent = Math.max(1, mailboxInfo.exists - 49); // fetch last 50
+              const allUids = await client.search({ seq: `${recent}:*` }, { uid: true });
+              if (Array.isArray(allUids)) uids = allUids;
+            }
+
             if (Array.isArray(uids)) {
               for (const uid of uids) {
-                const msg = await client.fetchOne(uid, { source: true, envelope: true });
+                const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
                 if (msg && msg.source) {
+                  const raw = msg.source.toString();
+                  const addressLower = session.address.toLowerCase();
+                  
+                  // Parse and verify the address is in any recipient header
+                  // For OTPs, Delivered-To is the most reliable header in Gmail.
+                  const inHeaders = ['to:', 'delivered-to:', 'x-original-to:'].some(h => {
+                    const idx = raw.toLowerCase().indexOf(h);
+                    if (idx === -1) return false;
+                    const line = raw.slice(idx, idx + 200).toLowerCase();
+                    return line.includes(addressLower);
+                  });
+                  
+                  // If we used the fallback and it's not in the headers, skip it
+                  // We only skip if uids > 10 (meaning it's likely a fallback search)
+                  if (!inHeaders && Array.isArray(uids) && uids.length > 10) continue; 
+                  
                   const parsed = await parser.parse(msg.source);
                   parsedMessages.push({
-                    id: uid.toString() + '-' + mailboxPath,
+                    id: Buffer.from(`${uid}:${mailboxPath}`).toString('base64url'),
                     subject: parsed.subject || '(No subject)',
                     from: parsed.from ? { address: parsed.from.address, name: parsed.from.name } : { address: '', name: '' },
                     createdAt: msg.envelope && msg.envelope.date ? msg.envelope.date.toISOString() : new Date().toISOString(),

@@ -33,7 +33,15 @@ export async function GET(
 
     // BYOE Gmail mode
     if (session.mailtm_account_id === 'byoe_gmail' && session.user_gmail_connections) {
-      const [uid, mailboxPath] = id.split('-');
+      const decoded = Buffer.from(id, 'base64url').toString('utf8');
+      const colonIdx = decoded.indexOf(':');
+      if (colonIdx === -1) {
+        return NextResponse.json({ error: 'Invalid message ID.' }, { status: 400 });
+      }
+      
+      const uid = decoded.slice(0, colonIdx);
+      const mailboxPath = decoded.slice(colonIdx + 1);
+
       if (!uid || !mailboxPath) {
         return NextResponse.json({ error: 'Invalid message ID.' }, { status: 400 });
       }
@@ -51,12 +59,14 @@ export async function GET(
         secure: true,
         auth: { user: conn.gmail_address, pass: appPassword },
         logger: false,
+        socketTimeout: 15000,
+        connectionTimeout: 15000,
       });
 
       try {
         await client.connect();
         await client.mailboxOpen(mailboxPath);
-        const msg = await client.fetchOne(uid, { source: true, envelope: true });
+        const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
         
         if (!msg || !msg.source) {
           await client.logout();

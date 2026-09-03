@@ -18,7 +18,10 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json({ domains: data || [] });
+    // Filter out 'gmail.com' in case it was accidentally added to the DB
+    const filteredDomains = (data || []).filter(d => d.domain.toLowerCase() !== 'gmail.com');
+
+    return NextResponse.json({ domains: filteredDomains });
   } catch (err: unknown) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }

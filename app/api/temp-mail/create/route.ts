@@ -141,25 +141,27 @@ export async function DELETE() {
               user: conn.gmail_address,
               pass: appPassword
             },
-            logger: false
+            logger: false,
+            socketTimeout: 15000,
+            connectionTimeout: 15000,
           });
 
           await client.connect();
           
           // Delete from INBOX
           await client.mailboxOpen('INBOX');
-          const inboxMessages = await client.search({ to: session.address });
+          const inboxMessages = await client.search({ to: session.address }, { uid: true });
           if (Array.isArray(inboxMessages) && inboxMessages.length > 0) {
-            await client.messageDelete(inboxMessages);
+            await client.messageDelete(inboxMessages, { uid: true });
           }
           await client.mailboxClose();
 
           // Delete from Spam
           try {
             await client.mailboxOpen('[Gmail]/Spam');
-            const spamMessages = await client.search({ to: session.address });
+            const spamMessages = await client.search({ to: session.address }, { uid: true });
             if (Array.isArray(spamMessages) && spamMessages.length > 0) {
-              await client.messageDelete(spamMessages);
+              await client.messageDelete(spamMessages, { uid: true });
             }
             await client.mailboxClose();
           } catch {
