@@ -126,7 +126,6 @@ export async function GET() {
               for (const uid of uids) {
                 const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
                 if (msg && msg.source) {
-                  const raw = msg.source.toString();
                   const addressLower = session.address.toLowerCase();
                   let baseAddress = addressLower;
                   if (addressLower.includes('+')) {
