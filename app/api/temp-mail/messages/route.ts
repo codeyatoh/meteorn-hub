@@ -178,14 +178,21 @@ export async function GET() {
               } catch { /* ignore */ }
             }
 
-            // Fetch only matched messages (typically 1-5, not 50)
+            // Limit to the most recent 10 UIDs to prevent slow fetching of years of old emails to the same alias
             if (Array.isArray(uids)) {
-              for (const uid of uids) {
+              const recentUids = uids.slice(-10);
+              for (const uid of recentUids) {
                 try {
                   const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
                   if (msg && msg.source) {
                     const parser = new PostalMime();
                     const parsed = await parser.parse(msg.source);
+
+                    const msgDate = msg.envelope && msg.envelope.date ? new Date(msg.envelope.date) : new Date();
+                    // Skip messages received before this session was even created
+                    if (msgDate.getTime() < new Date(session.created_at).getTime()) {
+                      continue;
+                    }
 
                     // Verify recipient match (dot-insensitive, suffix-insensitive)
                     const normalize = (s: string) => s.toLowerCase().replace(/\./g, '');
@@ -202,7 +209,7 @@ export async function GET() {
                       id: Buffer.from(`${uid}:${mailboxPath}`).toString('base64url'),
                       subject: parsed.subject || '(No subject)',
                       from: parsed.from ? { address: parsed.from.address, name: parsed.from.name } : { address: '', name: '' },
-                      createdAt: msg.envelope && msg.envelope.date ? msg.envelope.date.toISOString() : new Date().toISOString(),
+                      createdAt: msgDate.toISOString(),
                       seen: false,
                       intro: (parsed.text || '').substring(0, 100).replace(/\s+/g, ' '),
                       text: parsed.text,
