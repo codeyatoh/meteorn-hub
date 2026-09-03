@@ -203,9 +203,10 @@ export async function GET() {
         await fetchMailbox('[Gmail]/Spam');
 
         await client.logout();
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('BYOE IMAP fetch error:', err);
-        return NextResponse.json({ error: 'Failed to fetch messages from Gmail.' }, { status: 500 });
+        const errMsg = err instanceof Error ? err.message : String(err);
+        return NextResponse.json({ error: `Failed to fetch messages from Gmail: ${errMsg}` }, { status: 500 });
       }
 
       // Sort by newest first
@@ -247,8 +248,9 @@ export async function GET() {
       expires_at: currentExpiry,
       messages: parsedMessages,
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('messages error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errMsg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Internal server error: ${errMsg}` }, { status: 500 });
   }
 }
