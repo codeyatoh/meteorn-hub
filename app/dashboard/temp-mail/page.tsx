@@ -215,8 +215,13 @@ export default function TempMailPage() {
         setSession(sessionData.session);
         // Pre-fill username from existing active session
         const [u, d] = (sessionData.session.address as string).split('@');
-        if (u) setUsername(u);
-        if (d) setDomain(d);
+        if (sessionData.session.mailtm_account_id === 'byoe_gmail') {
+          const suffix = u.split('+')[1];
+          if (suffix) setUsername(suffix);
+        } else {
+          if (u) setUsername(u);
+          if (d) setDomain(d);
+        }
       }
       if (domainData.domains?.length) {
         // Sort domains: not banned first, then banned
@@ -262,9 +267,15 @@ export default function TempMailPage() {
         // Session expired — retain username so user can quickly regenerate
         setSession((prev) => {
           if (prev?.address) {
+            const isByoe = prev.mailtm_account_id === 'byoe_gmail' || prev.address.endsWith('@gmail.com');
             const [u, d] = prev.address.split('@');
-            setUsername(u ?? '');
-            setDomain((currentDomain) => d ?? currentDomain);
+            if (isByoe) {
+              const suffix = u.split('+')[1];
+              if (suffix) setUsername(suffix);
+            } else {
+              setUsername(u ?? '');
+              setDomain((currentDomain) => d ?? currentDomain);
+            }
           }
           return null;
         });
