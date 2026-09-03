@@ -144,7 +144,10 @@ export async function GET() {
                   const allRecipients = [...toHeaders, ...ccHeaders, ...bccHeaders, deliveredTo].join(' ');
                   
                   // For OTPs, we check if the full alias OR the base address is in the recipients
-                  const inHeaders = allRecipients.includes(addressLower) || allRecipients.includes(baseAddress);
+                  // We also remove dots because Gmail ignores them and some services normalize them
+                  const normalize = (s: string) => s.toLowerCase().replace(/\./g, '');
+                  const inHeaders = normalize(allRecipients).includes(normalize(addressLower)) || 
+                                    normalize(allRecipients).includes(normalize(baseAddress));
                   
                   // If we used the fallback and it's not in the recipients, skip it
                   // We only skip if uids > 10 (meaning it's likely a fallback search)
