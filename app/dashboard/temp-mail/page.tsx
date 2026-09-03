@@ -17,6 +17,8 @@ import {
   Crown,
   HelpCircle,
   Shuffle,
+  Plus,
+  Trash2 as TrashIcon,
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -164,6 +166,16 @@ export default function TempMailPage() {
   const [domainOpen, setDomainOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  // BYOE States
+  const [mode, setMode] = useState<"public" | "byoe">("public");
+  const [byoeConnections, setByoeConnections] = useState<{ id: string; gmail_address: string }[]>([]);
+  const [selectedByoeId, setSelectedByoeId] = useState("");
+  const [byoeEmail, setByoeEmail] = useState("");
+  const [byoePassword, setByoePassword] = useState("");
+  const [byoeConnecting, setByoeConnecting] = useState(false);
+  const [isAddingByoe, setIsAddingByoe] = useState(false);
+  const [byoeDropdownOpen, setByoeDropdownOpen] = useState(false);
+
   // Inbox
   const [messages, setMessages] = useState<Message[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -192,8 +204,9 @@ export default function TempMailPage() {
       fetch("/api/temp-mail/session").then((r) => r.json()),
       fetch("/api/temp-mail/domains").then((r) => r.json()),
       fetch("/api/temp-mail/access").then((r) => r.json()),
+      fetch("/api/temp-mail/byoe/connections").then((r) => r.json()),
       new Promise((res) => setTimeout(res, 800)),
-    ]).then(([sessionData, domainData, accessData]) => {
+    ]).then(([sessionData, domainData, accessData, byoeData]) => {
       if (accessData && accessData.status) {
         setAccess({ status: accessData.status, daily_count: accessData.daily_count, total_donated: accessData.total_donated ?? 0 });
       }
@@ -214,6 +227,13 @@ export default function TempMailPage() {
         if (!sessionData.session) {
           const firstAvailable = sortedDomains.find((d: DomainInfo) => !(d.available_at && new Date(d.available_at).getTime() > Date.now()));
           setDomain(firstAvailable?.domain || sortedDomains[0]?.domain || '');
+        }
+      }
+      
+      if (byoeData.connections) {
+        setByoeConnections(byoeData.connections);
+        if (byoeData.connections.length > 0) {
+          setSelectedByoeId(byoeData.connections[0].id);
         }
       }
     }).finally(() => setPageLoading(false));
@@ -288,14 +308,21 @@ export default function TempMailPage() {
   // ── Generate new temp email ──
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !domain) return;
+    if (!username.trim()) return;
+    if (mode === "public" && !domain) return;
+    if (mode === "byoe" && !selectedByoeId) return;
+
     setGenerating(true);
     destroyingRef.current = false;
     try {
+      const bodyPayload = mode === "public" 
+        ? { username: username.trim().toLowerCase(), domain } 
+        : { byoe_gmail_id: selectedByoeId, suffix: username.trim().toLowerCase() };
+
       const res = await fetch("/api/temp-mail/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim().toLowerCase(), domain }),
+        body: JSON.stringify(bodyPayload),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -311,6 +338,54 @@ export default function TempMailPage() {
       toast.error("Network error. Please try again.", { classNames: { icon: "text-destructive" } });
     } finally {
       setGenerating(false);
+    }
+  };
+
+  // ── BYOE Connect ──
+  const handleConnectByoe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!byoeEmail || !byoePassword) return;
+    setByoeConnecting(true);
+    try {
+      const res = await fetch("/api/temp-mail/byoe/connections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: byoeEmail, appPassword: byoePassword })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to connect Gmail.", { classNames: { icon: "text-destructive" } });
+        return;
+      }
+      setByoeConnections(prev => [data.connection, ...prev]);
+      setSelectedByoeId(data.connection.id);
+      setByoeEmail("");
+      setByoePassword("");
+      setIsAddingByoe(false);
+      toast.success("Gmail connected successfully!");
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setByoeConnecting(false);
+    }
+  };
+
+  // ── BYOE Delete ──
+  const handleDeleteByoe = async (id: string) => {
+    try {
+      const res = await fetch(`/api/temp-mail/byoe/connections?id=${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Failed to remove Gmail.");
+        return;
+      }
+      setByoeConnections(prev => prev.filter(c => c.id !== id));
+      if (selectedByoeId === id) {
+        const remaining = byoeConnections.filter(c => c.id !== id);
+        setSelectedByoeId(remaining.length > 0 ? remaining[0].id : "");
+      }
+      toast.success("Gmail removed.");
+    } catch {
+      toast.error("Network error.");
     }
   };
 
@@ -616,8 +691,19 @@ export default function TempMailPage() {
                 /* ── Generator Form ── */
                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Generate Address
+                    <div className="flex bg-foreground/5 p-1 rounded-lg">
+                      <button 
+                        onClick={() => setMode("public")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${mode === "public" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        Public Domain
+                      </button>
+                      <button 
+                        onClick={() => setMode("byoe")}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${mode === "byoe" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        Personal Gmail <Crown className="size-3 text-amber-500" />
+                      </button>
                     </div>
                     <button onClick={() => setIsTiersModalOpen(true)} className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors bg-primary/10 px-2 py-1 rounded-md shrink-0">
                       <HelpCircle className="size-3" /> <span className="text-[9px] whitespace-nowrap">View Tiers</span>
@@ -675,123 +761,277 @@ export default function TempMailPage() {
                     })()}
                   </div>
 
-                  <form onSubmit={handleGenerate} className="space-y-4">
-                    {/* Username + Domain row */}
-                    <div className="flex flex-col sm:flex-row items-stretch gap-3">
-                      {/* Username */}
-                      <div className="flex-[2] relative">
-                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                          <AtSign className="size-4 text-muted-foreground/70" />
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="yourusername"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
-                          minLength={3}
-                          maxLength={30}
-                          required
-                          className="w-full h-11 rounded-xl border border-border/50 bg-background/50 pl-9 pr-24 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-muted-foreground/50 font-mono shadow-sm"
-                        />
-                        {/* Random username button */}
-                        <button
-                          type="button"
-                          title="Generate random letters-only username"
-                          onClick={() => setUsername(generateRandomUsername())}
-                          className="absolute inset-y-0 right-2 flex items-center gap-1 px-2 my-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold transition-all"
-                        >
-                          <Shuffle className="size-3" />
-                          Random
-                        </button>
-                      </div>
-
-                      {/* Domain Dropdown */}
-                      <div className="flex-1 relative">
-                        <button
-                          type="button"
-                          onClick={() => setDomainOpen((o) => !o)}
-                          className={`w-full h-11 flex items-center justify-between gap-2 px-4 rounded-xl border border-border/50 bg-background/50 text-sm font-mono transition-colors shadow-sm ${
-                            domainOpen ? "ring-1 ring-primary/50 border-primary/50" : "hover:bg-foreground/[0.03]"
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 truncate">
-                            <><span className="text-muted-foreground/60">@</span><span className="truncate">{domain}</span></>
-                          </div>
-                          <ChevronDown className={`size-4 text-muted-foreground transition-transform flex-shrink-0 ${domainOpen ? "rotate-180" : ""}`} />
-                        </button>
-
-                        <AnimatePresence>
-                        {domainOpen && (
-                          <>
-                            <div className="fixed inset-0 z-40" onClick={() => setDomainOpen(false)} />
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute z-50 right-0 top-full mt-1.5 w-full min-w-[220px] rounded-xl border border-border bg-background shadow-xl overflow-hidden"
-                            >
-                              <div className="py-1">
-                                {/* Domain list */}
-                                {domains.map((d) => {
-                                  const isUpcoming = Boolean(d.available_at && new Date(d.available_at).getTime() > now);
-                                  return (
-                                  <button
-                                    key={d.domain}
-                                    type="button"
-                                    disabled={isUpcoming}
-                                    onClick={() => { setDomain(d.domain); setDomainOpen(false); }}
-                                    className={`w-full px-4 py-2.5 text-sm text-left font-mono transition-colors flex items-center justify-between ${
-                                      domain === d.domain
-                                        ? "bg-primary/10 text-primary"
-                                        : isUpcoming ? "opacity-50 cursor-not-allowed bg-background" : "text-foreground hover:bg-foreground/[0.04]"
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2 truncate">
-                                      <span className="truncate">@{d.domain}</span>
-                                      {d.is_banned && (
-                                        <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-amber-500/10 text-amber-500 flex-shrink-0">
-                                          Banned in Game
-                                        </span>
-                                      )}
-                                      {isUpcoming && (
-                                        <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 rounded flex items-center gap-1 flex-shrink-0">
-                                          <Clock className="size-3" />
-                                          {(() => {
-                                            const diff = new Date(d.available_at!).getTime() - now;
-                                            const h = Math.floor(diff / (1000 * 60 * 60));
-                                            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                                            const s = Math.floor((diff % (1000 * 60)) / 1000);
-                                            if (h > 0) return `${h}h ${m}m`;
-                                            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-                                          })()}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {domain === d.domain && <CheckIcon className="size-3.5 flex-shrink-0" />}
-                                  </button>
-                                )})}
-                              </div>
-                            </motion.div>
-                          </>
+                  {mode === "byoe" && (byoeConnections.length === 0 || isAddingByoe) ? (
+                    <form onSubmit={handleConnectByoe} className="p-5 border border-primary/20 bg-primary/5 rounded-xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold text-foreground">Connect your Gmail (BYOE)</div>
+                        {byoeConnections.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingByoe(false)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Cancel
+                          </button>
                         )}
-                        </AnimatePresence>
                       </div>
-                    </div>
+                      <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 text-xs text-amber-500/90 flex gap-2 items-start">
+                        <span className="mt-0.5 text-amber-500">⚠️</span>
+                        <span><strong>Tip:</strong> Use a <strong>dummy or secondary Gmail</strong>, not your main account, for better privacy.</span>
+                      </div>
 
-                    <p className="text-[11px] text-muted-foreground/80 font-medium">
-                      3–30 characters · lowercase letters, numbers, dots, and dashes allowed
-                    </p>
+                      <div className="rounded-lg bg-foreground/[0.03] border border-border/40 px-4 py-3 space-y-2">
+                        <p className="text-xs font-semibold text-foreground">How to get your App Password:</p>
+                        <ol className="text-xs text-muted-foreground space-y-2 pl-1">
+                          <li className="flex gap-2"><span className="text-primary font-bold">1.</span><span>Make sure <strong className="text-foreground">2-Step Verification</strong> is ON in your Google account.</span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold">2.</span><span>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" className="text-primary hover:underline font-semibold">myaccount.google.com/apppasswords</a></span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold">3.</span><span>Type a name (e.g. <span className="font-mono bg-foreground/10 px-1 rounded">Meteorn Hub</span>) and click <strong className="text-foreground">Create</strong>.</span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold">4.</span><span>Copy the <strong className="text-foreground">16-letter password</strong> Google gives you and paste it below.</span></li>
+                        </ol>
+                      </div>
 
-                    <div className="pt-2">
-                      <GenerateButton 
-                        onClick={handleGenerate}
-                        isGenerating={generating}
-                        disabled={generating || !username || !domain || (domains.find(d => d.domain === domain)?.available_at ? new Date(domains.find(d => d.domain === domain)!.available_at!).getTime() > now : false)}
-                        hue={210}
-                      />
-                    </div>
-                  </form>
+                      <div className="space-y-3">
+                        <input
+                          type="email"
+                          placeholder="Your Gmail address"
+                          value={byoeEmail}
+                          onChange={(e) => setByoeEmail(e.target.value)}
+                          required
+                          className="w-full h-10 rounded-lg border border-border/50 bg-background/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        />
+                        <input
+                          type="password"
+                          placeholder="16-letter App Password"
+                          value={byoePassword}
+                          onChange={(e) => setByoePassword(e.target.value)}
+                          required
+                          className="w-full h-10 rounded-lg border border-border/50 bg-background/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 font-mono"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={byoeConnecting}
+                        className="w-full h-10 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
+                      >
+                        {byoeConnecting ? <Loader2 className="size-4 animate-spin" /> : "Connect Gmail"}
+                      </button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleGenerate} className="space-y-4">
+                      <div className="flex flex-col sm:flex-row items-stretch gap-3">
+                        {mode === "byoe" ? (
+                          <div className="flex-[2] relative flex items-center h-11 rounded-xl border border-border/50 bg-background/50 overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-primary/50 transition-colors">
+                            <div className="pl-4 pr-1 text-muted-foreground/70 font-mono text-sm truncate max-w-[120px] sm:max-w-[200px] flex-shrink-0">
+                              {byoeConnections.find(c => c.id === selectedByoeId)?.gmail_address.split('@')[0] || "email"}<span className="text-foreground/50">+</span>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="suffix"
+                              value={username}
+                              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+                              minLength={1}
+                              maxLength={30}
+                              required
+                              className="flex-1 min-w-0 bg-transparent h-full px-1 pr-24 text-sm focus:outline-none placeholder:text-muted-foreground/50 font-mono text-foreground"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setUsername(generateRandomUsername())}
+                              className="absolute inset-y-0 right-2 flex items-center gap-1 px-2 my-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold transition-all"
+                            >
+                              <Shuffle className="size-3" />
+                              Random
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex-[2] relative">
+                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                              <AtSign className="size-4 text-muted-foreground/70" />
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="yourusername"
+                              value={username}
+                              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
+                              minLength={3}
+                              maxLength={30}
+                              required
+                              className="w-full h-11 rounded-xl border border-border/50 bg-background/50 pl-9 pr-24 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors placeholder:text-muted-foreground/50 font-mono shadow-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setUsername(generateRandomUsername())}
+                              className="absolute inset-y-0 right-2 flex items-center gap-1 px-2 my-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold transition-all"
+                            >
+                              <Shuffle className="size-3" />
+                              Random
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="flex-1 relative">
+                          {mode === "byoe" ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setByoeDropdownOpen((o) => !o)}
+                                className={`w-full h-11 flex items-center justify-between gap-2 px-4 rounded-xl border border-border/50 bg-background/50 text-sm font-mono transition-colors shadow-sm ${
+                                  byoeDropdownOpen ? "ring-1 ring-primary/50 border-primary/50" : "hover:bg-foreground/[0.03]"
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <span className="truncate">{byoeConnections.find(c => c.id === selectedByoeId)?.gmail_address || "Select Gmail"}</span>
+                                </div>
+                                <ChevronDown className={`size-4 text-muted-foreground transition-transform flex-shrink-0 ${byoeDropdownOpen ? "rotate-180" : ""}`} />
+                              </button>
+
+                              <AnimatePresence>
+                              {byoeDropdownOpen && (
+                                <>
+                                  <div className="fixed inset-0 z-40" onClick={() => setByoeDropdownOpen(false)} />
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute z-50 right-0 top-full mt-1.5 w-full min-w-[220px] rounded-xl border border-border bg-background shadow-xl overflow-hidden"
+                                  >
+                                    <div className="py-1">
+                                      {byoeConnections.map((c) => (
+                                        <div
+                                          key={c.id}
+                                          className={`w-full px-4 py-2.5 text-sm font-mono transition-colors flex items-center justify-between gap-2 group ${
+                                            selectedByoeId === c.id
+                                              ? "bg-primary/10 text-primary"
+                                              : "text-foreground hover:bg-foreground/[0.04]"
+                                          }`}
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={() => { setSelectedByoeId(c.id); setByoeDropdownOpen(false); }}
+                                            className="flex-1 text-left truncate"
+                                          >
+                                            <span className="truncate">{c.gmail_address}</span>
+                                          </button>
+                                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                                            {selectedByoeId === c.id && <CheckIcon className="size-3.5" />}
+                                            <button
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); handleDeleteByoe(c.id); setByoeDropdownOpen(false); }}
+                                              className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-destructive hover:bg-destructive/10 transition-all"
+                                              title="Remove this Gmail"
+                                            >
+                                              <TrashIcon className="size-3" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      <div className="h-px bg-border/50 my-1" />
+                                      <button
+                                        type="button"
+                                        onClick={() => { setByoeDropdownOpen(false); setIsAddingByoe(true); }}
+                                        className="w-full px-4 py-2.5 text-sm text-left font-mono transition-colors flex items-center text-primary hover:bg-primary/10"
+                                      >
+                                        <Plus className="size-4 mr-2" /> Add another Gmail
+                                      </button>
+                                    </div>
+                                  </motion.div>
+                                </>
+                              )}
+                              </AnimatePresence>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setDomainOpen((o) => !o)}
+                              className={`w-full h-11 flex items-center justify-between gap-2 px-4 rounded-xl border border-border/50 bg-background/50 text-sm font-mono transition-colors shadow-sm ${
+                                domainOpen ? "ring-1 ring-primary/50 border-primary/50" : "hover:bg-foreground/[0.03]"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate">
+                                <><span className="text-muted-foreground/60">@</span><span className="truncate">{domain}</span></>
+                              </div>
+                              <ChevronDown className={`size-4 text-muted-foreground transition-transform flex-shrink-0 ${domainOpen ? "rotate-180" : ""}`} />
+                            </button>
+                          )}
+
+                          {mode === "public" && (
+                            <AnimatePresence>
+                            {domainOpen && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setDomainOpen(false)} />
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                                  transition={{ duration: 0.15 }}
+                                  className="absolute z-50 right-0 top-full mt-1.5 w-full min-w-[220px] rounded-xl border border-border bg-background shadow-xl overflow-hidden"
+                                >
+                                  <div className="py-1">
+                                    {domains.map((d) => {
+                                      const isUpcoming = Boolean(d.available_at && new Date(d.available_at).getTime() > now);
+                                      return (
+                                      <button
+                                        key={d.domain}
+                                        type="button"
+                                        disabled={isUpcoming}
+                                        onClick={() => { setDomain(d.domain); setDomainOpen(false); }}
+                                        className={`w-full px-4 py-2.5 text-sm text-left font-mono transition-colors flex items-center justify-between ${
+                                          domain === d.domain
+                                            ? "bg-primary/10 text-primary"
+                                            : isUpcoming ? "opacity-50 cursor-not-allowed bg-background" : "text-foreground hover:bg-foreground/[0.04]"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2 truncate">
+                                          <span className="truncate">@{d.domain}</span>
+                                          {d.is_banned && (
+                                            <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-sm bg-amber-500/10 text-amber-500 flex-shrink-0">
+                                              Banned in Game
+                                            </span>
+                                          )}
+                                          {isUpcoming && (
+                                            <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 rounded flex items-center gap-1 flex-shrink-0">
+                                              <Clock className="size-3" />
+                                              {(() => {
+                                                const diff = new Date(d.available_at!).getTime() - now;
+                                                const h = Math.floor(diff / (1000 * 60 * 60));
+                                                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                                                const s = Math.floor((diff % (1000 * 60)) / 1000);
+                                                if (h > 0) return `${h}h ${m}m`;
+                                                return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                                              })()}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {domain === d.domain && <CheckIcon className="size-3.5 flex-shrink-0" />}
+                                      </button>
+                                    )})}
+                                  </div>
+                                </motion.div>
+                              </>
+                            )}
+                            </AnimatePresence>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-muted-foreground/80 font-medium">
+                        {mode === "byoe" 
+                          ? "Enter a custom suffix to append to your Gmail address." 
+                          : "3–30 characters · lowercase letters, numbers, dots, and dashes allowed"
+                        }
+                      </p>
+
+                      <div className="pt-2">
+                        <GenerateButton 
+                          onClick={handleGenerate}
+                          isGenerating={generating}
+                          disabled={generating || !username || (mode === "public" && (!domain || (domains.find(d => d.domain === domain)?.available_at ? new Date(domains.find(d => d.domain === domain)!.available_at!).getTime() > now : false))) || (mode === "byoe" && !selectedByoeId)}
+                          hue={210}
+                        />
+                      </div>
+                    </form>
+                  )}
                 </div>
               )}
 

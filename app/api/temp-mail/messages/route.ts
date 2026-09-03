@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-
 import PostalMime from 'postal-mime';
+import { ImapFlow } from 'imapflow';
+import { decrypt } from '@/lib/utils/encryption';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/temp-mail/messages
- * Fetches the inbox from Supabase yatmail_messages table.
- * All custom domains use Cloudflare Email Routing → Worker → Supabase.
- */
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -19,7 +15,7 @@ export async function GET() {
     // Get session from Supabase
     const { data: session, error: sessionError } = await supabase
       .from('temp_mail_sessions')
-      .select('*')
+      .select('*, user_gmail_connections(gmail_address, app_password_encrypted, iv, auth_tag)')
       .eq('user_id', user.id)
       .single();
 
@@ -27,43 +23,155 @@ export async function GET() {
       return NextResponse.json({ error: 'No active temp mail session.' }, { status: 404 });
     }
 
+    const isByoe = session.mailtm_account_id === 'byoe_gmail';
+
     // Check if session expired
     if (new Date(session.expires_at) < new Date()) {
+      // Cleanup for BYOE
+      if (isByoe && session.user_gmail_connections) {
+        try {
+          const conn = session.user_gmail_connections;
+          const appPassword = decrypt({
+            encrypted: conn.app_password_encrypted,
+            iv: conn.iv,
+            authTag: conn.auth_tag,
+          });
+
+          const client = new ImapFlow({
+            host: 'imap.gmail.com',
+            port: 993,
+            secure: true,
+            auth: { user: conn.gmail_address, pass: appPassword },
+            logger: false,
+          });
+          await client.connect();
+
+          await client.mailboxOpen('INBOX');
+          let msgs = await client.search({ to: session.address });
+          if (Array.isArray(msgs) && msgs.length > 0) {
+            await client.messageDelete(msgs);
+          }
+          await client.mailboxClose();
+
+          try {
+            await client.mailboxOpen('[Gmail]/Spam');
+            msgs = await client.search({ to: session.address });
+            if (Array.isArray(msgs) && msgs.length > 0) {
+              await client.messageDelete(msgs);
+            }
+            await client.mailboxClose();
+          } catch {
+            // Ignore if spam folder fails
+          }
+
+          await client.logout();
+        } catch (err) {
+          console.error('Failed to cleanup expired BYOE session:', err);
+        }
+      }
+      
       await supabase.from('temp_mail_sessions').delete().eq('user_id', user.id);
       return NextResponse.json({ error: 'Session expired. Please generate a new address.' }, { status: 410 });
     }
 
     const currentExpiry = session.expires_at;
-
-    // Read from Supabase yatmail_messages table
-    const { data: msgs, error: msgsError } = await supabase
-      .from('yatmail_messages')
-      .select('*')
-      .eq('mail_to', session.address)
-      .order('received_at', { ascending: false })
-      .limit(100);
-
-    if (msgsError) {
-      return NextResponse.json({ error: 'Failed to fetch messages.' }, { status: 500 });
-    }
-
     const parser = new PostalMime();
-    const parsedMessages = await Promise.all((msgs || []).map(async (m) => {
-      let parsed;
+    let parsedMessages: Record<string, unknown>[] = [];
+
+    if (isByoe && session.user_gmail_connections) {
+      // Fetch from Gmail IMAP
+      const conn = session.user_gmail_connections;
+      const appPassword = decrypt({
+        encrypted: conn.app_password_encrypted,
+        iv: conn.iv,
+        authTag: conn.auth_tag,
+      });
+
+      const client = new ImapFlow({
+        host: 'imap.gmail.com',
+        port: 993,
+        secure: true,
+        auth: { user: conn.gmail_address, pass: appPassword },
+        logger: false,
+      });
+
       try {
-        parsed = await parser.parse(m.body || '');
-      } catch {
-        parsed = { subject: '', from: { address: '', name: '' }, text: '' };
+        await client.connect();
+
+        const fetchMailbox = async (mailboxPath: string) => {
+          try {
+            await client.mailboxOpen(mailboxPath);
+            // Search for messages sent TO this specific alias
+            const uids = await client.search({ to: session.address });
+            
+            if (Array.isArray(uids)) {
+              for (const uid of uids) {
+                const msg = await client.fetchOne(uid, { source: true, envelope: true });
+                if (msg && msg.source) {
+                  const parsed = await parser.parse(msg.source);
+                  parsedMessages.push({
+                    id: uid.toString() + '-' + mailboxPath,
+                    subject: parsed.subject || '(No subject)',
+                    from: parsed.from ? { address: parsed.from.address, name: parsed.from.name } : { address: '', name: '' },
+                    createdAt: msg.envelope && msg.envelope.date ? msg.envelope.date.toISOString() : new Date().toISOString(),
+                    seen: false,
+                    intro: (parsed.text || '').substring(0, 100).replace(/\s+/g, ' '),
+                    // Keep full text/html for detail view
+                    text: parsed.text,
+                    html: [parsed.html]
+                  });
+                }
+              }
+            }
+            await client.mailboxClose();
+          } catch (e) {
+            console.error(`Failed to fetch from ${mailboxPath}:`, e);
+          }
+        };
+
+        // Fetch from both INBOX and Spam
+        await fetchMailbox('INBOX');
+        await fetchMailbox('[Gmail]/Spam');
+
+        await client.logout();
+      } catch (err) {
+        console.error('BYOE IMAP fetch error:', err);
+        return NextResponse.json({ error: 'Failed to fetch messages from Gmail.' }, { status: 500 });
       }
-      return {
-        id: m.id.toString(),
-        subject: parsed.subject || m.subject || '(No subject)',
-        from: parsed.from ? { address: parsed.from.address, name: parsed.from.name } : { address: m.mail_from, name: '' },
-        createdAt: m.received_at,
-        seen: false, // Could be derived if we add a seen column later
-        intro: (parsed.text || m.body || '').substring(0, 100).replace(/\s+/g, ' '),
-      };
-    }));
+
+      // Sort by newest first
+      parsedMessages.sort((a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
+
+    } else {
+      // Fetch from Supabase yatmail_messages (Public Temp Mail)
+      const { data: msgs, error: msgsError } = await supabase
+        .from('yatmail_messages')
+        .select('*')
+        .eq('mail_to', session.address)
+        .order('received_at', { ascending: false })
+        .limit(100);
+
+      if (msgsError) {
+        return NextResponse.json({ error: 'Failed to fetch messages.' }, { status: 500 });
+      }
+
+      parsedMessages = await Promise.all((msgs || []).map(async (m) => {
+        let parsed;
+        try {
+          parsed = await parser.parse(m.body || '');
+        } catch {
+          parsed = { subject: '', from: { address: '', name: '' }, text: '' };
+        }
+        return {
+          id: m.id.toString(),
+          subject: parsed.subject || m.subject || '(No subject)',
+          from: parsed.from ? { address: parsed.from.address, name: parsed.from.name } : { address: m.mail_from, name: '' },
+          createdAt: m.received_at,
+          seen: false,
+          intro: (parsed.text || m.body || '').substring(0, 100).replace(/\s+/g, ' '),
+        };
+      })) as Record<string, unknown>[];
+    }
 
     return NextResponse.json({
       address: session.address,
