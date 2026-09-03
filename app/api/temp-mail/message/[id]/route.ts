@@ -47,11 +47,23 @@ export async function GET(
       }
 
       const conn = session.user_gmail_connections;
-      const appPassword = decrypt({
-        encrypted: conn.app_password_encrypted,
-        iv: conn.iv,
-        authTag: conn.auth_tag,
-      });
+      let appPassword: string;
+      try {
+        appPassword = decrypt({
+          encrypted: conn.app_password_encrypted,
+          iv: conn.iv,
+          authTag: conn.auth_tag,
+        });
+      } catch (decryptErr: unknown) {
+        const errMsg = decryptErr instanceof Error ? decryptErr.message : String(decryptErr);
+        if (errMsg.includes('Unsupported state') || errMsg.includes('authenticate data')) {
+          // Encryption key mismatch! Auto-recover by deleting the corrupted connection
+          console.warn(`Encryption key mismatch for user ${user.id}. Deleting corrupted connection.`);
+          await supabase.from('user_gmail_connections').delete().eq('id', conn.id);
+          return NextResponse.json({ error: 'Connection encryption key changed. Please re-authenticate your Gmail.' }, { status: 401 });
+        }
+        throw decryptErr;
+      }
 
       const client = new ImapFlow({
         host: 'imap.gmail.com',

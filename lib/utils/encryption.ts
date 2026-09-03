@@ -2,9 +2,14 @@ import crypto from 'crypto';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 if (!ENCRYPTION_KEY) {
-  console.warn("WARNING: ENCRYPTION_KEY is not set in environment variables! Encrypted data will be lost on server restart.");
+  console.warn("WARNING: ENCRYPTION_KEY is not set! Using deterministic fallback based on Supabase URL.");
 }
-const ACTIVE_KEY = ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+
+// Generate a stable 32-byte (64 char hex) key that survives Vercel restarts even if ENCRYPTION_KEY is missing
+const fallbackSeed = process.env.NEXT_PUBLIC_SUPABASE_URL || 'meteorn_hub_default_seed';
+const fallbackKey = crypto.createHash('sha256').update(fallbackSeed).digest('hex');
+
+const ACTIVE_KEY = ENCRYPTION_KEY || fallbackKey;
 const ALGORITHM = 'aes-256-gcm';
 
 export function encrypt(text: string): { encrypted: string; iv: string; authTag: string } {

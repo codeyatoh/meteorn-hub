@@ -127,11 +127,21 @@ export async function DELETE() {
       if (session.mailtm_account_id === 'byoe_gmail' && session.user_gmail_connections) {
         try {
           const conn = session.user_gmail_connections;
-          const appPassword = decrypt({
-            encrypted: conn.app_password_encrypted,
-            iv: conn.iv,
-            authTag: conn.auth_tag
-          });
+          let appPassword: string;
+          try {
+            appPassword = decrypt({
+              encrypted: conn.app_password_encrypted,
+              iv: conn.iv,
+              authTag: conn.auth_tag
+            });
+          } catch (decryptErr: unknown) {
+            const errMsg = decryptErr instanceof Error ? decryptErr.message : String(decryptErr);
+            if (errMsg.includes('Unsupported state') || errMsg.includes('authenticate data')) {
+              console.warn(`Encryption key mismatch for user ${user.id} during session delete. Deleting corrupted connection.`);
+              await supabase.from('user_gmail_connections').delete().eq('id', conn.id);
+            }
+            throw decryptErr; // Rethrow to skip IMAP deletion, session will still be deleted in finally block
+          }
 
           const client = new ImapFlow({
             host: 'imap.gmail.com',
