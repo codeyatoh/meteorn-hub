@@ -787,12 +787,12 @@ export default function TempMailPage() {
                             <span className="text-primary font-bold shrink-0">1.</span>
                             <span>
                               <strong className="text-foreground">Enable IMAP</strong> in Gmail:{" "}
-                              <a href="https://mail.google.com/mail/u/0/#settings/fwdandpop" target="_blank" className="text-primary hover:underline font-semibold">Open Gmail Settings</a>
+                              <a href="https://mail.google.com/mail/u/0/#settings/fwdandpop" target="_blank" rel="noopener noreferrer" className="text-primary underline font-semibold inline-flex items-center gap-0.5 hover:text-primary/80 transition-colors">Open Gmail Settings ↗</a>
                               {" "}→ click <span className="font-mono bg-foreground/10 px-1 rounded">Forwarding and POP/IMAP</span> tab → scroll to <strong className="text-foreground">IMAP access</strong> → select <span className="font-mono bg-foreground/10 px-1 rounded">Enable IMAP</span> → click <strong className="text-foreground">Save Changes</strong>.
                             </span>
                           </li>
                           <li className="flex gap-2"><span className="text-primary font-bold shrink-0">2.</span><span>Make sure <strong className="text-foreground">2-Step Verification</strong> is ON in your Google account.</span></li>
-                          <li className="flex gap-2"><span className="text-primary font-bold shrink-0">3.</span><span>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" className="text-primary hover:underline font-semibold">myaccount.google.com/apppasswords</a></span></li>
+                          <li className="flex gap-2"><span className="text-primary font-bold shrink-0">3.</span><span>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-primary underline font-semibold inline-flex items-center gap-0.5 hover:text-primary/80 transition-colors">myaccount.google.com/apppasswords ↗</a></span></li>
                           <li className="flex gap-2"><span className="text-primary font-bold shrink-0">4.</span><span>Type a name (e.g. <span className="font-mono bg-foreground/10 px-1 rounded">Meteorn Hub</span>) and click <strong className="text-foreground">Create</strong>.</span></li>
                           <li className="flex gap-2"><span className="text-primary font-bold shrink-0">5.</span><span>Copy the <strong className="text-foreground">16-letter password</strong> Google gives you and paste it below.</span></li>
                         </ol>
