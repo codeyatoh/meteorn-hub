@@ -47,6 +47,7 @@ type MessageDetail = Message & {
 type Session = {
   address: string;
   expires_at: string;
+  mailtm_account_id?: string;
 };
 
 type DomainInfo = {
