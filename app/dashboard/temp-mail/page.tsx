@@ -414,9 +414,16 @@ export default function TempMailPage() {
       setSelectedMsg(null);
       
       // Keep username/domain in the field so user can quickly regenerate
+      const isByoe = session.mailtm_account_id === 'byoe_gmail' || prevAddress.endsWith('@gmail.com');
       const [u, d] = prevAddress.split("@");
-      if (u) setUsername(u);
-      if (d) setDomain(d);
+      
+      if (isByoe) {
+        const suffix = u.split('+')[1];
+        if (suffix) setUsername(suffix);
+      } else {
+        if (u) setUsername(u);
+        if (d) setDomain(d);
+      }
       
       if (pollRef.current) clearInterval(pollRef.current);
       
