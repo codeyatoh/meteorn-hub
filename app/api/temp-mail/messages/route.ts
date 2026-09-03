@@ -141,58 +141,31 @@ export async function GET() {
               baseAddress = `${name.split('+')[0]}@${domain}`;
             }
 
-            // Multi-stage server-side search (no per-message looping)
+            // Single Stage: Gmail X-GM-RAW search (catches stripped +suffix via Delivered-To instantly)
             let uids: number[] = [];
-
-            // Stage 1: Exact To: match (fast path, works when To: header has full alias)
             try {
-              const exact = await client.search({ to: session.address }, { uid: true });
-              if (Array.isArray(exact) && exact.length > 0) uids = exact;
-            } catch { /* ignore search errors */ }
-
-            // Stage 2: Gmail X-GM-RAW search (catches stripped +suffix via Delivered-To)
-            if (uids.length === 0) {
-              try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const gmRaw = await client.search({ rawBytes: Buffer.from(`X-GM-RAW "deliveredto:${baseAddress}"`) } as any, { uid: true });
-                if (Array.isArray(gmRaw) && gmRaw.length > 0) uids = gmRaw;
-              } catch {
-                // X-GM-RAW not supported or search failed, try standard fallback
-              }
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const gmRaw = await client.search({ rawBytes: Buffer.from(`X-GM-RAW "deliveredto:${baseAddress}"`) } as any, { uid: true });
+              if (Array.isArray(gmRaw)) uids = gmRaw;
+            } catch {
+              // Ignore
             }
 
-            // Stage 3: Standard IMAP OR search with base address (non-Gmail fallback)
-            if (uids.length === 0 && baseAddress !== addressLower) {
-              try {
-                const orSearch = await client.search({ to: baseAddress }, { uid: true });
-                if (Array.isArray(orSearch) && orSearch.length > 0) uids = orSearch;
-              } catch { /* ignore */ }
-            }
-
-            // Stage 4: Last resort — search recent messages by sequence, limit to 10
-            if (uids.length === 0 && mailboxInfo.exists > 0) {
-              try {
-                const recent = Math.max(1, mailboxInfo.exists - 9);
-                const allUids = await client.search({ seq: `${recent}:*` }, { uid: true });
-                if (Array.isArray(allUids)) uids = allUids;
-              } catch { /* ignore */ }
-            }
-
-            // Limit to the most recent 10 UIDs to prevent slow fetching of years of old emails to the same alias
-            if (Array.isArray(uids)) {
-              const recentUids = uids.slice(-10);
+            // Limit to the most recent 5 UIDs to prevent slow fetching of years of old emails
+            if (uids.length > 0) {
+              const recentUids = uids.slice(-5);
               for (const uid of recentUids) {
                 try {
                   const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
                   if (msg && msg.source) {
-                    const parser = new PostalMime();
-                    const parsed = await parser.parse(msg.source);
-
                     const msgDate = msg.envelope && msg.envelope.date ? new Date(msg.envelope.date) : new Date();
-                    // Skip messages received before this session was even created
+                    // FAST PATH: Skip messages received before this session was even created BEFORE heavy parsing
                     if (msgDate.getTime() < new Date(session.created_at).getTime()) {
                       continue;
                     }
+
+                    const parser = new PostalMime();
+                    const parsed = await parser.parse(msg.source);
 
                     // Verify recipient match (dot-insensitive, suffix-insensitive)
                     const normalize = (s: string) => s.toLowerCase().replace(/\./g, '');
@@ -202,8 +175,8 @@ export async function GET() {
                     const matched = normalize(allRecip).includes(normalize(addressLower)) ||
                                     normalize(allRecip).includes(normalize(baseAddress));
 
-                    // Skip non-matching messages only if we came from Stage 4 (last resort)
-                    if (!matched && uids.length > 5) continue;
+                    // Skip non-matching messages
+                    if (!matched) continue;
 
                     parsedMessages.push({
                       id: Buffer.from(`${uid}:${mailboxPath}`).toString('base64url'),
