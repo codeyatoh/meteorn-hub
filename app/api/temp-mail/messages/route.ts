@@ -128,14 +128,20 @@ export async function GET() {
                 if (msg && msg.source) {
                   const raw = msg.source.toString();
                   const addressLower = session.address.toLowerCase();
+                  let baseAddress = addressLower;
+                  if (addressLower.includes('+')) {
+                    const [name, domain] = addressLower.split('@');
+                    baseAddress = `${name.split('+')[0]}@${domain}`;
+                  }
                   
                   // Parse and verify the address is in any recipient header
                   // For OTPs, Delivered-To is the most reliable header in Gmail.
+                  // We also match the baseAddress because many services strip the +suffix.
                   const inHeaders = ['to:', 'delivered-to:', 'x-original-to:'].some(h => {
                     const idx = raw.toLowerCase().indexOf(h);
                     if (idx === -1) return false;
                     const line = raw.slice(idx, idx + 200).toLowerCase();
-                    return line.includes(addressLower);
+                    return line.includes(addressLower) || line.includes(baseAddress);
                   });
                   
                   // If we used the fallback and it's not in the headers, skip it
