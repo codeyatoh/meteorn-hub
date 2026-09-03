@@ -287,7 +287,15 @@ export default function TempMailPage() {
         }
         return;
       }
-      if (!res.ok) return;
+      if (!res.ok) {
+        try {
+          const errData = await res.json();
+          console.error("API Error Response:", errData);
+        } catch {
+          console.error("API returned non-JSON error:", res.status);
+        }
+        return;
+      }
       const data = await res.json();
       setSession({ address: data.address, expires_at: data.expires_at });
       
@@ -296,7 +304,8 @@ export default function TempMailPage() {
         ...m,
         seen: currentReadIds.has(m.id)
       })));
-    } catch {
+    } catch (err) {
+      console.error("Fetch error caught:", err);
       if (!silent) toast.error("Inbox sync failed. Check connection.");
     } finally {
       if (!silent) setRefreshing(false);
