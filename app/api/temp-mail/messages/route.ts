@@ -134,21 +134,23 @@ export async function GET() {
                     baseAddress = `${name.split('+')[0]}@${domain}`;
                   }
                   
-                  // Parse and verify the address is in any recipient header
-                  // For OTPs, Delivered-To is the most reliable header in Gmail.
-                  // We also match the baseAddress because many services strip the +suffix.
-                  const inHeaders = ['to:', 'delivered-to:', 'x-original-to:'].some(h => {
-                    const idx = raw.toLowerCase().indexOf(h);
-                    if (idx === -1) return false;
-                    const line = raw.slice(idx, idx + 200).toLowerCase();
-                    return line.includes(addressLower) || line.includes(baseAddress);
-                  });
+                  const parsed = await parser.parse(msg.source);
                   
-                  // If we used the fallback and it's not in the headers, skip it
+                  // Extract recipient addresses from parsed headers to avoid false negatives with regex/indexOf
+                  const toHeaders = parsed.to?.map(t => t.address?.toLowerCase() || '') || [];
+                  const ccHeaders = parsed.cc?.map(t => t.address?.toLowerCase() || '') || [];
+                  const bccHeaders = parsed.bcc?.map(t => t.address?.toLowerCase() || '') || [];
+                  const deliveredTo = parsed.headers?.find(h => h.key.toLowerCase() === 'delivered-to')?.value?.toLowerCase() || '';
+                  
+                  const allRecipients = [...toHeaders, ...ccHeaders, ...bccHeaders, deliveredTo].join(' ');
+                  
+                  // For OTPs, we check if the full alias OR the base address is in the recipients
+                  const inHeaders = allRecipients.includes(addressLower) || allRecipients.includes(baseAddress);
+                  
+                  // If we used the fallback and it's not in the recipients, skip it
                   // We only skip if uids > 10 (meaning it's likely a fallback search)
                   if (!inHeaders && Array.isArray(uids) && uids.length > 10) continue; 
                   
-                  const parsed = await parser.parse(msg.source);
                   parsedMessages.push({
                     id: Buffer.from(`${uid}:${mailboxPath}`).toString('base64url'),
                     subject: parsed.subject || '(No subject)',
