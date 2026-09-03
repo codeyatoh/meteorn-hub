@@ -149,7 +149,7 @@ export async function DELETE() {
           // Delete from INBOX
           await client.mailboxOpen('INBOX');
           const inboxMessages = await client.search({ to: session.address });
-          if (inboxMessages.length > 0) {
+          if (Array.isArray(inboxMessages) && inboxMessages.length > 0) {
             await client.messageDelete(inboxMessages);
           }
           await client.mailboxClose();
@@ -158,11 +158,11 @@ export async function DELETE() {
           try {
             await client.mailboxOpen('[Gmail]/Spam');
             const spamMessages = await client.search({ to: session.address });
-            if (spamMessages.length > 0) {
+            if (Array.isArray(spamMessages) && spamMessages.length > 0) {
               await client.messageDelete(spamMessages);
             }
             await client.mailboxClose();
-          } catch (e) {
+          } catch {
             // Ignore if spam folder fails
           }
 
