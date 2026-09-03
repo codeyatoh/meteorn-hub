@@ -15,7 +15,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { PageContainer } from "@/components/ui/page-container";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { getTierDetails } from "@/lib/utils/tiers";
+import { TierEffect } from "@/components/ui/tier-effect";
 
 // Admin provided avatar choices
 const AVATAR_MAP: Record<string, ReactNode> = {
@@ -356,7 +356,6 @@ export default function UserDashboardPage() {
 
 
 
-  const userTier = getTierDetails(totalDonatedAmount);
 
   const updateTicket = async (id: number, delta: number) => {
     if (updatingTicketsIds.has(id)) return;
@@ -812,9 +811,7 @@ export default function UserDashboardPage() {
               <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
                 Welcome back, <span className="text-primary">{nickname}</span>
               </h1>
-              <div className={`flex items-center gap-1.5 px-3 py-1 mt-1 rounded-full border border-border/50 bg-background/50 backdrop-blur-sm text-sm font-medium font-mono ${userTier.effectClass} ${userTier.colorClass}`}>
-                <span>{userTier.name}</span>
-              </div>
+              <TierEffect donatedAmount={totalDonatedAmount} badge />
             </div>
             <div className="shrink-0">
               <GuideModal title="Dashboard Overview">

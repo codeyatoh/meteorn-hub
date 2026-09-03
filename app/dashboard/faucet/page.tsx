@@ -11,6 +11,7 @@ import { AnimatedModal } from "@/components/ui/animated-modal";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { getTierLimits, TIER_TABLE } from "@/lib/utils/tiers";
+import { TierEffect } from "@/components/ui/tier-effect";
 import { NumberTicker } from "@/components/ui/number-ticker";
 
 interface FaucetClaim {
@@ -800,9 +801,7 @@ export default function FaucetPage() {
                 }`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`font-bold text-sm ${isCurrentTier ? 'text-primary' : i === 0 ? 'text-foreground' : 'text-foreground/70'}`}>
-                        {tier.name}
-                      </span>
+                      <TierEffect donatedAmount={tier.min} className="text-sm" />
                       <span className="text-[10px] text-muted-foreground">({tier.min}+ $POL)</span>
                     </div>
                     {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded shrink-0">YOUR TIER</span>}
@@ -839,7 +838,7 @@ export default function FaucetPage() {
                     <tr key={tier.min} className={`hover:bg-foreground/5 transition-colors ${isCurrentTier ? 'bg-primary/5' : ''}`}>
                       <td className={`py-3 pr-4 font-medium whitespace-nowrap ${isCurrentTier ? 'text-primary' : i === 0 ? 'text-foreground' : 'text-foreground/70'}`}>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold">{tier.name}</span>
+                          <TierEffect donatedAmount={tier.min} />
                           <span className="text-xs text-muted-foreground">({tier.min}+ $POL)</span>
                           {isCurrentTier && <span className="text-[9px] font-mono bg-primary/20 text-primary px-1.5 py-0.5 rounded ml-1">YOUR TIER</span>}
                         </div>
