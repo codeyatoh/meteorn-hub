@@ -56,18 +56,36 @@ export async function POST(request: NextRequest) {
         user: cleanEmail,
         pass: cleanAppPassword,
       },
-      logger: false, // Disable verbose logging
+      logger: false,
+      // 15s timeout so it doesn't hang forever
+      socketTimeout: 15000,
+      connectionTimeout: 15000,
     });
 
     try {
       await client.connect();
       await client.logout();
     } catch (imapError: unknown) {
-      console.error('IMAP Test Error:', imapError);
-      return NextResponse.json(
-        { error: 'Failed to connect. Please check your App Password and ensure IMAP is enabled in your Gmail settings.' },
-        { status: 400 }
-      );
+      // Always close the socket cleanly if still open
+      try { client.close(); } catch { /* ignore */ }
+
+      // Extract the real reason so we can show it
+      const errMsg = imapError instanceof Error ? imapError.message : String(imapError);
+      console.error('IMAP Test Error:', errMsg);
+
+      // Translate common ImapFlow error codes into friendly messages
+      let friendlyError = 'Failed to connect to Gmail. ';
+      if (/auth|login|credential|password|AUTHENTICATIONFAILED/i.test(errMsg)) {
+        friendlyError += 'Wrong App Password — make sure you copied the 16-letter App Password correctly and removed any spaces.';
+      } else if (/IMAP.*disabled|not enabled/i.test(errMsg)) {
+        friendlyError += 'IMAP is disabled on this Gmail account. Enable it in Gmail → Settings → Forwarding and POP/IMAP.';
+      } else if (/timeout|ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(errMsg)) {
+        friendlyError += 'Connection timed out. Check your internet or try again later.';
+      } else {
+        friendlyError += errMsg;
+      }
+
+      return NextResponse.json({ error: friendlyError }, { status: 400 });
     }
 
     // 2. Encrypt the app password
