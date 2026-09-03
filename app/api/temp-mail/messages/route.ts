@@ -125,35 +125,35 @@ export async function GET() {
             if (Array.isArray(uids)) {
               for (const uid of uids) {
                 try {
+                  const addressLower = session.address.toLowerCase();
+                  let baseAddress = addressLower;
+                  if (addressLower.includes('+')) {
+                    const [name, domain] = addressLower.split('@');
+                    baseAddress = `${name.split('+')[0]}@${domain}`;
+                  }
+                  
+                  let shouldFetchSource = true;
+                  const normalize = (s: string) => s.toLowerCase().replace(/\./g, '');
+                  
+                  // Optimize bandwidth: if fallback search, fetch only headers first to check match
+                  if (uids.length > 10) {
+                    const hMsg = await client.fetchOne(uid, { headers: ['to', 'delivered-to', 'x-original-to', 'cc', 'bcc'] }, { uid: true });
+                    if (hMsg && hMsg.headers) {
+                      const rawHeaders = hMsg.headers.toString('utf8').toLowerCase();
+                      const normHeaders = normalize(rawHeaders);
+                      const inHeaders = normHeaders.includes(normalize(addressLower)) || normHeaders.includes(normalize(baseAddress));
+                      if (!inHeaders) shouldFetchSource = false;
+                    } else {
+                      shouldFetchSource = false;
+                    }
+                  }
+                  
+                  if (!shouldFetchSource) continue;
+                  
                   const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
                   if (msg && msg.source) {
-                    const addressLower = session.address.toLowerCase();
-                    let baseAddress = addressLower;
-                    if (addressLower.includes('+')) {
-                      const [name, domain] = addressLower.split('@');
-                      baseAddress = `${name.split('+')[0]}@${domain}`;
-                    }
-                    
                     const parser = new PostalMime();
                     const parsed = await parser.parse(msg.source);
-                    
-                    // Extract recipient addresses from parsed headers to avoid false negatives with regex/indexOf
-                    const toHeaders = parsed.to?.map(t => t.address?.toLowerCase() || '') || [];
-                    const ccHeaders = parsed.cc?.map(t => t.address?.toLowerCase() || '') || [];
-                    const bccHeaders = parsed.bcc?.map(t => t.address?.toLowerCase() || '') || [];
-                    const deliveredTo = parsed.deliveredTo?.toLowerCase() || parsed.headers?.find(h => h.key.toLowerCase() === 'delivered-to')?.value?.toLowerCase() || '';
-                    
-                    const allRecipients = [...toHeaders, ...ccHeaders, ...bccHeaders, deliveredTo].join(' ');
-                    
-                    // For OTPs, we check if the full alias OR the base address is in the recipients
-                    // We also remove dots because Gmail ignores them and some services normalize them
-                    const normalize = (s: string) => s.toLowerCase().replace(/\./g, '');
-                    const inHeaders = normalize(allRecipients).includes(normalize(addressLower)) || 
-                                      normalize(allRecipients).includes(normalize(baseAddress));
-                    
-                    // If we used the fallback and it's not in the recipients, skip it
-                    // We only skip if uids > 10 (meaning it's likely a fallback search)
-                    if (!inHeaders && Array.isArray(uids) && uids.length > 10) continue; 
                     
                     parsedMessages.push({
                       id: Buffer.from(`${uid}:${mailboxPath}`).toString('base64url'),
@@ -162,7 +162,6 @@ export async function GET() {
                       createdAt: msg.envelope && msg.envelope.date ? msg.envelope.date.toISOString() : new Date().toISOString(),
                       seen: false,
                       intro: (parsed.text || '').substring(0, 100).replace(/\s+/g, ' '),
-                      // Keep full text/html for detail view
                       text: parsed.text,
                       html: [parsed.html]
                     });
