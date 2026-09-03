@@ -112,49 +112,70 @@ export async function GET() {
               return;
             }
 
-            // Try UID-based search first (fast path)
-            let uids = await client.search({ to: session.address }, { uid: true });
-            
-            // Fallback: search recent messages and filter by headers (crucial for OTPs)
-            if ((!Array.isArray(uids) || uids.length === 0) && mailboxInfo.exists > 0) {
-              const recent = Math.max(1, mailboxInfo.exists - 49); // fetch last 50
-              const allUids = await client.search({ seq: `${recent}:*` }, { uid: true });
-              if (Array.isArray(allUids)) uids = allUids;
+            const addressLower = session.address.toLowerCase();
+            let baseAddress = addressLower;
+            if (addressLower.includes('+')) {
+              const [name, domain] = addressLower.split('@');
+              baseAddress = `${name.split('+')[0]}@${domain}`;
             }
 
+            // Multi-stage server-side search (no per-message looping)
+            let uids: number[] = [];
+
+            // Stage 1: Exact To: match (fast path, works when To: header has full alias)
+            try {
+              const exact = await client.search({ to: session.address }, { uid: true });
+              if (Array.isArray(exact) && exact.length > 0) uids = exact;
+            } catch { /* ignore search errors */ }
+
+            // Stage 2: Gmail X-GM-RAW search (catches stripped +suffix via Delivered-To)
+            if (uids.length === 0) {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const gmRaw = await client.search({ rawBytes: Buffer.from(`X-GM-RAW "deliveredto:${baseAddress}"`) } as any, { uid: true });
+                if (Array.isArray(gmRaw) && gmRaw.length > 0) uids = gmRaw;
+              } catch {
+                // X-GM-RAW not supported or search failed, try standard fallback
+              }
+            }
+
+            // Stage 3: Standard IMAP OR search with base address (non-Gmail fallback)
+            if (uids.length === 0 && baseAddress !== addressLower) {
+              try {
+                const orSearch = await client.search({ to: baseAddress }, { uid: true });
+                if (Array.isArray(orSearch) && orSearch.length > 0) uids = orSearch;
+              } catch { /* ignore */ }
+            }
+
+            // Stage 4: Last resort — search recent messages by sequence, limit to 10
+            if (uids.length === 0 && mailboxInfo.exists > 0) {
+              try {
+                const recent = Math.max(1, mailboxInfo.exists - 9);
+                const allUids = await client.search({ seq: `${recent}:*` }, { uid: true });
+                if (Array.isArray(allUids)) uids = allUids;
+              } catch { /* ignore */ }
+            }
+
+            // Fetch only matched messages (typically 1-5, not 50)
             if (Array.isArray(uids)) {
               for (const uid of uids) {
                 try {
-                  const addressLower = session.address.toLowerCase();
-                  let baseAddress = addressLower;
-                  if (addressLower.includes('+')) {
-                    const [name, domain] = addressLower.split('@');
-                    baseAddress = `${name.split('+')[0]}@${domain}`;
-                  }
-                  
-                  let shouldFetchSource = true;
-                  const normalize = (s: string) => s.toLowerCase().replace(/\./g, '');
-                  
-                  // Optimize bandwidth: if fallback search, fetch only headers first to check match
-                  if (uids.length > 10) {
-                    const hMsg = await client.fetchOne(uid, { headers: ['to', 'delivered-to', 'x-original-to', 'cc', 'bcc'] }, { uid: true });
-                    if (hMsg && hMsg.headers) {
-                      const rawHeaders = hMsg.headers.toString('utf8').toLowerCase();
-                      const normHeaders = normalize(rawHeaders);
-                      const inHeaders = normHeaders.includes(normalize(addressLower)) || normHeaders.includes(normalize(baseAddress));
-                      if (!inHeaders) shouldFetchSource = false;
-                    } else {
-                      shouldFetchSource = false;
-                    }
-                  }
-                  
-                  if (!shouldFetchSource) continue;
-                  
                   const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
                   if (msg && msg.source) {
                     const parser = new PostalMime();
                     const parsed = await parser.parse(msg.source);
-                    
+
+                    // Verify recipient match (dot-insensitive, suffix-insensitive)
+                    const normalize = (s: string) => s.toLowerCase().replace(/\./g, '');
+                    const toAddrs = parsed.to?.map(t => t.address?.toLowerCase() || '') || [];
+                    const delivTo = parsed.deliveredTo?.toLowerCase() || '';
+                    const allRecip = [...toAddrs, delivTo].join(' ');
+                    const matched = normalize(allRecip).includes(normalize(addressLower)) ||
+                                    normalize(allRecip).includes(normalize(baseAddress));
+
+                    // Skip non-matching messages only if we came from Stage 4 (last resort)
+                    if (!matched && uids.length > 5) continue;
+
                     parsedMessages.push({
                       id: Buffer.from(`${uid}:${mailboxPath}`).toString('base64url'),
                       subject: parsed.subject || '(No subject)',
