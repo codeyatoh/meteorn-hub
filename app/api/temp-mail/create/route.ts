@@ -77,9 +77,13 @@ function generateDotTrickEmail(baseName: string, index: number): string {
         currentIndex = 1; // Skip base email (0 dots)
       }
       
+      // Alternate between gmail.com and googlemail.com to double the variations
+      const domain = (currentIndex % 2 === 0) ? 'googlemail.com' : 'gmail.com';
+      const dotIndex = Math.floor((currentIndex + 1) / 2);
+      
       try {
-        const dottedName = generateDotTrickEmail(baseName, currentIndex);
-        address = `${dottedName}@gmail.com`;
+        const dottedName = generateDotTrickEmail(baseName, dotIndex);
+        address = `${dottedName}@${domain}`;
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         return NextResponse.json({ error: errMsg }, { status: 400 });
