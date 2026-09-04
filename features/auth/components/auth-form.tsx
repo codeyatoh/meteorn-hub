@@ -132,13 +132,21 @@ function CredentialsForm({ isLogin, setIsLogin }: { isLogin: boolean, setIsLogin
         });
         if (error) throw error;
         
-        toast.success("Account created successfully", {
-          classNames: { icon: "text-green-500" },
-        });
+        if (data.session === null) {
+          toast.success("Registration successful! Please check your email to verify your account.", {
+            classNames: { icon: "text-green-500" },
+            duration: 6000,
+          });
+          setIsLogin(true);
+        } else {
+          toast.success("Account created successfully", {
+            classNames: { icon: "text-green-500" },
+          });
 
-        const role = data.user?.user_metadata?.role;
-        router.push(role === 'admin' ? "/admin" : "/dashboard");
-        router.refresh();
+          const role = data.user?.user_metadata?.role;
+          router.push(role === 'admin' ? "/admin" : "/dashboard");
+          router.refresh();
+        }
       }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "An error occurred during authentication.", {

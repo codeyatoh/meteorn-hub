@@ -40,9 +40,12 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/admin`)
       }
       return NextResponse.redirect(`${origin}${next}`)
+    } else {
+      console.error('OAuth Callback Error:', error.message)
+      return NextResponse.redirect(`${origin}/login?error=oauth_error&message=${encodeURIComponent(error.message)}`)
     }
   }
 
   // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/login?error=oauth_error`)
+  return NextResponse.redirect(`${origin}/login?error=oauth_error&message=no_code_provided`)
 }
