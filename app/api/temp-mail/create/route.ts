@@ -72,7 +72,10 @@ function generateDotTrickEmail(baseName: string, index: number): string {
       }
 
       const baseName = connection.gmail_address.split('@')[0];
-      const currentIndex = connection.dot_trick_index || 0;
+      let currentIndex = connection.dot_trick_index || 0;
+      if (currentIndex === 0) {
+        currentIndex = 1; // Skip base email (0 dots)
+      }
       
       try {
         const dottedName = generateDotTrickEmail(baseName, currentIndex);
