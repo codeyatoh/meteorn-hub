@@ -854,13 +854,7 @@ export default function TempMailPage() {
                   ) : (
                     <form onSubmit={handleGenerate} className="space-y-4">
                       <div className="flex flex-col sm:flex-row items-stretch gap-3">
-                        {mode === "byoe" ? (
-                          <div className="flex-[2] relative flex items-center h-11 rounded-xl border border-primary/20 bg-primary/5 overflow-hidden shadow-sm transition-colors px-4">
-                            <span className="text-primary/80 font-mono text-xs sm:text-sm truncate">
-                              Auto-generating dot trick variation...
-                            </span>
-                          </div>
-                        ) : (
+                        {mode === "public" && (
                           <div className="flex-[2] relative">
                             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                               <AtSign className="size-4 text-muted-foreground/70" />
@@ -1032,9 +1026,9 @@ export default function TempMailPage() {
                         </div>
                       </div>
 
-                      <p className="text-[11px] text-muted-foreground/80 font-medium">
+                      <p className={`text-[11px] font-medium ${mode === "byoe" ? "text-primary/80" : "text-muted-foreground/80"}`}>
                         {mode === "byoe" 
-                          ? "Enter a custom suffix to append to your Gmail address." 
+                          ? "✨ Auto-generating unique dot trick variation for your Gmail address." 
                           : "3–30 characters · lowercase letters, numbers, dots, and dashes allowed"
                         }
                       </p>
