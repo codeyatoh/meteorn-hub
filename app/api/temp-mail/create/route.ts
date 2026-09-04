@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { username, domain, byoe_gmail_id, suffix } = body;
+    const { username, domain, byoe_gmail_id } = body;
 
     // --- Atomic Access & Rate Limit Check ---
     const { data: allowed, error: rpcError } = await supabase
