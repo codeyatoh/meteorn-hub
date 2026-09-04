@@ -35,19 +35,34 @@ export async function POST(request: NextRequest) {
     let mailtmAccountId = 'custom';
     let byoeConnectionId = null;
 
+function generateDotTrickEmail(baseName: string, index: number): string {
+  // Remove any existing dots to get the pure base name
+  const cleanBase = baseName.replace(/\./g, '');
+  if (cleanBase.length <= 1) return cleanBase;
+  
+  const numSlots = cleanBase.length - 1;
+  const maxVariations = Math.pow(2, numSlots);
+  
+  if (index >= maxVariations) {
+    throw new Error('All possible dot trick variations exhausted.');
+  }
+
+  let result = cleanBase[0];
+  for (let i = 0; i < numSlots; i++) {
+    if ((index & (1 << i)) !== 0) {
+      result += '.';
+    }
+    result += cleanBase[i + 1];
+  }
+  return result;
+}
+
     if (byoe_gmail_id) {
       // BYOE Mode
-      if (!suffix || !/^[a-z0-9._-]{1,30}$/i.test(suffix)) {
-        return NextResponse.json(
-          { error: 'Suffix must be 1–30 characters, alphanumeric with dots or dashes.' },
-          { status: 400 }
-        );
-      }
-
-      // Fetch the connection
+      // Fetch the connection with its dot_trick_index
       const { data: connection, error: connError } = await supabase
         .from('user_gmail_connections')
-        .select('gmail_address, id')
+        .select('gmail_address, id, dot_trick_index')
         .eq('id', byoe_gmail_id)
         .eq('user_id', user.id)
         .single();
@@ -57,7 +72,26 @@ export async function POST(request: NextRequest) {
       }
 
       const baseName = connection.gmail_address.split('@')[0];
-      address = `${baseName}+${suffix}@gmail.com`;
+      const currentIndex = connection.dot_trick_index || 0;
+      
+      try {
+        const dottedName = generateDotTrickEmail(baseName, currentIndex);
+        address = `${dottedName}@gmail.com`;
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        return NextResponse.json({ error: errMsg }, { status: 400 });
+      }
+
+      // Increment index for the next time
+      const { error: updateError } = await supabase
+        .from('user_gmail_connections')
+        .update({ dot_trick_index: currentIndex + 1 })
+        .eq('id', connection.id);
+        
+      if (updateError) {
+        console.error('Failed to update dot trick index:', updateError);
+      }
+
       mailtmAccountId = 'byoe_gmail';
       byoeConnectionId = connection.id;
 

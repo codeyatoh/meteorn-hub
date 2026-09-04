@@ -329,8 +329,7 @@ export default function TempMailPage() {
   // ── Generate new temp email ──
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
-    if (mode === "public" && !domain) return;
+    if (mode === "public" && (!username.trim() || !domain)) return;
     if (mode === "byoe" && !selectedByoeId) return;
 
     setGenerating(true);
@@ -338,7 +337,7 @@ export default function TempMailPage() {
     try {
       const bodyPayload = mode === "public" 
         ? { username: username.trim().toLowerCase(), domain } 
-        : { byoe_gmail_id: selectedByoeId, suffix: username.trim().toLowerCase() };
+        : { byoe_gmail_id: selectedByoeId };
 
       const res = await fetch("/api/temp-mail/create", {
         method: "POST",
@@ -856,28 +855,10 @@ export default function TempMailPage() {
                     <form onSubmit={handleGenerate} className="space-y-4">
                       <div className="flex flex-col sm:flex-row items-stretch gap-3">
                         {mode === "byoe" ? (
-                          <div className="flex-[2] relative flex items-center h-11 rounded-xl border border-border/50 bg-background/50 overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-primary/50 transition-colors">
-                            <div className="pl-4 pr-1 text-muted-foreground/70 font-mono text-sm truncate max-w-[120px] sm:max-w-[200px] flex-shrink-0">
-                              {byoeConnections.find(c => c.id === selectedByoeId)?.gmail_address.split('@')[0] || "email"}<span className="text-foreground/50">+</span>
-                            </div>
-                            <input
-                              type="text"
-                              placeholder="suffix"
-                              value={username}
-                              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""))}
-                              minLength={1}
-                              maxLength={30}
-                              required
-                              className="flex-1 min-w-0 bg-transparent h-full px-1 pr-24 text-sm focus:outline-none placeholder:text-muted-foreground/50 font-mono text-foreground"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setUsername(generateRandomUsername())}
-                              className="absolute inset-y-0 right-2 flex items-center gap-1 px-2 my-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold transition-all"
-                            >
-                              <Shuffle className="size-3" />
-                              Random
-                            </button>
+                          <div className="flex-[2] relative flex items-center h-11 rounded-xl border border-primary/20 bg-primary/5 overflow-hidden shadow-sm transition-colors px-4">
+                            <span className="text-primary/80 font-mono text-xs sm:text-sm truncate">
+                              Auto-generating dot trick variation...
+                            </span>
                           </div>
                         ) : (
                           <div className="flex-[2] relative">
@@ -1062,7 +1043,7 @@ export default function TempMailPage() {
                         <GenerateButton 
                           onClick={handleGenerate}
                           isGenerating={generating}
-                          disabled={generating || !username || (mode === "public" && (!domain || (domains.find(d => d.domain === domain)?.available_at ? new Date(domains.find(d => d.domain === domain)!.available_at!).getTime() > now : false))) || (mode === "byoe" && !selectedByoeId)}
+                          disabled={generating || (mode === "public" && (!username || !domain || (domains.find(d => d.domain === domain)?.available_at ? new Date(domains.find(d => d.domain === domain)!.available_at!).getTime() > now : false))) || (mode === "byoe" && !selectedByoeId)}
                           hue={210}
                         />
                       </div>
