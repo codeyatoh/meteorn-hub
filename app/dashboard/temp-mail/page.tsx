@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   Mail,
@@ -54,6 +55,14 @@ type DomainInfo = {
   domain: string;
   is_banned: boolean;
   available_at?: string;
+};
+
+type UserAccount = {
+  id: string | number;
+  name: string;
+  referral_link: string;
+  tickets_done: number;
+  total_tickets: number;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -167,6 +176,11 @@ export default function TempMailPage() {
   const [domainOpen, setDomainOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  // Farming States
+  const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [showCreditModal, setShowCreditModal] = useState(false);
+
   // BYOE States
   const [mode] = useState<"public" | "byoe">("public");
   const [byoeConnections, setByoeConnections] = useState<{ id: string; gmail_address: string }[]>([]);
@@ -206,6 +220,14 @@ export default function TempMailPage() {
       fetch("/api/temp-mail/domains").then((r) => r.json()),
       fetch("/api/temp-mail/access").then((r) => r.json()),
       fetch("/api/temp-mail/byoe/connections").then((r) => r.json()),
+      (async () => {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: accounts } = await supabase.from("user_accounts").select("*").eq("user_id", user.id);
+          if (accounts) setUserAccounts(accounts);
+        }
+      })(),
       new Promise((res) => setTimeout(res, 800)),
     ]).then(([sessionData, domainData, accessData, byoeData]) => {
       if (accessData && accessData.status) {
@@ -410,19 +432,30 @@ export default function TempMailPage() {
   };
 
   // ── Destroy session ──
-  const handleDestroy = async () => {
-    if (!session) return;
+  const confirmAndDestroy = async (credit: boolean) => {
+    setShowCreditModal(false);
     setDestroying(true);
     destroyingRef.current = true;
-    const prevAddress = session.address;
+    const prevAddress = session?.address || "";
+    
+    if (credit && selectedAccountId) {
+      const supabase = createClient();
+      const { error } = await supabase.rpc("increment_account_ticket", { p_account_id: parseInt(selectedAccountId) });
+      if (error) {
+        toast.error("Failed to credit ticket: " + error.message);
+      } else {
+        toast.success("Ticket credited successfully!", { classNames: { icon: "text-emerald-500" } });
+        setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + 1 } : a));
+      }
+    }
+
     try {
       await fetch("/api/temp-mail/create", { method: "DELETE" });
       setSession(null);
       setMessages([]);
       setSelectedMsg(null);
       
-      // Keep username/domain in the field so user can quickly regenerate
-      const isByoe = session.mailtm_account_id === 'byoe_gmail' || prevAddress.endsWith('@gmail.com');
+      const isByoe = session?.mailtm_account_id === 'byoe_gmail' || prevAddress.endsWith('@gmail.com');
       const [u, d] = prevAddress.split("@");
       
       if (isByoe) {
@@ -441,6 +474,15 @@ export default function TempMailPage() {
       toast.error("Failed to destroy session.", { classNames: { icon: "text-destructive" } });
     } finally {
       setDestroying(false);
+    }
+  };
+
+  const handleDestroy = async () => {
+    if (!session) return;
+    if (selectedAccountId) {
+      setShowCreditModal(true);
+    } else {
+      confirmAndDestroy(false);
     }
   };
 
@@ -716,7 +758,42 @@ export default function TempMailPage() {
                 </div>
               ) : (
                 /* ── Generator Form ── */
-                <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
+                                <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
+                  {/* Target Account Selector */}
+                  <div className="flex flex-col gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-2">
+                    <label className="text-xs font-semibold text-primary uppercase tracking-wider flex justify-between">
+                      <span>Select Account to Farm</span>
+                      {selectedAccountId && <span className="text-foreground/50">Auto-credit on delete</span>}
+                    </label>
+                    <select 
+                       className="bg-background border border-border rounded-md px-3 py-2 text-sm w-full outline-none focus:border-primary/50"
+                       value={selectedAccountId}
+                       onChange={(e) => setSelectedAccountId(e.target.value)}
+                    >
+                      <option value="">-- No Account Selected --</option>
+                      {userAccounts.map(acc => (
+                         <option key={acc.id} value={acc.id}>{acc.name} ({acc.tickets_done}/{acc.total_tickets})</option>
+                      ))}
+                    </select>
+                    {selectedAccountId && userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link && (
+                      <div className="flex items-center gap-2 mt-1 bg-background/50 p-2 rounded-md">
+                        <span className="text-xs text-muted-foreground truncate flex-1">
+                          {userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link}
+                        </span>
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigator.clipboard.writeText(userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link || "");
+                            toast.success("Referral link copied!");
+                          }}
+                          className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition-colors font-medium whitespace-nowrap"
+                        >
+                          Copy Link
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       GENERATE ADDRESS
@@ -1226,6 +1303,31 @@ export default function TempMailPage() {
           </div>
         </div>
       </AnimatedModal>
+
+      {showCreditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-xl p-6 shadow-xl max-w-sm w-full space-y-4">
+            <h3 className="text-lg font-bold text-foreground">Did it credit?</h3>
+            <p className="text-sm text-muted-foreground">
+              Did this temp email successfully credit a ticket for the selected account?
+            </p>
+            <div className="flex gap-3 justify-end pt-2">
+              <button 
+                onClick={() => confirmAndDestroy(false)}
+                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                No, just delete
+              </button>
+              <button 
+                onClick={() => confirmAndDestroy(true)}
+                className="px-4 py-2 text-sm font-bold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all shadow-sm shadow-primary/20"
+              >
+                Yes, it credited!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
