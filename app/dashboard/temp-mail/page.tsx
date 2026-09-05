@@ -24,7 +24,7 @@ import {
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { Combobox } from "@/components/ui/combobox";
-import { Users, CheckCircle } from "lucide-react";
+import { Users, CheckCircle, Copy, MousePointerClick } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
@@ -784,29 +784,37 @@ export default function TempMailPage() {
                       }))}
                       value={selectedAccountId}
                       onValueChange={setSelectedAccountId}
-                      placeholder="Search and select an account..."
+                      placeholder="Choose an account to farm..."
                       searchPlaceholder="Search account name..."
                       emptyText="No active accounts found."
                     />
-                    {selectedAccountId && userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link && (
-                      <div className="flex items-center gap-2 mt-1 bg-background/50 p-2 rounded-md">
-                        <span className="text-xs text-muted-foreground truncate flex-1">
-                          {userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link}
-                        </span>
-                        <button 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            navigator.clipboard.writeText(userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link || "");
-                            toast.success("Referral link copied!");
-                          }}
-                          className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded hover:bg-primary/20 transition-colors font-medium whitespace-nowrap"
-                        >
-                          Copy Link
-                        </button>
+                    
+                    {!selectedAccountId ? (
+                      <div className="mt-4 p-4 rounded-lg border border-dashed border-border/60 bg-foreground/[0.02] flex flex-col items-center text-center gap-2">
+                        <MousePointerClick className="size-5 text-muted-foreground opacity-50" />
+                        <p className="text-xs text-muted-foreground font-medium">Please choose an account above to get your referral link.</p>
                       </div>
+                    ) : (
+                      userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link && (
+                        <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 flex flex-col items-center justify-center gap-3 text-center">
+                          <p className="text-sm font-medium text-foreground">
+                            You are referring <span className="font-bold text-primary">@{userAccounts.find(a => a.id.toString() === selectedAccountId)?.name}</span>
+                          </p>
+                          <button 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigator.clipboard.writeText(userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link || "");
+                              toast.success("Referral link copied!");
+                            }}
+                            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-lg hover:bg-primary/90 transition-all font-semibold shadow-md shadow-primary/20"
+                          >
+                            <Copy className="size-4" />
+                            Copy Referral Link
+                          </button>
+                        </div>
+                      )
                     )}
                   </div>
-
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       GENERATE ADDRESS
