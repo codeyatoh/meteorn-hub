@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
+import { Combobox } from "@/components/ui/combobox";
+import { Users, CheckCircle } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
@@ -760,21 +762,33 @@ export default function TempMailPage() {
                 /* ── Generator Form ── */
                                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
                   {/* Target Account Selector */}
-                  <div className="flex flex-col gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-2">
-                    <label className="text-xs font-semibold text-primary uppercase tracking-wider flex justify-between">
-                      <span>Select Account to Farm</span>
-                      {selectedAccountId && <span className="text-foreground/50">Auto-credit on delete</span>}
-                    </label>
-                    <select 
-                       className="bg-background border border-border rounded-md px-3 py-2 text-sm w-full outline-none focus:border-primary/50"
-                       value={selectedAccountId}
-                       onChange={(e) => setSelectedAccountId(e.target.value)}
-                    >
-                      <option value="">-- No Account Selected --</option>
-                      {userAccounts.map(acc => (
-                         <option key={acc.id} value={acc.id}>{acc.name} ({acc.tickets_done}/{acc.total_tickets})</option>
-                      ))}
-                    </select>
+                  <div className="group relative rounded-xl border border-border/40 bg-gradient-to-b from-background/80 to-background/40 backdrop-blur-md p-4 mb-4 shadow-sm transition-all hover:border-primary/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-md bg-primary/10 text-primary">
+                          <Users className="size-4" />
+                        </div>
+                        <h3 className="text-sm font-semibold tracking-tight">Active Farming Account</h3>
+                      </div>
+                      {selectedAccountId && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                          <CheckCircle className="size-3" />
+                          Auto-credit on delete
+                        </span>
+                      )}
+                    </div>
+                    <Combobox 
+                      options={userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).map(acc => ({
+                        value: acc.id.toString(),
+                        label: acc.name + " (" + acc.tickets_done + "/" + acc.total_tickets + ")"
+                      }))}
+                      value={selectedAccountId}
+                      onValueChange={setSelectedAccountId}
+                      placeholder="Search and select an account..."
+                      searchPlaceholder="Search account name..."
+                      emptyText="No active accounts found."
+                    />
+                  </div>
                     {selectedAccountId && userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link && (
                       <div className="flex items-center gap-2 mt-1 bg-background/50 p-2 rounded-md">
                         <span className="text-xs text-muted-foreground truncate flex-1">
