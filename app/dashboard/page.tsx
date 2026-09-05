@@ -1,6 +1,6 @@
 "use client";
 
-import { CopyIcon, LinkIcon, PencilIcon, TrashIcon, CheckIcon, CircleIcon, MinusIcon, PlusIcon, ChevronDownIcon, WalletIcon, MailIcon, WrenchIcon, SearchIcon, ListFilterIcon, CalendarIcon } from "lucide-react";
+import { CopyIcon, LinkIcon, PencilIcon, TrashIcon, CheckIcon, CircleIcon, PlusIcon, ChevronDownIcon, WalletIcon, MailIcon, WrenchIcon, SearchIcon, ListFilterIcon, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -162,7 +162,6 @@ export default function UserDashboardPage() {
   const [isDeletingLog, setIsDeletingLog] = useState(false);
   const [isCashingOut, setIsCashingOut] = useState(false);
   const [isUsingRepairTicket, setIsUsingRepairTicket] = useState(false);
-  const [updatingTicketsIds, setUpdatingTicketsIds] = useState<Set<number>>(new Set());
   
   const supabase = createClient();
 
@@ -357,53 +356,6 @@ export default function UserDashboardPage() {
 
 
 
-  const updateTicket = async (id: number, delta: number) => {
-    if (updatingTicketsIds.has(id)) return;
-    setUpdatingTicketsIds(prev => new Set(prev).add(id));
-    
-    try {
-      const account = accounts.find(a => a.id === id);
-      if (!account) return;
-      
-      const newCount = Math.max(0, Math.min(account.totalTickets, account.ticketsDone + delta));
-      const actualDelta = newCount - account.ticketsDone;
-      if (actualDelta === 0) return;
-      
-      const newAccumulated = account.totalAccumulatedTickets + actualDelta;
-      
-      if (actualDelta < 0 && newAccumulated < account.repairTicketsUsed) {
-        toast.error("Cannot decrease tickets that have already been used for repair.");
-        return;
-      }
-      
-      setAccounts((prev) =>
-        prev.map((acc) => (acc.id === id ? { ...acc, ticketsDone: newCount, totalAccumulatedTickets: newAccumulated } : acc))
-      );
-      
-      await supabase
-        .from('user_accounts')
-        .update({ tickets_done: newCount, total_accumulated_tickets: newAccumulated })
-        .eq('id', id);
-
-      if (userId) {
-        await supabase
-          .from('ticket_logs')
-          .insert({
-            user_id: userId,
-            account_id: id,
-            account_name: account.name,
-            increment: actualDelta
-          });
-        toast.success("Daily repair tickets updated.");
-      }
-    } finally {
-      setUpdatingTicketsIds(prev => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }
-  };
 
   const handleLogIncome = async () => {
     const gmto = parseFloat(gmtoEarned);
