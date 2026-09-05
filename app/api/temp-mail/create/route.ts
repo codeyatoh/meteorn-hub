@@ -35,28 +35,6 @@ export async function POST(request: NextRequest) {
     let mailtmAccountId = 'custom';
     let byoeConnectionId = null;
 
-function generateDotTrickEmail(baseName: string, index: number): string {
-  // Remove any existing dots to get the pure base name
-  const cleanBase = baseName.replace(/\./g, '');
-  if (cleanBase.length <= 1) return cleanBase;
-  
-  const numSlots = cleanBase.length - 1;
-  const maxVariations = Math.pow(2, numSlots);
-  
-  if (index >= maxVariations) {
-    throw new Error('All possible dot trick variations exhausted.');
-  }
-
-  let result = cleanBase[0];
-  for (let i = 0; i < numSlots; i++) {
-    if ((index & (1 << i)) !== 0) {
-      result += '.';
-    }
-    result += cleanBase[i + 1];
-  }
-  return result;
-}
-
 function generateRandomSuffix(length: number): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
@@ -82,18 +60,10 @@ function generateRandomSuffix(length: number): string {
 
       const baseName = connection.gmail_address.split('@')[0];
       let currentIndex = connection.dot_trick_index || 0;
-      if (currentIndex === 0) {
-        currentIndex = 1; // Skip base email (0 dots)
-      }
-      
-      // Alternate between gmail.com and googlemail.com to double the variations
-      const domain = (currentIndex % 2 === 0) ? 'googlemail.com' : 'gmail.com';
-      const dotIndex = Math.floor((currentIndex + 1) / 2);
       
       try {
-        const dottedName = generateDotTrickEmail(baseName, dotIndex);
         const randomSuffix = generateRandomSuffix(10);
-        address = `${dottedName}+${randomSuffix}@${domain}`;
+        address = `${baseName}+${randomSuffix}@gmail.com`;
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         return NextResponse.json({ error: errMsg }, { status: 400 });
