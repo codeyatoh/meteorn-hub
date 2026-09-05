@@ -24,7 +24,7 @@ import {
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { Combobox } from "@/components/ui/combobox";
-import { Users, CheckCircle, MousePointerClick } from "lucide-react";
+import { Users, CheckCircle, MousePointerClick, ExternalLink } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
@@ -803,13 +803,13 @@ export default function TempMailPage() {
                           <button 
                             onClick={(e) => {
                               e.preventDefault();
-                              navigator.clipboard.writeText(userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link || "");
-                              toast.success("Referral link copied!");
+                              const link = userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link;
+                              if (link) window.open(link, '_blank');
                             }}
                             className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-lg hover:bg-primary/90 transition-all font-semibold shadow-md shadow-primary/20"
                           >
-                            <Copy className="size-4" />
-                            Copy Referral Link
+                            <ExternalLink className="size-4" />
+                            Go to Link
                           </button>
                         </div>
                       )
