@@ -57,6 +57,15 @@ function generateDotTrickEmail(baseName: string, index: number): string {
   return result;
 }
 
+function generateRandomSuffix(length: number): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
     if (byoe_gmail_id) {
       // BYOE Mode
       // Fetch the connection with its dot_trick_index
@@ -83,7 +92,8 @@ function generateDotTrickEmail(baseName: string, index: number): string {
       
       try {
         const dottedName = generateDotTrickEmail(baseName, dotIndex);
-        address = `${dottedName}@${domain}`;
+        const randomSuffix = generateRandomSuffix(10);
+        address = `${dottedName}+${randomSuffix}@${domain}`;
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         return NextResponse.json({ error: errMsg }, { status: 400 });
