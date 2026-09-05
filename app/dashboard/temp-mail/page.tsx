@@ -24,7 +24,7 @@ import {
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { Combobox } from "@/components/ui/combobox";
-import { Users, CheckCircle, Copy, MousePointerClick } from "lucide-react";
+import { Users, CheckCircle, MousePointerClick } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
