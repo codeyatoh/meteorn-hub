@@ -1090,25 +1090,10 @@ export default function UserDashboardPage() {
                       {/* Interactive Ticket Logger */}
                       {!account.isBanned && (
                         <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] shrink-0">
-                          <button 
-                            onClick={() => updateTicket(account.id, -1)}
-                            disabled={account.ticketsDone === 0 || updatingTicketsIds.has(account.id) || (account.totalAccumulatedTickets - 1 < account.repairTicketsUsed)}
-                            className="p-1.5 sm:p-2 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                          >
-                            <MinusIcon className="size-4" />
-                          </button>
                           
-                          <span className={`w-10 sm:w-11 text-center ${isDone ? "text-emerald-500" : "text-muted-foreground/70"}`}>
+                          <span className={`w-10 sm:w-11 text-center font-bold ${isDone ? "text-emerald-500" : "text-muted-foreground"}`}>
                             {account.ticketsDone}/{account.totalTickets}
                           </span>
-                          
-                          <button 
-                            onClick={() => updateTicket(account.id, 1)}
-                            disabled={isDone || updatingTicketsIds.has(account.id)}
-                            className="p-1.5 sm:p-2 text-muted-foreground/50 hover:text-foreground hover:bg-foreground/10 rounded-md transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                          >
-                            <PlusIcon className="size-4" />
-                          </button>
 
                           <Image src="/repair-ticket.png" alt="tix" width={24} height={24} className={`object-contain ml-1 sm:ml-1.5 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} w-5 h-5 sm:w-6 sm:h-6`} />
 
