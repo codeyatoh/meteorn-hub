@@ -718,21 +718,8 @@ export default function TempMailPage() {
                 /* ── Generator Form ── */
                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex bg-foreground/5 p-1 rounded-lg">
-                      <button 
-                        onClick={() => setMode("public")}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-background shadow-sm text-foreground cursor-default`}
-                      >
-                        Public Domain
-                      </button>
-                      {/* Hidden BYOE option 
-                      <button 
-                        onClick={() => setMode("byoe")}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${mode === "byoe" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                      >
-                        Personal Gmail <Crown className="size-3 text-amber-500" />
-                      </button>
-                      */}
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      GENERATE ADDRESS
                     </div>
                     <button onClick={() => setIsTiersModalOpen(true)} className="flex items-center gap-1 text-primary hover:underline hover:text-primary/80 transition-colors bg-primary/10 px-2 py-1 rounded-md shrink-0">
                       <HelpCircle className="size-3" /> <span className="text-[9px] whitespace-nowrap">View Tiers</span>
