@@ -226,7 +226,7 @@ export default function TempMailPage() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data: accounts } = await supabase.from("user_accounts").select("*").eq("user_id", user.id);
+          const { data: accounts } = await supabase.from("user_accounts").select("*").eq("user_id", user.id).neq("is_banned", true);
           if (accounts) setUserAccounts(accounts);
         }
       })(),
