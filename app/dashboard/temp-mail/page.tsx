@@ -24,7 +24,7 @@ import {
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { Combobox } from "@/components/ui/combobox";
-import { Users, CheckCircle, MousePointerClick, ExternalLink } from "lucide-react";
+import { CheckCircle, ExternalLink } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
@@ -762,58 +762,47 @@ export default function TempMailPage() {
                 /* ── Generator Form ── */
                                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
                   {/* Target Account Selector */}
-                  <div className="group relative rounded-xl border border-border/40 bg-gradient-to-b from-background/80 to-background/40 backdrop-blur-md p-4 mb-4 shadow-sm transition-all hover:border-primary/30">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-primary/10 text-primary">
-                          <Users className="size-4" />
-                        </div>
-                        <h3 className="text-sm font-semibold tracking-tight">Active Farming Account</h3>
-                      </div>
+                  <div className="flex flex-col gap-2 mb-5">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Active Farming Account
+                      </span>
                       {selectedAccountId && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                          <CheckCircle className="size-3" />
-                          Auto-credit on delete
+                        <span className="text-[10px] font-medium text-emerald-500 flex items-center gap-1">
+                          <CheckCircle className="size-3" /> Auto-credit on delete
                         </span>
                       )}
                     </div>
-                    <Combobox 
-                      options={userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).map(acc => ({
-                        value: acc.id.toString(),
-                        label: acc.name + " (" + acc.tickets_done + "/" + acc.total_tickets + ")"
-                      }))}
-                      value={selectedAccountId}
-                      onValueChange={setSelectedAccountId}
-                      placeholder="Choose an account to farm..."
-                      searchPlaceholder="Search account name..."
-                      emptyText="No active accounts found."
-                    />
                     
-                    {!selectedAccountId ? (
-                      <div className="mt-4 p-4 rounded-lg border border-dashed border-border/60 bg-foreground/[0.02] flex flex-col items-center text-center gap-2">
-                        <MousePointerClick className="size-5 text-muted-foreground opacity-50" />
-                        <p className="text-xs text-muted-foreground font-medium">Please choose an account above to get your referral link.</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <Combobox 
+                          options={userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).map(acc => ({
+                            value: acc.id.toString(),
+                            label: acc.name + " (" + acc.tickets_done + "/" + acc.total_tickets + ")"
+                          }))}
+                          value={selectedAccountId}
+                          onValueChange={setSelectedAccountId}
+                          placeholder="Choose an account to farm..."
+                          searchPlaceholder="Search account name..."
+                          emptyText="No active accounts found."
+                        />
                       </div>
-                    ) : (
-                      userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link && (
-                        <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20 flex flex-col items-center justify-center gap-3 text-center">
-                          <p className="text-sm font-medium text-foreground">
-                            You are referring <span className="font-bold text-primary">@{userAccounts.find(a => a.id.toString() === selectedAccountId)?.name}</span>
-                          </p>
-                          <button 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              const link = userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link;
-                              if (link) window.open(link, '_blank');
-                            }}
-                            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-lg hover:bg-primary/90 transition-all font-semibold shadow-md shadow-primary/20"
-                          >
-                            <ExternalLink className="size-4" />
-                            Go to Link
-                          </button>
-                        </div>
-                      )
-                    )}
+                      
+                      {selectedAccountId && userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link && (
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const link = userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link;
+                            if (link) window.open(link, '_blank');
+                          }}
+                          className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground px-4 rounded-md hover:bg-primary/90 transition-all font-semibold text-xs shadow-sm h-10"
+                        >
+                          <ExternalLink className="size-3.5" />
+                          Go to Link
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
