@@ -59,7 +59,7 @@ function generateRandomSuffix(length: number): string {
       }
 
       const baseName = connection.gmail_address.split('@')[0];
-      let currentIndex = connection.dot_trick_index || 0;
+      const currentIndex = connection.dot_trick_index || 0;
       
       try {
         const randomSuffix = generateRandomSuffix(10);
