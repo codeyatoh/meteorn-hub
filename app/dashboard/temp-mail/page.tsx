@@ -168,7 +168,7 @@ export default function TempMailPage() {
   const [generating, setGenerating] = useState(false);
 
   // BYOE States
-  const [mode, setMode] = useState<"public" | "byoe">("public");
+  const [mode] = useState<"public" | "byoe">("public");
   const [byoeConnections, setByoeConnections] = useState<{ id: string; gmail_address: string }[]>([]);
   const [selectedByoeId, setSelectedByoeId] = useState("");
   const [byoeEmail, setByoeEmail] = useState("");
