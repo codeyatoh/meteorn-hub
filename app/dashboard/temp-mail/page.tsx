@@ -788,7 +788,6 @@ export default function TempMailPage() {
                       searchPlaceholder="Search account name..."
                       emptyText="No active accounts found."
                     />
-                  </div>
                     {selectedAccountId && userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link && (
                       <div className="flex items-center gap-2 mt-1 bg-background/50 p-2 rounded-md">
                         <span className="text-xs text-muted-foreground truncate flex-1">
