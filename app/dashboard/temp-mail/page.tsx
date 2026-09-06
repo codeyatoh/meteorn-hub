@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
-import { CheckCircle, ExternalLink, Minus } from "lucide-react";
+import { CheckCircle, ExternalLink, RotateCcw } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
@@ -549,7 +549,15 @@ export default function TempMailPage() {
         toast.error("Failed to credit ticket: " + error.message);
       } else {
         toast.success("Ticket credited successfully!", { classNames: { icon: "text-emerald-500" } });
+        // Update own accounts optimistically
         setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + 1 } : a));
+        // Also update helpRequests optimistically (for assisting accounts)
+        setHelpRequests(prev => prev.map(h => h.account_id.toString() === selectedAccountId && h.user_accounts
+          ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done + 1 } }
+          : h
+        ));
+        // Re-fetch from DB to trigger the auto-switch effect with accurate data
+        await fetchAccountsAndHelps();
       }
     }
 
@@ -590,15 +598,24 @@ export default function TempMailPage() {
 
     const supabase = createClient();
     
-    // Optimistic update
+    // Optimistic update for own accounts
     setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done - 1 } : a));
-    toast.success("Ticket count decreased manually.");
+    // Optimistic update for assisting accounts
+    setHelpRequests(prev => prev.map(h => h.account_id.toString() === selectedAccountId && h.user_accounts
+      ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done - 1 } }
+      : h
+    ));
+    toast.success("Ticket undone.");
 
     const { error } = await supabase.rpc("decrement_account_ticket", { p_account_id: parseInt(selectedAccountId) });
     if (error) {
-      // Revert on error
+      // Revert both on error
       setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + 1 } : a));
-      toast.error(`Failed to adjust ticket: ${error.message}`);
+      setHelpRequests(prev => prev.map(h => h.account_id.toString() === selectedAccountId && h.user_accounts
+        ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done + 1 } }
+        : h
+      ));
+      toast.error(`Failed to undo ticket: ${error.message}`);
     }
   };
 
@@ -900,10 +917,11 @@ export default function TempMailPage() {
                                  <button
                                    onClick={(e) => { e.preventDefault(); handleManualAdjustment(); }}
                                    disabled={acc.tickets_done <= 0}
-                                   className="flex items-center justify-center size-5 rounded-md bg-background/50 border border-border/50 hover:bg-foreground/10 hover:border-foreground/20 text-muted-foreground hover:text-foreground transition-all disabled:opacity-30"
-                                   title="Undo credited ticket"
+                                   className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-background/50 border border-border/50 hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-500 text-muted-foreground transition-all disabled:opacity-30 text-[10px] font-semibold"
+                                   title="Undo last credited ticket"
                                  >
-                                   <Minus className="size-3" />
+                                   <RotateCcw className="size-2.5" />
+                                   Undo
                                  </button>
                                </div>
                              </div>
