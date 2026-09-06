@@ -21,14 +21,11 @@ import {
   Plus,
   Trash2 as TrashIcon,
   Bell,
-  ArrowRight,
   HandHeart,
-  Ban,
   CheckCircle2,
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
-import { Combobox } from "@/components/ui/combobox";
 import { CheckCircle, ExternalLink } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
@@ -816,17 +813,20 @@ export default function TempMailPage() {
                   </div>
                 </div>
               ) : viewMode === "onboarding" ? (
-                <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-4">
-                  <div className="text-center mb-6">
-                    <h2 className="text-xl font-bold text-foreground">Select an account to grind</h2>
-                    <p className="text-sm text-muted-foreground mt-1">Choose one of your active accounts or help requests below.</p>
+                <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-background/60 p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6 z-0">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent -z-10" />
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl sm:text-3xl font-black bg-gradient-to-br from-foreground to-foreground/50 bg-clip-text text-transparent pb-1">
+                      Select an account to grind
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-2">Choose one of your active accounts or help requests below.</p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).map(acc => (
                       <button
                         key={`own-${acc.id}`}
                         onClick={() => { setSelectedAccountId(acc.id.toString()); setViewMode("grind"); }}
-                        className="flex flex-col text-left p-4 rounded-xl border border-border/50 bg-background hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                        className="flex flex-col text-left p-5 rounded-2xl border border-white/5 bg-foreground/[0.02] hover:border-primary/30 hover:bg-primary/5 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group"
                       >
                         <div className="flex items-center justify-between mb-2 w-full">
                           <span className="font-bold text-foreground truncate">{acc.name}</span>
@@ -843,7 +843,7 @@ export default function TempMailPage() {
                       <button
                         key={`help-${hr.account_id}`}
                         onClick={() => { setSelectedAccountId(hr.account_id.toString()); setViewMode("grind"); }}
-                        className="flex flex-col text-left p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60 hover:bg-amber-500/10 transition-all group relative overflow-hidden"
+                        className="flex flex-col text-left p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40 hover:bg-amber-500/10 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/5 transition-all duration-300 group relative overflow-hidden"
                       >
                         <div className="absolute top-0 right-0 bg-amber-500 text-amber-500-foreground text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-bl-lg">
                            Helping
@@ -883,15 +883,16 @@ export default function TempMailPage() {
                       )}
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-primary/5 border border-primary/20 rounded-xl p-3 shadow-sm gap-3">
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                         <span className="text-[11px] font-medium text-muted-foreground">Itong account na gina grind mo now:</span>
-                         <span className="text-sm font-bold text-foreground truncate">
+                    <div className="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 sm:p-5 shadow-lg backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-0">
+                      <div className="absolute -left-10 -top-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
+                      <div className="flex flex-col gap-1 min-w-0">
+                         <span className="text-xs font-semibold text-primary uppercase tracking-widest">Currently Grinding</span>
+                         <span className="text-base sm:text-lg font-black text-foreground truncate drop-shadow-sm">
                            {userAccounts.find(a => a.id.toString() === selectedAccountId)?.name || 
                             helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.name}
                          </span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2.5 shrink-0">
                         {(() => {
                            const link = userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link || 
                                         helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.referral_link;
@@ -899,9 +900,9 @@ export default function TempMailPage() {
                              return (
                                <button 
                                  onClick={(e) => { e.preventDefault(); window.open(link, '_blank'); }}
-                                 className="shrink-0 flex items-center gap-1.5 bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md transition-all font-semibold text-xs shadow-sm"
+                                 className="shrink-0 flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-xs shadow-md hover:shadow-primary/20 hover:-translate-y-0.5"
                                >
-                                 <ExternalLink className="size-3.5" />
+                                 <ExternalLink className="size-4" />
                                  Ref Link
                                </button>
                              )
@@ -910,7 +911,7 @@ export default function TempMailPage() {
                         })()}
                         <button
                           onClick={(e) => { e.preventDefault(); setViewMode("onboarding"); setSelectedAccountId(""); }}
-                          className="shrink-0 flex items-center gap-1.5 bg-foreground/5 text-foreground hover:bg-foreground/10 px-3 py-1.5 rounded-md transition-all font-semibold text-xs border border-border/50"
+                          className="shrink-0 flex items-center gap-2 bg-foreground/5 text-foreground hover:bg-foreground/10 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-xs border border-white/10 hover:-translate-y-0.5"
                         >
                           Switch
                         </button>

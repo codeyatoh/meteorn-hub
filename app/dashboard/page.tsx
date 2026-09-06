@@ -1,6 +1,6 @@
 "use client";
 
-import { CopyIcon, LinkIcon, PencilIcon, TrashIcon, CheckIcon, CircleIcon, PlusIcon, ChevronDownIcon, WalletIcon, MailIcon, WrenchIcon, SearchIcon, ListFilterIcon, CalendarIcon, HandHeart } from "lucide-react";
+import { LinkIcon, PencilIcon, TrashIcon, CheckIcon, CircleIcon, PlusIcon, ChevronDownIcon, WalletIcon, MailIcon, WrenchIcon, SearchIcon, ListFilterIcon, CalendarIcon, HandHeart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -34,28 +34,6 @@ type IncomeLog = { id: string; time: string; title: string; gmto: number; color:
 type HelpRequest = { id: number; requester_id: string; helper_id: string; account_id: number; status: string; };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
-
-const handleReferralClick = (e: React.MouseEvent, url: string) => {
-  e.preventDefault();
-  if (typeof window !== "undefined") {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    if (isAndroid) {
-      try {
-        const parsed = new URL(url);
-        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-          const scheme = parsed.protocol.replace(":", "");
-          const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${scheme};S.browser_fallback_url=${encodeURIComponent(url)};end;`;
-          window.location.href = intentUrl;
-          return;
-        }
-      } catch {
-        // Fallback to default routing on error
-      }
-    }
-    // For iOS and Desktop, standard navigation is best for Universal Links
-    window.location.href = url;
-  }
-};
 
 export default function UserDashboardPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -168,8 +146,9 @@ export default function UserDashboardPage() {
   const [myHelpRequests, setMyHelpRequests] = useState<HelpRequest[]>([]);
   const [isRequestHelpModalOpen, setIsRequestHelpModalOpen] = useState(false);
   const [requestHelpAccountId, setRequestHelpAccountId] = useState<number | null>(null);
-  const [requestHelpSearchQuery, setRequestHelpSearchQuery] = useState("");
+  const [requestHelpUserId, setRequestHelpUserId] = useState("");
   const [isRequestingHelp, setIsRequestingHelp] = useState(false);
+  const [helperOptions, setHelperOptions] = useState<{value: string, label: string}[]>([]);
   
   const supabase = createClient();
 
@@ -604,23 +583,31 @@ export default function UserDashboardPage() {
     }
   };
 
+  useEffect(() => {
+    if (isRequestHelpModalOpen) {
+      const fetchHelpers = async () => {
+        const { data } = await supabase.rpc("search_chat_profiles", { search_query: "" });
+        if (data) {
+          setHelperOptions(data.map((u: { user_id: string; full_name: string }) => ({
+            value: u.user_id,
+            label: u.full_name
+          })));
+        }
+      };
+      fetchHelpers();
+    }
+  }, [isRequestHelpModalOpen, supabase]);
+
   const handleRequestHelp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!requestHelpAccountId || !requestHelpSearchQuery.trim()) return;
+    if (!requestHelpAccountId || !requestHelpUserId) {
+      toast.error("Please select a helper.");
+      return;
+    }
 
     setIsRequestingHelp(true);
     try {
-      // Find helper by email or nickname
-      const { data: profiles, error: searchError } = await supabase
-        .rpc("search_chat_profiles", { search_query: requestHelpSearchQuery.trim() });
-      
-      if (searchError || !profiles || profiles.length === 0) {
-        toast.error("User not found. Please check the email or nickname.");
-        return;
-      }
-      
-      // For simplicity, take the first match
-      const helperId = profiles[0].user_id;
+      const helperId = requestHelpUserId;
 
       if (helperId === userId) {
         toast.error("You cannot request help from yourself.");
@@ -653,7 +640,7 @@ export default function UserDashboardPage() {
           status: 'pending'
         }]);
         setIsRequestHelpModalOpen(false);
-        setRequestHelpSearchQuery("");
+        setRequestHelpUserId("");
       }
     } finally {
       setIsRequestingHelp(false);
@@ -1093,14 +1080,9 @@ export default function UserDashboardPage() {
                       )}
                       <div className="flex items-center gap-1 shrink-0">
                         {account.referralLink && (
-                          <>
-                            <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Referral Link">
-                              <CopyIcon className="size-4" />
-                            </button>
-                            <button onClick={(e) => handleReferralClick(e, account.referralLink!)} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center rounded-md" title="Open Referral Link">
-                              <LinkIcon className="size-4" />
-                            </button>
-                          </>
+                          <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Referral Link">
+                            <LinkIcon className="size-4" />
+                          </button>
                         )}
 
                         {account.email && (
@@ -1108,12 +1090,13 @@ export default function UserDashboardPage() {
                             <MailIcon className="size-4" />
                           </button>
                         )}
+
+                        <button onClick={() => { setRequestHelpAccountId(account.id); setIsRequestHelpModalOpen(true); }} className="p-2 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 rounded-md transition-colors" title="Request Help">
+                          <HandHeart className="size-4" />
+                        </button>
                         
                         {/* Action Buttons */}
                         <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center transition-opacity shrink-0 ml-1">
-                          <button onClick={() => { setRequestHelpAccountId(account.id); setIsRequestHelpModalOpen(true); }} className="p-2 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 rounded-md transition-colors" title="Request Help">
-                            <HandHeart className="size-4" />
-                          </button>
                           <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
                             <PencilIcon className="size-4" />
                           </button>
@@ -1804,17 +1787,19 @@ export default function UserDashboardPage() {
       <AnimatedModal isOpen={isRequestHelpModalOpen} onClose={() => setIsRequestHelpModalOpen(false)} title="Request Help" icon={<HandHeart size={18} strokeWidth={1.5} />} maxWidth="sm">
         <form onSubmit={handleRequestHelp} className="p-4 sm:p-6 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-foreground">Helper Email or Nickname</label>
-            <input 
-              type="text" 
-              placeholder="e.g. user@example.com or CoolUser123"
-              value={requestHelpSearchQuery}
-              onChange={(e) => setRequestHelpSearchQuery(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-            />
+            <label className="text-xs font-semibold text-foreground">Select a Helper</label>
+            <div className="mt-1">
+              <Combobox 
+                options={helperOptions} 
+                value={requestHelpUserId} 
+                onValueChange={setRequestHelpUserId} 
+                placeholder="Search by nickname or email..." 
+                searchPlaceholder="Type to filter helpers..."
+                emptyText="No users found."
+              />
+            </div>
             <p className="text-[10px] text-muted-foreground mt-1">
-              Enter the exact email or nickname of the person you want to help grind this account. They will receive a notification in Temp Mail.
+              Select the person you want to help grind this account. They will receive a notification in Temp Mail.
             </p>
           </div>
           <div className="flex gap-3 justify-end pt-2">
