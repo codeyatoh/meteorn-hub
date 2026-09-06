@@ -153,6 +153,21 @@ export default function AnalyticsPage() {
       fetchData(),
       new Promise(resolve => setTimeout(resolve, 1000))
     ]).finally(() => setLoading(false));
+
+    const channel = supabase.channel('analytics_realtime_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_logs' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'income_logs' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    window.addEventListener("focus", fetchData);
+    return () => {
+      window.removeEventListener("focus", fetchData);
+      supabase.removeChannel(channel);
+    };
   }, [supabase, filter]);
 
   const currencySymbol = currency === "php" ? "₱" : currency === "eur" ? "€" : "$";

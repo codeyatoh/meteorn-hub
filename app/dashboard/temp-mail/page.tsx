@@ -231,6 +231,18 @@ export default function TempMailPage() {
     return () => clearInterval(timer);
   }, []);
 
+  const fetchAccountsAndHelps = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: accounts } = await supabase.from("user_accounts").select("*").eq("user_id", user.id).neq("is_banned", true);
+      if (accounts) setUserAccounts(accounts);
+      
+      const { data: helps } = await supabase.from("help_requests").select("*, user_accounts(*)").eq("helper_id", user.id);
+      if (helps) setHelpRequests(helps as HelpRequest[]);
+    }
+  }, []);
+
   // ── Load existing session + domains + access on mount ──
   useEffect(() => {
     Promise.all([
@@ -238,17 +250,7 @@ export default function TempMailPage() {
       fetch("/api/temp-mail/domains").then((r) => r.json()),
       fetch("/api/temp-mail/access").then((r) => r.json()),
       fetch("/api/temp-mail/byoe/connections").then((r) => r.json()),
-      (async () => {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: accounts } = await supabase.from("user_accounts").select("*").eq("user_id", user.id).neq("is_banned", true);
-          if (accounts) setUserAccounts(accounts);
-          
-          const { data: helps } = await supabase.from("help_requests").select("*, user_accounts(*)").eq("helper_id", user.id);
-          if (helps) setHelpRequests(helps as HelpRequest[]);
-        }
-      })(),
+      fetchAccountsAndHelps(),
       new Promise((res) => setTimeout(res, 800)),
     ]).then(([sessionData, domainData, accessData, byoeData]) => {
       if (accessData && accessData.status) {
@@ -287,7 +289,23 @@ export default function TempMailPage() {
       }
 
     }).finally(() => setPageLoading(false));
-  }, []);
+
+    const supabase = createClient();
+    const channel = supabase.channel('tempmail_realtime_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_accounts' }, () => {
+        fetchAccountsAndHelps();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'help_requests' }, () => {
+        fetchAccountsAndHelps();
+      })
+      .subscribe();
+
+    window.addEventListener("focus", fetchAccountsAndHelps);
+    return () => {
+      window.removeEventListener("focus", fetchAccountsAndHelps);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchAccountsAndHelps]);
 
   // Restore from localStorage and Supabase safely on client mount
   useEffect(() => {

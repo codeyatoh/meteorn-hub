@@ -320,8 +320,23 @@ export default function FaucetPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => { fetchData(); }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchData]);
+
+    const channel = supabase.channel('faucet_realtime_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'faucet_claims' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'faucet_user_stats' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    window.addEventListener("focus", fetchData);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("focus", fetchData);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData, supabase]);
 
   // Background auto-sync on load
   useEffect(() => {

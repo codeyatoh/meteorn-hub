@@ -127,10 +127,20 @@ export default function InventoryPage() {
       }
     };
     load();
+
+    const channel = supabase.channel('inventory_realtime_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shoe_inventory_posts' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    window.addEventListener("focus", fetchData);
     return () => {
       mounted = false;
+      window.removeEventListener("focus", fetchData);
+      supabase.removeChannel(channel);
     };
-  }, [fetchData]);
+  }, [fetchData, supabase]);
 
   const resetForm = () => {
     setSelectedPostId(null);
