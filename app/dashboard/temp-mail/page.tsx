@@ -293,11 +293,13 @@ export default function TempMailPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedId = localStorage.getItem("grind_account_id");
-      if (savedId) {
-        setSelectedAccountId(savedId);
-        setViewMode("grind");
-      }
-      setIsRestored(true);
+      setTimeout(() => {
+        if (savedId) {
+          setSelectedAccountId(savedId);
+          setViewMode("grind");
+        }
+        setIsRestored(true);
+      }, 0);
     }
   }, []);
 

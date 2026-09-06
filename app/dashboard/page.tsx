@@ -1035,92 +1035,95 @@ export default function UserDashboardPage() {
                 return (
                   <li
                     key={account.id}
-                    className="group flex flex-wrap xl:flex-nowrap items-center gap-2 xl:gap-3 rounded-md px-2 py-2 transition-colors hover:bg-foreground/[0.03]"
+                    className="group flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 xl:gap-4 rounded-xl p-3 sm:p-4 bg-background/30 sm:bg-transparent border sm:border-0 border-border/10 transition-colors hover:bg-foreground/[0.03]"
                   >
-                    <div
-                      className={`flex size-4 sm:size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                        isDone
-                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500"
-                          : "border-foreground/30 text-transparent"
-                      }`}
-                    >
-                      {isDone ? (
-                        <CheckIcon className="size-2.5 sm:size-3" />
-                      ) : (
-                        <CircleIcon className="size-2.5 sm:size-3" />
-                      )}
-                    </div>
-                    
-                    {/* Account Avatar */}
-                    <div className="flex items-center justify-center size-7 sm:size-9 bg-accent rounded-full text-accent-foreground ml-0.5 sm:ml-1 overflow-hidden shrink-0">
-                      {AVATAR_MAP[account.avatar || "Avatar1"]}
-                    </div>
-
-                    <div className="flex-1 min-w-0 flex flex-wrap items-center justify-between gap-y-2 gap-x-1.5 sm:gap-2">
-                      <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 flex-1 min-w-[120px]">
-                        <span
-                          className={`block break-all sm:break-words whitespace-normal text-xs sm:text-sm transition-all ${isDone ? "text-emerald-500" : account.isBanned ? "text-red-500/70" : "text-foreground"}`}
-                        >
-                          {account.name}
-                        </span>
-                        {(() => {
-                          const helpReqs = myHelpRequests.filter(hr => hr.account_id === account.id);
-                          const hasAccepted = helpReqs.some(hr => hr.status === 'accepted');
-                          const hasPending = helpReqs.some(hr => hr.status === 'pending');
-                          if (hasAccepted) {
-                            return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 flex items-center gap-1"><HandHeart className="size-3" /> Ongoing Help</span>;
-                          } else if (hasPending) {
-                            return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-amber-500/10 text-amber-500">Pending Help</span>;
-                          }
-                          return null;
-                        })()}
-                        {account.isBanned && (
-                          <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-red-500/10 text-red-500">
-                            Banned
-                          </span>
+                    {/* Left/Top Section: Info */}
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full xl:w-auto">
+                      <div
+                        className={`flex size-4 sm:size-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                          isDone
+                            ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-500"
+                            : "border-foreground/30 text-transparent"
+                        }`}
+                      >
+                        {isDone ? (
+                          <CheckIcon className="size-2.5 sm:size-3" />
+                        ) : (
+                          <CircleIcon className="size-2.5 sm:size-3" />
                         )}
                       </div>
+                      
+                      {/* Account Avatar */}
+                      <div className="flex items-center justify-center size-7 sm:size-9 bg-accent rounded-full text-accent-foreground overflow-hidden shrink-0">
+                        {AVATAR_MAP[account.avatar || "Avatar1"]}
+                      </div>
+
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+                          <span
+                            className={`block truncate max-w-full text-xs sm:text-sm font-semibold transition-all ${isDone ? "text-emerald-500" : account.isBanned ? "text-red-500/70" : "text-foreground"}`}
+                          >
+                            {account.name}
+                          </span>
+                          {(() => {
+                            const helpReqs = myHelpRequests.filter(hr => hr.account_id === account.id);
+                            const hasAccepted = helpReqs.some(hr => hr.status === 'accepted');
+                            const hasPending = helpReqs.some(hr => hr.status === 'pending');
+                            if (hasAccepted) {
+                              return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 flex items-center gap-1"><HandHeart className="size-3" /> Ongoing Help</span>;
+                            } else if (hasPending) {
+                              return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-amber-500/10 text-amber-500">Pending Help</span>;
+                            }
+                            return null;
+                          })()}
+                          {account.isBanned && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-red-500/10 text-red-500">
+                              Banned
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right/Bottom Section: Actions and Tickets */}
+                    <div className="flex items-center justify-between xl:justify-end gap-3 sm:gap-4 w-full xl:w-auto shrink-0 border-t xl:border-0 border-border/10 pt-2 xl:pt-0">
+                      
+                      {/* Action Buttons */}
                       <div className="flex items-center flex-wrap gap-1 shrink-0">
                         {account.referralLink && (
-                          <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Referral Link">
+                          <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md bg-foreground/5 xl:bg-transparent" title="Copy Referral Link">
                             <LinkIcon className="size-4" />
                           </button>
                         )}
 
                         {account.email && (
-                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Email">
+                          <button onClick={() => { navigator.clipboard.writeText(account.email!); toast.success("Email copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md bg-foreground/5 xl:bg-transparent" title="Copy Email">
                             <MailIcon className="size-4" />
                           </button>
                         )}
 
-                        <button onClick={() => { setRequestHelpAccountId(account.id); setIsRequestHelpModalOpen(true); }} className="p-2 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 rounded-md transition-colors" title="Request Help">
+                        <button onClick={() => { setRequestHelpAccountId(account.id); setIsRequestHelpModalOpen(true); }} className="p-2 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 rounded-md transition-colors bg-foreground/5 xl:bg-transparent" title="Request Help">
                           <HandHeart className="size-4" />
                         </button>
                         
-                        {/* Action Buttons */}
-                        <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center transition-opacity shrink-0 ml-1">
-                          <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
+                        <div className="opacity-100 xl:opacity-0 xl:group-hover:opacity-100 flex items-center transition-opacity shrink-0 ml-1">
+                          <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors bg-foreground/5 xl:bg-transparent" title="Edit Account">
                             <PencilIcon className="size-4" />
                           </button>
-                          <button onClick={() => openDeleteAccountModal(account.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors" title="Delete Account">
+                          <button onClick={() => openDeleteAccountModal(account.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors bg-foreground/5 xl:bg-transparent" title="Delete Account">
                             <TrashIcon className="size-4" />
                           </button>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center w-full xl:w-auto mt-2 xl:mt-0 justify-center xl:justify-end gap-x-4 gap-y-3">
+
                       {/* Interactive Ticket Logger */}
                       {!account.isBanned && (
-                        <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] shrink-0">
-                          
+                        <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] shrink-0 bg-background/50 xl:bg-transparent px-2 py-1 xl:p-0 rounded-lg border border-border/10 xl:border-0">
                           <span className={`w-10 sm:w-11 text-center font-bold ${isDone ? "text-emerald-500" : "text-muted-foreground"}`}>
                             {account.ticketsDone}/{account.totalTickets}
                           </span>
-
                           <Image src="/repair-ticket.png" alt="tix" width={24} height={24} className={`object-contain ml-1 sm:ml-1.5 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} w-5 h-5 sm:w-6 sm:h-6`} />
 
-                          {/* Repair Tickets */}
                           <div className="ml-2 sm:ml-3 flex items-center gap-2 border-l border-border/50 pl-2 sm:pl-3">
                             <div className="flex items-center gap-1 sm:gap-1.5 text-muted-foreground/50" title="Total Accumulated Tickets">
                               <span className="text-[9px] sm:text-[10px] uppercase tracking-widest hidden sm:inline">Total</span>
@@ -1145,7 +1148,6 @@ export default function UserDashboardPage() {
                           </div>
                         </div>
                       )}
-
                     </div>
                   </li>
                 );
