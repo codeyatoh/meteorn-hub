@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
-import { CheckCircle, ExternalLink, RotateCcw } from "lucide-react";
+import { CheckCircle, ExternalLink, RotateCcw, Plus } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
