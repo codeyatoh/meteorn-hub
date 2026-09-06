@@ -21,9 +21,6 @@ SELECT cron.schedule(
   $$
 );
 
--- Verify the job was created:
--- SELECT jobname, schedule, command FROM cron.job;
-
 
 -- ============================================================
 -- FIX 2: Add missing repair_tickets_used column (if missing)
@@ -33,10 +30,85 @@ SELECT cron.schedule(
 ALTER TABLE public.user_accounts
   ADD COLUMN IF NOT EXISTS repair_tickets_used INTEGER DEFAULT 0 NOT NULL;
 
+
 -- ============================================================
--- FIX 3: Also reset repair_tickets_used in the cron job
--- (Optional but recommended: reset repair usage daily so users get fresh repairs)
--- If you want to reset repair_tickets_used every day, uncomment the line below
--- and re-run the cron.schedule() above with it added to the $$ block:
--- UPDATE public.user_accounts SET tickets_done = 0, repair_tickets_used = 0;
+-- STORAGE OPTIMIZATION: Auto-cleanup cron jobs
+-- Prevents the database from filling up over time
+-- Current risk tables: yatmail_messages, ticket_logs, global_chats
 -- ============================================================
+
+-- JOB 1: Delete emails older than 3 days (biggest storage risk)
+SELECT cron.unschedule('cleanup-old-emails');
+SELECT cron.schedule(
+  'cleanup-old-emails',
+  '30 16 * * *',  -- 12:30 AM PHT daily
+  $$
+    DELETE FROM public.yatmail_messages
+    WHERE received_at < now() - INTERVAL '3 days';
+  $$
+);
+
+-- JOB 2: Delete already-expired temp mail sessions
+SELECT cron.unschedule('cleanup-expired-sessions');
+SELECT cron.schedule(
+  'cleanup-expired-sessions',
+  '35 16 * * *',  -- 12:35 AM PHT daily
+  $$
+    DELETE FROM public.temp_mail_sessions
+    WHERE expires_at < now() - INTERVAL '1 hour';
+  $$
+);
+
+-- JOB 3: Keep ticket_logs for only last 30 days
+-- (grows 1 row per credited ticket per user)
+SELECT cron.unschedule('cleanup-old-ticket-logs');
+SELECT cron.schedule(
+  'cleanup-old-ticket-logs',
+  '40 16 * * *',  -- 12:40 AM PHT daily
+  $$
+    DELETE FROM public.ticket_logs
+    WHERE created_at < now() - INTERVAL '30 days';
+  $$
+);
+
+-- JOB 4: Clean up completed/rejected help_requests older than 7 days
+SELECT cron.unschedule('cleanup-old-help-requests');
+SELECT cron.schedule(
+  'cleanup-old-help-requests',
+  '45 16 * * *',  -- 12:45 AM PHT daily
+  $$
+    DELETE FROM public.help_requests
+    WHERE status IN ('completed', 'rejected')
+      AND updated_at < now() - INTERVAL '7 days';
+  $$
+);
+
+-- JOB 5: Clean up global chat messages older than 30 days
+SELECT cron.unschedule('cleanup-old-chats');
+SELECT cron.schedule(
+  'cleanup-old-chats',
+  '50 16 * * *',  -- 12:50 AM PHT daily
+  $$
+    DELETE FROM public.global_chats
+    WHERE created_at < now() - INTERVAL '30 days';
+    -- chat_reactions auto-deletes via ON DELETE CASCADE
+  $$
+);
+
+-- JOB 6: Weekly VACUUM to reclaim freed disk space
+-- (Postgres keeps dead rows until VACUUM runs)
+SELECT cron.unschedule('vacuum-tables');
+SELECT cron.schedule(
+  'vacuum-tables',
+  '0 17 * * 0',  -- Every Sunday at 1:00 AM PHT
+  $$
+    VACUUM (ANALYZE) public.yatmail_messages;
+    VACUUM (ANALYZE) public.temp_mail_sessions;
+    VACUUM (ANALYZE) public.ticket_logs;
+    VACUUM (ANALYZE) public.help_requests;
+    VACUUM (ANALYZE) public.global_chats;
+  $$
+);
+
+-- Verify all scheduled jobs:
+-- SELECT jobname, schedule FROM cron.job ORDER BY jobname;
