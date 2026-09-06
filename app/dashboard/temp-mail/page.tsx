@@ -899,7 +899,7 @@ export default function TempMailPage() {
                            if (link) {
                              return (
                                <button 
-                                 onClick={(e) => { e.preventDefault(); window.open(link, '_blank'); }}
+                                 onClick={(e) => { e.preventDefault(); window.location.href = link; }}
                                  className="shrink-0 flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-xs shadow-md hover:shadow-primary/20 hover:-translate-y-0.5"
                                >
                                  <ExternalLink className="size-4" />
