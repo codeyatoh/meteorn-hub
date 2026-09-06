@@ -1086,7 +1086,7 @@ export default function UserDashboardPage() {
                     </div>
 
                     {/* Right/Bottom Section: Actions and Tickets */}
-                    <div className="flex items-center justify-between xl:justify-end gap-3 sm:gap-4 w-full xl:w-auto shrink-0 border-t xl:border-0 border-border/10 pt-2 xl:pt-0">
+                    <div className="flex flex-wrap items-center justify-between xl:justify-end gap-y-2 gap-x-3 sm:gap-4 w-full xl:w-auto shrink-0 border-t xl:border-0 border-border/10 pt-2 xl:pt-0">
                       
                       {/* Action Buttons */}
                       <div className="flex items-center flex-wrap gap-1 shrink-0">
