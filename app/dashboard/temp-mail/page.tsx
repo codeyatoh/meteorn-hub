@@ -563,10 +563,10 @@ export default function TempMailPage() {
       } else {
         toast.success("Ticket credited successfully!", { classNames: { icon: "text-emerald-500" } });
         // Update own accounts optimistically
-        setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + 1 } : a));
+        setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + 1, total_accumulated_tickets: (a.total_accumulated_tickets || 0) + 1 } : a));
         // Also update helpRequests optimistically (for assisting accounts)
         setHelpRequests(prev => prev.map(h => h.account_id.toString() === selectedAccountId && h.user_accounts
-          ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done + 1 } }
+          ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done + 1, total_accumulated_tickets: (h.user_accounts.total_accumulated_tickets || 0) + 1 } }
           : h
         ));
         // Re-fetch from DB to trigger the auto-switch effect with accurate data
@@ -612,10 +612,10 @@ export default function TempMailPage() {
     const supabase = createClient();
     
     // Optimistic update for own accounts
-    setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done - 1 } : a));
+    setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done - 1, total_accumulated_tickets: Math.max(0, (a.total_accumulated_tickets || 0) - 1) } : a));
     // Optimistic update for assisting accounts
     setHelpRequests(prev => prev.map(h => h.account_id.toString() === selectedAccountId && h.user_accounts
-      ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done - 1 } }
+      ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done - 1, total_accumulated_tickets: Math.max(0, (h.user_accounts.total_accumulated_tickets || 0) - 1) } }
       : h
     ));
     toast.success("Ticket undone.");
@@ -623,9 +623,9 @@ export default function TempMailPage() {
     const { error } = await supabase.rpc("decrement_account_ticket", { p_account_id: parseInt(selectedAccountId) });
     if (error) {
       // Revert both on error
-      setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + 1 } : a));
+      setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + 1, total_accumulated_tickets: (a.total_accumulated_tickets || 0) + 1 } : a));
       setHelpRequests(prev => prev.map(h => h.account_id.toString() === selectedAccountId && h.user_accounts
-        ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done + 1 } }
+        ? { ...h, user_accounts: { ...h.user_accounts, tickets_done: h.user_accounts.tickets_done + 1, total_accumulated_tickets: (h.user_accounts.total_accumulated_tickets || 0) + 1 } }
         : h
       ));
       toast.error(`Failed to undo ticket: ${error.message}`);
