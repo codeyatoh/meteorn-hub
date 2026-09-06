@@ -250,7 +250,7 @@ export default function TempMailPage() {
       fetch("/api/temp-mail/domains").then((r) => r.json()),
       fetch("/api/temp-mail/access").then((r) => r.json()),
       fetch("/api/temp-mail/byoe/connections").then((r) => r.json()),
-      fetchAccountsAndHelps(),
+      (async () => { await fetchAccountsAndHelps(); })(),
       new Promise((res) => setTimeout(res, 800)),
     ]).then(([sessionData, domainData, accessData, byoeData]) => {
       if (accessData && accessData.status) {
