@@ -19,7 +19,6 @@ import {
   Crown,
   HelpCircle,
   Shuffle,
-  Plus,
   Trash2 as TrashIcon,
   Bell,
   HandHeart,
@@ -582,24 +581,23 @@ export default function TempMailPage() {
     }
   };
 
-  const handleManualAdjustment = async (delta: 1 | -1) => {
+  const handleManualAdjustment = async () => {
     if (!selectedAccountId) return;
     const acc = userAccounts.find(a => a.id.toString() === selectedAccountId) || 
                 helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts;
     if (!acc) return;
-    if (delta === -1 && acc.tickets_done <= 0) return;
+    if (acc.tickets_done <= 0) return;
 
     const supabase = createClient();
-    const rpcName = delta === 1 ? "increment_account_ticket" : "decrement_account_ticket";
     
     // Optimistic update
-    setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + delta } : a));
-    toast.success(delta === 1 ? "Ticket count increased manually." : "Ticket count decreased manually.");
+    setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done - 1 } : a));
+    toast.success("Ticket count decreased manually.");
 
-    const { error } = await supabase.rpc(rpcName, { p_account_id: parseInt(selectedAccountId) });
+    const { error } = await supabase.rpc("decrement_account_ticket", { p_account_id: parseInt(selectedAccountId) });
     if (error) {
       // Revert on error
-      setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done - delta } : a));
+      setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + 1 } : a));
       toast.error(`Failed to adjust ticket: ${error.message}`);
     }
   };
@@ -900,19 +898,12 @@ export default function TempMailPage() {
                                </span>
                                <div className="flex items-center gap-1 ml-1">
                                  <button
-                                   onClick={(e) => { e.preventDefault(); handleManualAdjustment(-1); }}
+                                   onClick={(e) => { e.preventDefault(); handleManualAdjustment(); }}
                                    disabled={acc.tickets_done <= 0}
                                    className="flex items-center justify-center size-5 rounded-md bg-background/50 border border-border/50 hover:bg-foreground/10 hover:border-foreground/20 text-muted-foreground hover:text-foreground transition-all disabled:opacity-30"
-                                   title="Decrease tickets"
+                                   title="Undo credited ticket"
                                  >
                                    <Minus className="size-3" />
-                                 </button>
-                                 <button
-                                   onClick={(e) => { e.preventDefault(); handleManualAdjustment(1); }}
-                                   className="flex items-center justify-center size-5 rounded-md bg-background/50 border border-border/50 hover:bg-foreground/10 hover:border-foreground/20 text-muted-foreground hover:text-foreground transition-all"
-                                   title="Increase tickets"
-                                 >
-                                   <Plus className="size-3" />
                                  </button>
                                </div>
                              </div>
