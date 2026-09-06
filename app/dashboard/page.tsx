@@ -1066,6 +1066,7 @@ export default function UserDashboardPage() {
                             {account.name}
                           </span>
                           {(() => {
+                            if (isDone) return null;
                             const helpReqs = myHelpRequests.filter(hr => hr.account_id === account.id);
                             const hasAccepted = helpReqs.some(hr => hr.status === 'accepted');
                             const hasPending = helpReqs.some(hr => hr.status === 'pending');
