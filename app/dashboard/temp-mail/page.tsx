@@ -364,12 +364,23 @@ export default function TempMailPage() {
                 helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts;
     if (acc && acc.tickets_done >= acc.total_tickets) {
       toast.success(`Quota reached for ${acc.name}! Please select another account.`);
+      
+      // Auto-destroy active temp mail session if any
+      if (session) {
+        fetch("/api/temp-mail/create", { method: "DELETE" }).catch(console.error);
+        setSession(null);
+        setMessages([]);
+        setSelectedMsg(null);
+        if (pollRef.current) clearInterval(pollRef.current);
+        toast.info("Active temp email session closed automatically.");
+      }
+
       setTimeout(() => {
         setViewMode("onboarding");
         setSelectedAccountId("");
       }, 0);
     }
-  }, [userAccounts, helpRequests, selectedAccountId, viewMode]);
+  }, [userAccounts, helpRequests, selectedAccountId, viewMode, session]);
 
   // ── Countdown timer ──
   useEffect(() => {
