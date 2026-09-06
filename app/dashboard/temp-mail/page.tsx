@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
-import { CheckCircle, ExternalLink } from "lucide-react";
+import { CheckCircle, ExternalLink, Minus } from "lucide-react";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { AnimatePresence, motion } from "motion/react";
@@ -365,8 +365,10 @@ export default function TempMailPage() {
                 helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts;
     if (acc && acc.tickets_done >= acc.total_tickets) {
       toast.success(`Quota reached for ${acc.name}! Please select another account.`);
-      setViewMode("onboarding");
-      setSelectedAccountId("");
+      setTimeout(() => {
+        setViewMode("onboarding");
+        setSelectedAccountId("");
+      }, 0);
     }
   }, [userAccounts, helpRequests, selectedAccountId, viewMode]);
 
@@ -577,6 +579,28 @@ export default function TempMailPage() {
       toast.error("Failed to destroy session.", { classNames: { icon: "text-destructive" } });
     } finally {
       setDestroying(false);
+    }
+  };
+
+  const handleManualAdjustment = async (delta: 1 | -1) => {
+    if (!selectedAccountId) return;
+    const acc = userAccounts.find(a => a.id.toString() === selectedAccountId) || 
+                helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts;
+    if (!acc) return;
+    if (delta === -1 && acc.tickets_done <= 0) return;
+
+    const supabase = createClient();
+    const rpcName = delta === 1 ? "increment_account_ticket" : "decrement_account_ticket";
+    
+    // Optimistic update
+    setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done + delta } : a));
+    toast.success(delta === 1 ? "Ticket count increased manually." : "Ticket count decreased manually.");
+
+    const { error } = await supabase.rpc(rpcName, { p_account_id: parseInt(selectedAccountId) });
+    if (error) {
+      // Revert on error
+      setUserAccounts(prev => prev.map(a => a.id.toString() === selectedAccountId ? { ...a, tickets_done: a.tickets_done - delta } : a));
+      toast.error(`Failed to adjust ticket: ${error.message}`);
     }
   };
 
@@ -874,6 +898,23 @@ export default function TempMailPage() {
                                <span className={`text-xs font-mono px-2 py-0.5 rounded shadow-sm border ${isDone ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" : "bg-background/50 border-border/50 text-foreground"}`}>
                                  {acc.tickets_done}/{acc.total_tickets}
                                </span>
+                               <div className="flex items-center gap-1 ml-1">
+                                 <button
+                                   onClick={(e) => { e.preventDefault(); handleManualAdjustment(-1); }}
+                                   disabled={acc.tickets_done <= 0}
+                                   className="flex items-center justify-center size-5 rounded-md bg-background/50 border border-border/50 hover:bg-foreground/10 hover:border-foreground/20 text-muted-foreground hover:text-foreground transition-all disabled:opacity-30"
+                                   title="Decrease tickets"
+                                 >
+                                   <Minus className="size-3" />
+                                 </button>
+                                 <button
+                                   onClick={(e) => { e.preventDefault(); handleManualAdjustment(1); }}
+                                   className="flex items-center justify-center size-5 rounded-md bg-background/50 border border-border/50 hover:bg-foreground/10 hover:border-foreground/20 text-muted-foreground hover:text-foreground transition-all"
+                                   title="Increase tickets"
+                                 >
+                                   <Plus className="size-3" />
+                                 </button>
+                               </div>
                              </div>
                              {isDone && (
                                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-1 mt-0.5">
