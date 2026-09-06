@@ -1056,29 +1056,31 @@ export default function UserDashboardPage() {
                       {AVATAR_MAP[account.avatar || "Avatar1"]}
                     </div>
 
-                    <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
-                      <span
-                        className={`block break-words whitespace-normal flex-1 min-w-[50px] text-xs sm:text-sm transition-all ${isDone ? "text-emerald-500" : account.isBanned ? "text-red-500/70" : "text-foreground"}`}
-                      >
-                        {account.name}
-                      </span>
-                      {(() => {
-                        const helpReqs = myHelpRequests.filter(hr => hr.account_id === account.id);
-                        const hasAccepted = helpReqs.some(hr => hr.status === 'accepted');
-                        const hasPending = helpReqs.some(hr => hr.status === 'pending');
-                        if (hasAccepted) {
-                          return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 flex items-center gap-1"><HandHeart className="size-3" /> Ongoing Help</span>;
-                        } else if (hasPending) {
-                          return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-amber-500/10 text-amber-500">Pending Help</span>;
-                        }
-                        return null;
-                      })()}
-                      {account.isBanned && (
-                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-red-500/10 text-red-500">
-                          Banned
+                    <div className="flex-1 min-w-0 flex flex-wrap items-center justify-between gap-y-2 gap-x-1.5 sm:gap-2">
+                      <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 flex-1 min-w-[120px]">
+                        <span
+                          className={`block break-all sm:break-words whitespace-normal text-xs sm:text-sm transition-all ${isDone ? "text-emerald-500" : account.isBanned ? "text-red-500/70" : "text-foreground"}`}
+                        >
+                          {account.name}
                         </span>
-                      )}
-                      <div className="flex items-center gap-1 shrink-0">
+                        {(() => {
+                          const helpReqs = myHelpRequests.filter(hr => hr.account_id === account.id);
+                          const hasAccepted = helpReqs.some(hr => hr.status === 'accepted');
+                          const hasPending = helpReqs.some(hr => hr.status === 'pending');
+                          if (hasAccepted) {
+                            return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 flex items-center gap-1"><HandHeart className="size-3" /> Ongoing Help</span>;
+                          } else if (hasPending) {
+                            return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-amber-500/10 text-amber-500">Pending Help</span>;
+                          }
+                          return null;
+                        })()}
+                        {account.isBanned && (
+                          <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-red-500/10 text-red-500">
+                            Banned
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center flex-wrap gap-1 shrink-0">
                         {account.referralLink && (
                           <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md" title="Copy Referral Link">
                             <LinkIcon className="size-4" />
