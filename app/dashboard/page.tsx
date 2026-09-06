@@ -1086,10 +1086,10 @@ export default function UserDashboardPage() {
                     </div>
 
                     {/* Right/Bottom Section: Actions and Tickets */}
-                    <div className="flex flex-wrap items-center justify-between xl:justify-end gap-y-2 gap-x-3 sm:gap-4 w-full xl:w-auto shrink-0 border-t xl:border-0 border-border/10 pt-2 xl:pt-0">
+                    <div className="flex flex-wrap items-center justify-center xl:justify-end gap-y-2 gap-x-3 sm:gap-4 w-full xl:w-auto shrink-0 border-t xl:border-0 border-border/10 pt-2 xl:pt-0 mt-1 xl:mt-0">
                       
                       {/* Action Buttons */}
-                      <div className="flex items-center flex-wrap gap-1 shrink-0">
+                      <div className="flex items-center justify-center flex-wrap gap-1 shrink-0">
                         {account.referralLink && (
                           <button onClick={() => { navigator.clipboard.writeText(account.referralLink!); toast.success("Referral link copied."); }} className="p-2 text-muted-foreground hover:text-primary transition-colors inline-flex items-center active:scale-95 rounded-md bg-foreground/5 xl:bg-transparent" title="Copy Referral Link">
                             <LinkIcon className="size-4" />
@@ -1106,7 +1106,7 @@ export default function UserDashboardPage() {
                           <HandHeart className="size-4" />
                         </button>
                         
-                        <div className="opacity-100 xl:opacity-0 xl:group-hover:opacity-100 flex items-center transition-opacity shrink-0 ml-1">
+                        <div className="opacity-100 xl:opacity-0 xl:group-hover:opacity-100 flex items-center justify-center transition-opacity shrink-0 ml-1">
                           <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors bg-foreground/5 xl:bg-transparent" title="Edit Account">
                             <PencilIcon className="size-4" />
                           </button>
@@ -1118,13 +1118,13 @@ export default function UserDashboardPage() {
 
                       {/* Interactive Ticket Logger */}
                       {!account.isBanned && (
-                        <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] shrink-0 bg-background/50 xl:bg-transparent px-2 py-1 xl:p-0 rounded-lg border border-border/10 xl:border-0">
+                        <div className="flex items-center justify-center gap-1 sm:gap-1.5 font-mono text-[11px] sm:text-xs uppercase tracking-[0.2em] shrink-0 bg-background/50 xl:bg-transparent px-3 py-1.5 xl:p-0 rounded-lg border border-border/10 xl:border-0">
                           <span className={`w-10 sm:w-11 text-center font-bold ${isDone ? "text-emerald-500" : "text-muted-foreground"}`}>
                             {account.ticketsDone}/{account.totalTickets}
                           </span>
                           <Image src="/repair-ticket.png" alt="tix" width={24} height={24} className={`object-contain ml-1 sm:ml-1.5 transition-opacity ${isDone ? "opacity-50 grayscale" : "opacity-100"} w-5 h-5 sm:w-6 sm:h-6`} />
 
-                          <div className="ml-2 sm:ml-3 flex items-center gap-2 border-l border-border/50 pl-2 sm:pl-3">
+                          <div className="ml-2 sm:ml-3 flex items-center justify-center gap-2 border-l border-border/50 pl-2 sm:pl-3">
                             <div className="flex items-center gap-1 sm:gap-1.5 text-muted-foreground/50" title="Total Accumulated Tickets">
                               <span className="text-[9px] sm:text-[10px] uppercase tracking-widest hidden sm:inline">Total</span>
                               <span className="font-medium text-xs sm:text-sm">{account.totalAccumulatedTickets}</span>
@@ -1133,7 +1133,7 @@ export default function UserDashboardPage() {
                             <button 
                               onClick={() => openRepairTicketModal(account.id)}
                               disabled={(account.totalAccumulatedTickets - account.repairTicketsUsed) <= 0}
-                              className="p-1.5 sm:p-2 rounded-md transition-colors inline-flex items-center gap-1 sm:gap-1.5 text-orange-500/70 hover:text-orange-500 hover:bg-orange-500/10 disabled:opacity-30 disabled:pointer-events-none"
+                              className="p-1.5 sm:p-2 rounded-md transition-colors inline-flex items-center justify-center gap-1 sm:gap-1.5 text-orange-500/70 hover:text-orange-500 hover:bg-orange-500/10 disabled:opacity-30 disabled:pointer-events-none"
                               title="Use Repair Ticket"
                             >
                               <WrenchIcon className="size-4" />
