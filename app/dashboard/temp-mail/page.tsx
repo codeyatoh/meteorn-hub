@@ -68,6 +68,8 @@ type UserAccount = {
   tickets_done: number;
   total_tickets: number;
   is_banned?: boolean;
+  total_accumulated_tickets?: number;
+  repair_tickets_used?: number;
 };
 
 type HelpRequest = {
