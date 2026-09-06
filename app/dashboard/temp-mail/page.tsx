@@ -358,6 +358,18 @@ export default function TempMailPage() {
     }
   }, [selectedAccountId, isRestored]);
 
+  // Auto-switch to onboarding if the current account reaches its quota
+  useEffect(() => {
+    if (!selectedAccountId || viewMode !== "grind") return;
+    const acc = userAccounts.find(a => a.id.toString() === selectedAccountId) || 
+                helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts;
+    if (acc && acc.tickets_done >= acc.total_tickets) {
+      toast.success(`Quota reached for ${acc.name}! Please select another account.`);
+      setViewMode("onboarding");
+      setSelectedAccountId("");
+    }
+  }, [userAccounts, helpRequests, selectedAccountId, viewMode]);
+
   // ── Countdown timer ──
   useEffect(() => {
     if (!session) return;
