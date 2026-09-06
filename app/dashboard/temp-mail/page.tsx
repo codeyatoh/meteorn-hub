@@ -795,10 +795,29 @@ export default function TempMailPage() {
                     <div className="absolute -left-10 -top-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
                     <div className="flex flex-col gap-1 min-w-0">
                        <span className="text-xs font-semibold text-primary uppercase tracking-widest">Currently Grinding</span>
-                       <span className="text-base sm:text-lg font-black text-foreground truncate drop-shadow-sm">
-                         {userAccounts.find(a => a.id.toString() === selectedAccountId)?.name || 
-                          helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.name}
-                       </span>
+                       {(() => {
+                         const acc = userAccounts.find(a => a.id.toString() === selectedAccountId) || 
+                                     helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts;
+                         if (!acc) return null;
+                         const isDone = acc.tickets_done >= acc.total_tickets;
+                         return (
+                           <div className="flex flex-col gap-1">
+                             <div className="flex items-center gap-2">
+                               <span className="text-base sm:text-lg font-black text-foreground truncate drop-shadow-sm">
+                                 {acc.name}
+                               </span>
+                               <span className={`text-xs font-mono px-2 py-0.5 rounded shadow-sm border ${isDone ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" : "bg-background/50 border-border/50 text-foreground"}`}>
+                                 {acc.tickets_done}/{acc.total_tickets}
+                               </span>
+                             </div>
+                             {isDone && (
+                               <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                                 <CheckCircle className="size-3" /> Quota Reached (Done)
+                               </span>
+                             )}
+                           </div>
+                         );
+                       })()}
                     </div>
                     <div className="flex items-center gap-2.5 shrink-0">
                       {(() => {
