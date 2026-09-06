@@ -289,28 +289,49 @@ export default function TempMailPage() {
     }).finally(() => setPageLoading(false));
   }, []);
 
-  // Restore from localStorage safely on client mount
+  // Restore from localStorage and Supabase safely on client mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedId = localStorage.getItem("grind_account_id");
-      setTimeout(() => {
+      const initGrindState = async () => {
+        let savedId = localStorage.getItem("grind_account_id");
+        
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.user_metadata?.grind_account_id) {
+            savedId = user.user_metadata.grind_account_id;
+            localStorage.setItem("grind_account_id", savedId!);
+          }
+        } catch (error) {
+          console.error("Failed to sync grind state from database", error);
+        }
+
         if (savedId) {
           setSelectedAccountId(savedId);
           setViewMode("grind");
         }
         setIsRestored(true);
-      }, 0);
+      };
+
+      initGrindState();
     }
   }, []);
 
-  // Save selectedAccountId to localStorage when it changes
+  // Save selectedAccountId to localStorage and Supabase when it changes
   useEffect(() => {
     if (isRestored && typeof window !== "undefined") {
-      if (selectedAccountId) {
-        localStorage.setItem("grind_account_id", selectedAccountId);
-      } else {
-        localStorage.removeItem("grind_account_id");
-      }
+      const syncState = async () => {
+        const supabase = createClient();
+        if (selectedAccountId) {
+          localStorage.setItem("grind_account_id", selectedAccountId);
+          await supabase.auth.updateUser({ data: { grind_account_id: selectedAccountId } });
+        } else {
+          localStorage.removeItem("grind_account_id");
+          await supabase.auth.updateUser({ data: { grind_account_id: null } });
+        }
+      };
+      
+      syncState().catch(console.error);
     }
   }, [selectedAccountId, isRestored]);
 
