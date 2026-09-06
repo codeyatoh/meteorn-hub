@@ -901,58 +901,7 @@ export default function TempMailPage() {
               )}
 
               {/* ── Active Session Card ── */}
-              {session ? (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1.5">
-                        Active Inbox
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-lg font-semibold text-foreground font-mono break-all">
-                          {session.address}
-                        </span>
-                        <button
-                          onClick={copyAddress}
-                          className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-all ${
-                            copied
-                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                              : "bg-foreground/5 text-muted-foreground hover:text-foreground hover:bg-foreground/10"
-                          }`}
-                        >
-                          {copied ? (
-                            <><CheckIcon className="size-3" /> Copied</>
-                          ) : (
-                            <><Copy className="size-3" /> Copy</>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={handleDestroy}
-                      disabled={destroying}
-                      className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                      title="Destroy this inbox"
-                    >
-                      {destroying ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-                    </button>
-                  </div>
-
-                  {/* Timer */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="size-3.5" />
-                    <span>
-                      Resets on incoming mail · expires in{" "}
-                      <span className={`font-mono font-medium ${
-                        parseInt(countdown.split(":")[0]) < 2 ? "text-destructive" : "text-foreground"
-                      }`}>
-                        {countdown}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              ) : viewMode === "onboarding" ? (
+              {viewMode === "onboarding" && (
                 <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-background/60 p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6 z-0">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent -z-10" />
                   <div className="text-center mb-8">
@@ -1065,7 +1014,61 @@ export default function TempMailPage() {
                     );
                   })()}
                 </div>
-              ) : (
+              )}
+
+              {/* ── Active Session Card ── */}
+              {session ? (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1.5">
+                        Active Inbox
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-lg font-semibold text-foreground font-mono break-all">
+                          {session.address}
+                        </span>
+                        <button
+                          onClick={copyAddress}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-all ${
+                            copied
+                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                              : "bg-foreground/5 text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+                          }`}
+                        >
+                          {copied ? (
+                            <><CheckIcon className="size-3" /> Copied</>
+                          ) : (
+                            <><Copy className="size-3" /> Copy</>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleDestroy}
+                      disabled={destroying}
+                      className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                      title="Destroy this inbox"
+                    >
+                      {destroying ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                    </button>
+                  </div>
+
+                  {/* Timer */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="size-3.5" />
+                    <span>
+                      Resets on incoming mail · expires in{" "}
+                      <span className={`font-mono font-medium ${
+                        parseInt(countdown.split(":")[0]) < 2 ? "text-destructive" : "text-foreground"
+                      }`}>
+                        {countdown}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              ) : viewMode === "grind" ? (
                 /* ── Generator Form ── */
                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
                   <div className="flex items-center justify-between gap-2">
@@ -1384,7 +1387,7 @@ export default function TempMailPage() {
                     </form>
                   )}
                 </div>
-              )}
+              ) : null}
 
               {/* ── Inbox ── */}
               {session && (
