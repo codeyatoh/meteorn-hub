@@ -191,10 +191,16 @@ export default function TempMailPage() {
   const [generating, setGenerating] = useState(false);
 
   // Farming States
-  const [viewMode, setViewMode] = useState<"onboarding" | "grind">("onboarding");
+  const [viewMode, setViewMode] = useState<"onboarding" | "grind">(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("grind_account_id") ? "grind" : "onboarding";
+    return "onboarding";
+  });
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
   const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("grind_account_id") || "";
+    return "";
+  });
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [showHelpNotifications, setShowHelpNotifications] = useState(false);
 
@@ -284,8 +290,20 @@ export default function TempMailPage() {
           setSelectedByoeId(byoeData.connections[0].id);
         }
       }
+
     }).finally(() => setPageLoading(false));
   }, []);
+
+  // Save selectedAccountId to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (selectedAccountId) {
+        localStorage.setItem("grind_account_id", selectedAccountId);
+      } else {
+        localStorage.removeItem("grind_account_id");
+      }
+    }
+  }, [selectedAccountId]);
 
   // ── Countdown timer ──
   useEffect(() => {
@@ -760,6 +778,56 @@ export default function TempMailPage() {
               transition={{ duration: 0.2 }}
               className="space-y-6 max-w-2xl mx-auto"
             >
+              {viewMode === "grind" && (
+                <div className="flex flex-col gap-2 mb-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Active Farming Account
+                    </span>
+                    {selectedAccountId && (
+                      <span className="text-[10px] font-medium text-emerald-500 flex items-center gap-1">
+                        <CheckCircle className="size-3" /> Auto-credit on delete
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 sm:p-5 shadow-lg backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-0">
+                    <div className="absolute -left-10 -top-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
+                    <div className="flex flex-col gap-1 min-w-0">
+                       <span className="text-xs font-semibold text-primary uppercase tracking-widest">Currently Grinding</span>
+                       <span className="text-base sm:text-lg font-black text-foreground truncate drop-shadow-sm">
+                         {userAccounts.find(a => a.id.toString() === selectedAccountId)?.name || 
+                          helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.name}
+                       </span>
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      {(() => {
+                         const link = userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link || 
+                                      helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.referral_link;
+                         if (link) {
+                           return (
+                             <button 
+                               onClick={(e) => { e.preventDefault(); window.location.href = link; }}
+                               className="shrink-0 flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-xs shadow-md hover:shadow-primary/20 hover:-translate-y-0.5"
+                             >
+                               <ExternalLink className="size-4" />
+                               Ref Link
+                             </button>
+                           )
+                         }
+                         return null;
+                      })()}
+                      <button
+                        onClick={(e) => { e.preventDefault(); setViewMode("onboarding"); setSelectedAccountId(""); }}
+                        className="shrink-0 flex items-center gap-2 bg-foreground/5 text-foreground hover:bg-foreground/10 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-xs border border-white/10 hover:-translate-y-0.5"
+                      >
+                        Switch
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ── Active Session Card ── */}
               {session ? (
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-4">
@@ -826,16 +894,21 @@ export default function TempMailPage() {
                       <button
                         key={`own-${acc.id}`}
                         onClick={() => { setSelectedAccountId(acc.id.toString()); setViewMode("grind"); }}
-                        className="flex flex-col text-left p-5 rounded-2xl border border-white/5 bg-foreground/[0.02] hover:border-primary/30 hover:bg-primary/5 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group"
+                        className="flex flex-col text-left p-5 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:from-primary/10 hover:to-primary/5 hover:border-primary/40 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm"
                       >
-                        <div className="flex items-center justify-between mb-2 w-full">
-                          <span className="font-bold text-foreground truncate">{acc.name}</span>
-                          <span className="text-xs font-mono bg-foreground/5 px-2 py-0.5 rounded text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+                        <div className="absolute top-0 right-0 bg-primary/20 text-primary text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-bl-lg backdrop-blur-md">
+                           Personal
+                        </div>
+                        <div className="flex items-center justify-between mb-3 w-full pr-14">
+                          <span className="font-extrabold text-foreground text-lg truncate drop-shadow-sm">{acc.name}</span>
+                          <span className="text-xs font-mono bg-background/50 border border-border/50 px-2.5 py-1 rounded-md text-foreground group-hover:border-primary/50 group-hover:text-primary transition-colors shadow-sm">
                             {acc.tickets_done}/{acc.total_tickets}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-auto">
-                           <CheckCircle2 className="size-3.5 text-emerald-500" /> Auto-credit supported
+                           <CheckCircle2 className="size-3.5 text-emerald-500 drop-shadow-[0_0_2px_rgba(16,185,129,0.5)]" /> 
+                           <span>Auto-credit enabled</span>
                         </div>
                       </button>
                     ))}
@@ -843,19 +916,21 @@ export default function TempMailPage() {
                       <button
                         key={`help-${hr.account_id}`}
                         onClick={() => { setSelectedAccountId(hr.account_id.toString()); setViewMode("grind"); }}
-                        className="flex flex-col text-left p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40 hover:bg-amber-500/10 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/5 transition-all duration-300 group relative overflow-hidden"
+                        className="flex flex-col text-left p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent hover:from-amber-500/20 hover:to-amber-500/10 hover:border-amber-500/60 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm"
                       >
-                        <div className="absolute top-0 right-0 bg-amber-500 text-amber-500-foreground text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-bl-lg">
-                           Helping
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+                        <div className="absolute top-0 right-0 bg-amber-500 text-amber-950 text-[9px] uppercase tracking-wider font-black px-3 py-1 rounded-bl-xl shadow-sm">
+                           Assisting
                         </div>
-                        <div className="flex items-center justify-between mb-2 w-full pr-12">
-                          <span className="font-bold text-amber-500 truncate">{hr.user_accounts?.name}</span>
-                          <span className="text-xs font-mono bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 dark:text-amber-400 transition-colors shrink-0">
+                        <div className="flex items-center justify-between mb-3 w-full pr-16">
+                          <span className="font-extrabold text-amber-500 text-lg truncate drop-shadow-[0_0_2px_rgba(245,158,11,0.2)]">{hr.user_accounts?.name}</span>
+                          <span className="text-xs font-mono bg-background/50 border border-amber-500/20 px-2.5 py-1 rounded-md text-amber-600 dark:text-amber-400 transition-colors shrink-0 group-hover:border-amber-500/50 shadow-sm">
                             {hr.user_accounts?.tickets_done}/{hr.user_accounts?.total_tickets}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-amber-600/80 dark:text-amber-400/80 mt-auto">
-                           <HandHeart className="size-3.5" /> Gina help mo lang
+                        <div className="flex items-center gap-1.5 text-xs text-amber-600/90 dark:text-amber-400/90 mt-auto font-medium">
+                           <HandHeart className="size-3.5 drop-shadow-sm" /> 
+                           <span>Helping this account</span>
                         </div>
                       </button>
                     ))}
@@ -870,54 +945,6 @@ export default function TempMailPage() {
               ) : (
                 /* ── Generator Form ── */
                 <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
-                  {/* Target Account Selector */}
-                  <div className="flex flex-col gap-2 mb-5">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                        Active Farming Account
-                      </span>
-                      {selectedAccountId && (
-                        <span className="text-[10px] font-medium text-emerald-500 flex items-center gap-1">
-                          <CheckCircle className="size-3" /> Auto-credit on delete
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 sm:p-5 shadow-lg backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-0">
-                      <div className="absolute -left-10 -top-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10" />
-                      <div className="flex flex-col gap-1 min-w-0">
-                         <span className="text-xs font-semibold text-primary uppercase tracking-widest">Currently Grinding</span>
-                         <span className="text-base sm:text-lg font-black text-foreground truncate drop-shadow-sm">
-                           {userAccounts.find(a => a.id.toString() === selectedAccountId)?.name || 
-                            helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.name}
-                         </span>
-                      </div>
-                      <div className="flex items-center gap-2.5 shrink-0">
-                        {(() => {
-                           const link = userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link || 
-                                        helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.referral_link;
-                           if (link) {
-                             return (
-                               <button 
-                                 onClick={(e) => { e.preventDefault(); window.location.href = link; }}
-                                 className="shrink-0 flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-xs shadow-md hover:shadow-primary/20 hover:-translate-y-0.5"
-                               >
-                                 <ExternalLink className="size-4" />
-                                 Ref Link
-                               </button>
-                             )
-                           }
-                           return null;
-                        })()}
-                        <button
-                          onClick={(e) => { e.preventDefault(); setViewMode("onboarding"); setSelectedAccountId(""); }}
-                          className="shrink-0 flex items-center gap-2 bg-foreground/5 text-foreground hover:bg-foreground/10 px-4 py-2 rounded-xl transition-all duration-300 font-bold text-xs border border-white/10 hover:-translate-y-0.5"
-                        >
-                          Switch
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       GENERATE ADDRESS
