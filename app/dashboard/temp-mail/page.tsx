@@ -13,6 +13,7 @@ import {
   Inbox,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   Loader2,
   AtSign,
   Crown,
@@ -219,6 +220,10 @@ export default function TempMailPage() {
   const destroyingRef = useRef(false);
   const [inboxPage, setInboxPage] = useState(0);
   const INBOX_PAGE_SIZE = 8;
+
+  // Grind Selection Pagination
+  const [grindPage, setGrindPage] = useState(0);
+  const GRIND_PAGE_SIZE = 6;
 
   // Countdown
   const [countdown, setCountdown] = useState("10:00");
@@ -956,58 +961,109 @@ export default function TempMailPage() {
                     </h2>
                     <p className="text-sm text-muted-foreground mt-2">Choose one of your active accounts or help requests below.</p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).map(acc => (
-                      <button
-                        key={`own-${acc.id}`}
-                        onClick={() => { setSelectedAccountId(acc.id.toString()); setViewMode("grind"); }}
-                        className="flex flex-col text-left p-5 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:from-primary/10 hover:to-primary/5 hover:border-primary/40 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
-                        <div className="absolute top-0 right-0 bg-primary/20 text-primary text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-bl-lg backdrop-blur-md">
-                           Personal
+                  {(() => {
+                    const personalAccounts = userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).map(acc => ({ type: 'personal' as const, data: acc }));
+                    const assistingAccounts = helpRequests.filter(hr => hr.status === "accepted" && hr.user_accounts && hr.user_accounts.tickets_done < hr.user_accounts.total_tickets && !hr.user_accounts.is_banned).map(hr => ({ type: 'assisting' as const, data: hr }));
+                    
+                    const allAccounts = [...personalAccounts, ...assistingAccounts];
+                    const totalPages = Math.max(1, Math.ceil(allAccounts.length / GRIND_PAGE_SIZE));
+                    const safePage = Math.min(Math.max(0, grindPage), totalPages - 1);
+                    const paginatedAccounts = allAccounts.slice(safePage * GRIND_PAGE_SIZE, (safePage + 1) * GRIND_PAGE_SIZE);
+
+                    if (allAccounts.length === 0) {
+                      return (
+                        <div className="text-center p-8 border border-dashed border-border/60 rounded-xl bg-foreground/[0.02]">
+                          <p className="text-sm text-muted-foreground">No active accounts to grind.</p>
                         </div>
-                        <div className="flex items-center justify-between mb-3 w-full pr-14">
-                          <span className="font-extrabold text-foreground text-lg truncate drop-shadow-sm">{acc.name}</span>
-                          <span className="text-xs font-mono bg-background/50 border border-border/50 px-2.5 py-1 rounded-md text-foreground group-hover:border-primary/50 group-hover:text-primary transition-colors shadow-sm">
-                            {acc.tickets_done}/{acc.total_tickets}
-                          </span>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {paginatedAccounts.map(item => {
+                            if (item.type === 'personal') {
+                              const acc = item.data;
+                              return (
+                                <button
+                                  key={`own-${acc.id}`}
+                                  onClick={() => { setSelectedAccountId(acc.id.toString()); setViewMode("grind"); }}
+                                  className="flex flex-col text-left p-5 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:from-primary/10 hover:to-primary/5 hover:border-primary/40 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm"
+                                >
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+                                  <div className="absolute top-0 right-0 bg-primary/20 text-primary text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-bl-lg backdrop-blur-md">
+                                     Personal
+                                  </div>
+                                  <div className="flex items-center justify-between mb-3 w-full pr-14">
+                                    <span className="font-extrabold text-foreground text-lg truncate drop-shadow-sm">{acc.name}</span>
+                                    <span className="text-xs font-mono bg-background/50 border border-border/50 px-2.5 py-1 rounded-md text-foreground group-hover:border-primary/50 group-hover:text-primary transition-colors shadow-sm">
+                                      {acc.tickets_done}/{acc.total_tickets}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-auto">
+                                     <CheckCircle2 className="size-3.5 text-emerald-500 drop-shadow-[0_0_2px_rgba(16,185,129,0.5)]" /> 
+                                     <span>Auto-credit enabled</span>
+                                  </div>
+                                </button>
+                              );
+                            } else {
+                              const hr = item.data;
+                              return (
+                                <button
+                                  key={`help-${hr.account_id}`}
+                                  onClick={() => { setSelectedAccountId(hr.account_id.toString()); setViewMode("grind"); }}
+                                  className="flex flex-col text-left p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent hover:from-amber-500/20 hover:to-amber-500/10 hover:border-amber-500/60 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm"
+                                >
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+                                  <div className="absolute top-0 right-0 bg-amber-500 text-amber-950 text-[9px] uppercase tracking-wider font-black px-3 py-1 rounded-bl-xl shadow-sm">
+                                     Assisting
+                                  </div>
+                                  <div className="flex items-center justify-between mb-3 w-full pr-16">
+                                    <span className="font-extrabold text-amber-500 text-lg truncate drop-shadow-[0_0_2px_rgba(245,158,11,0.2)]">{hr.user_accounts?.name}</span>
+                                    <span className="text-xs font-mono bg-background/50 border border-amber-500/20 px-2.5 py-1 rounded-md text-amber-600 dark:text-amber-400 transition-colors shrink-0 group-hover:border-amber-500/50 shadow-sm">
+                                      {hr.user_accounts?.tickets_done}/{hr.user_accounts?.total_tickets}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs text-amber-600/90 dark:text-amber-400/90 mt-auto font-medium">
+                                     <HandHeart className="size-3.5 drop-shadow-sm" /> 
+                                     <span>Helping this account</span>
+                                  </div>
+                                </button>
+                              );
+                            }
+                          })}
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-auto">
-                           <CheckCircle2 className="size-3.5 text-emerald-500 drop-shadow-[0_0_2px_rgba(16,185,129,0.5)]" /> 
-                           <span>Auto-credit enabled</span>
-                        </div>
-                      </button>
-                    ))}
-                    {helpRequests.filter(hr => hr.status === "accepted" && hr.user_accounts && hr.user_accounts.tickets_done < hr.user_accounts.total_tickets && !hr.user_accounts.is_banned).map(hr => (
-                      <button
-                        key={`help-${hr.account_id}`}
-                        onClick={() => { setSelectedAccountId(hr.account_id.toString()); setViewMode("grind"); }}
-                        className="flex flex-col text-left p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent hover:from-amber-500/20 hover:to-amber-500/10 hover:border-amber-500/60 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 group relative overflow-hidden backdrop-blur-sm"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
-                        <div className="absolute top-0 right-0 bg-amber-500 text-amber-950 text-[9px] uppercase tracking-wider font-black px-3 py-1 rounded-bl-xl shadow-sm">
-                           Assisting
-                        </div>
-                        <div className="flex items-center justify-between mb-3 w-full pr-16">
-                          <span className="font-extrabold text-amber-500 text-lg truncate drop-shadow-[0_0_2px_rgba(245,158,11,0.2)]">{hr.user_accounts?.name}</span>
-                          <span className="text-xs font-mono bg-background/50 border border-amber-500/20 px-2.5 py-1 rounded-md text-amber-600 dark:text-amber-400 transition-colors shrink-0 group-hover:border-amber-500/50 shadow-sm">
-                            {hr.user_accounts?.tickets_done}/{hr.user_accounts?.total_tickets}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-amber-600/90 dark:text-amber-400/90 mt-auto font-medium">
-                           <HandHeart className="size-3.5 drop-shadow-sm" /> 
-                           <span>Helping this account</span>
-                        </div>
-                      </button>
-                    ))}
-                    {userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).length === 0 && 
-                     helpRequests.filter(hr => hr.status === "accepted" && hr.user_accounts && hr.user_accounts.tickets_done < hr.user_accounts.total_tickets).length === 0 && (
-                      <div className="col-span-1 sm:col-span-2 text-center p-8 border border-dashed border-border/60 rounded-xl bg-foreground/[0.02]">
-                        <p className="text-sm text-muted-foreground">No active accounts to grind.</p>
-                      </div>
-                    )}
-                  </div>
+                        
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-center gap-2 mt-6">
+                            <button
+                              onClick={() => setGrindPage(p => Math.max(0, p - 1))}
+                              disabled={safePage === 0}
+                              className="p-2 rounded-lg border border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-30 transition-colors"
+                            >
+                              <ChevronLeft className="size-4" />
+                            </button>
+                            <div className="flex items-center gap-1.5 mx-2">
+                              {Array.from({ length: totalPages }).map((_, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => setGrindPage(i)}
+                                  className={`size-2 rounded-full transition-all duration-300 ${i === safePage ? "bg-primary w-4" : "bg-border hover:bg-muted-foreground"}`}
+                                />
+                              ))}
+                            </div>
+                            <button
+                              onClick={() => setGrindPage(p => Math.min(totalPages - 1, p + 1))}
+                              disabled={safePage === totalPages - 1}
+                              className="p-2 rounded-lg border border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-30 transition-colors"
+                            >
+                              <ChevronRight className="size-4" />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               ) : (
                 /* ── Generator Form ── */
