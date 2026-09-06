@@ -368,14 +368,16 @@ export default function TempMailPage() {
       // Auto-destroy active temp mail session if any
       if (session) {
         fetch("/api/temp-mail/create", { method: "DELETE" }).catch(console.error);
-        setSession(null);
-        setMessages([]);
-        setSelectedMsg(null);
         if (pollRef.current) clearInterval(pollRef.current);
         toast.info("Active temp email session closed automatically.");
       }
 
       setTimeout(() => {
+        if (session) {
+          setSession(null);
+          setMessages([]);
+          setSelectedMsg(null);
+        }
         setViewMode("onboarding");
         setSelectedAccountId("");
       }, 0);
