@@ -191,16 +191,11 @@ export default function TempMailPage() {
   const [generating, setGenerating] = useState(false);
 
   // Farming States
-  const [viewMode, setViewMode] = useState<"onboarding" | "grind">(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("grind_account_id") ? "grind" : "onboarding";
-    return "onboarding";
-  });
+  const [viewMode, setViewMode] = useState<"onboarding" | "grind">("onboarding");
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
   const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("grind_account_id") || "";
-    return "";
-  });
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [isRestored, setIsRestored] = useState(false);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [showHelpNotifications, setShowHelpNotifications] = useState(false);
 
@@ -294,16 +289,28 @@ export default function TempMailPage() {
     }).finally(() => setPageLoading(false));
   }, []);
 
-  // Save selectedAccountId to localStorage when it changes
+  // Restore from localStorage safely on client mount
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const savedId = localStorage.getItem("grind_account_id");
+      if (savedId) {
+        setSelectedAccountId(savedId);
+        setViewMode("grind");
+      }
+      setIsRestored(true);
+    }
+  }, []);
+
+  // Save selectedAccountId to localStorage when it changes
+  useEffect(() => {
+    if (isRestored && typeof window !== "undefined") {
       if (selectedAccountId) {
         localStorage.setItem("grind_account_id", selectedAccountId);
       } else {
         localStorage.removeItem("grind_account_id");
       }
     }
-  }, [selectedAccountId]);
+  }, [selectedAccountId, isRestored]);
 
   // ── Countdown timer ──
   useEffect(() => {
