@@ -20,6 +20,11 @@ import {
   Shuffle,
   Plus,
   Trash2 as TrashIcon,
+  Bell,
+  ArrowRight,
+  HandHeart,
+  Ban,
+  CheckCircle2,
 } from "lucide-react";
 import { GenerateButton } from "@/components/ui/generate-button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -65,6 +70,16 @@ type UserAccount = {
   referral_link: string;
   tickets_done: number;
   total_tickets: number;
+  is_banned?: boolean;
+};
+
+type HelpRequest = {
+  id: number;
+  requester_id: string;
+  helper_id: string;
+  account_id: number;
+  status: string;
+  user_accounts?: UserAccount;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -179,9 +194,12 @@ export default function TempMailPage() {
   const [generating, setGenerating] = useState(false);
 
   // Farming States
+  const [viewMode, setViewMode] = useState<"onboarding" | "grind">("onboarding");
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
+  const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [showCreditModal, setShowCreditModal] = useState(false);
+  const [showHelpNotifications, setShowHelpNotifications] = useState(false);
 
   // BYOE States
   const [mode] = useState<"public" | "byoe">("public");
@@ -228,6 +246,9 @@ export default function TempMailPage() {
         if (user) {
           const { data: accounts } = await supabase.from("user_accounts").select("*").eq("user_id", user.id).neq("is_banned", true);
           if (accounts) setUserAccounts(accounts);
+          
+          const { data: helps } = await supabase.from("help_requests").select("*, user_accounts(*)").eq("helper_id", user.id);
+          if (helps) setHelpRequests(helps as HelpRequest[]);
         }
       })(),
       new Promise((res) => setTimeout(res, 800)),
@@ -526,6 +547,30 @@ export default function TempMailPage() {
       setLoadingMsg(false);
     }
   };
+  // ── Help Requests Handlers ──
+  const handleApproveHelp = async (requestId: number) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("help_requests").update({ status: "accepted" }).eq("id", requestId);
+      if (error) throw error;
+      setHelpRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: "accepted" } : r));
+      toast.success("Help request approved!");
+    } catch {
+      toast.error("Failed to approve request.");
+    }
+  };
+
+  const handleRejectHelp = async (requestId: number) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("help_requests").update({ status: "rejected" }).eq("id", requestId);
+      if (error) throw error;
+      setHelpRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: "rejected" } : r));
+      toast.success("Help request rejected.");
+    } catch {
+      toast.error("Failed to reject request.");
+    }
+  };
 
   // ── Copy email address ──
   const copyAddress = () => {
@@ -555,8 +600,20 @@ export default function TempMailPage() {
             Temp Mail
           </div>
           <div className="flex items-center justify-between gap-4">
-            <h1 className="font-heading text-3xl sm:text-4xl text-foreground">
+            <h1 className="font-heading text-3xl sm:text-4xl text-foreground flex items-center gap-3">
               Temporary Email
+              
+              <button 
+                onClick={() => setShowHelpNotifications(true)}
+                className="relative p-2 rounded-full hover:bg-foreground/5 transition-colors"
+              >
+                <Bell className="size-5 text-muted-foreground" />
+                {helpRequests.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="absolute top-0 right-0 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background">
+                    {helpRequests.filter(r => r.status === 'pending').length}
+                  </span>
+                )}
+              </button>
             </h1>
             <GuideModal title="How Temp Mail Works">
               <p>Generate a disposable email address to receive verification codes without exposing your real email.</p>
@@ -758,9 +815,61 @@ export default function TempMailPage() {
                     </span>
                   </div>
                 </div>
+              ) : viewMode === "onboarding" ? (
+                <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-4">
+                  <div className="text-center mb-6">
+                    <h2 className="text-xl font-bold text-foreground">Select an account to grind</h2>
+                    <p className="text-sm text-muted-foreground mt-1">Choose one of your active accounts or help requests below.</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).map(acc => (
+                      <button
+                        key={`own-${acc.id}`}
+                        onClick={() => { setSelectedAccountId(acc.id.toString()); setViewMode("grind"); }}
+                        className="flex flex-col text-left p-4 rounded-xl border border-border/50 bg-background hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                      >
+                        <div className="flex items-center justify-between mb-2 w-full">
+                          <span className="font-bold text-foreground truncate">{acc.name}</span>
+                          <span className="text-xs font-mono bg-foreground/5 px-2 py-0.5 rounded text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            {acc.tickets_done}/{acc.total_tickets}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-auto">
+                           <CheckCircle2 className="size-3.5 text-emerald-500" /> Auto-credit supported
+                        </div>
+                      </button>
+                    ))}
+                    {helpRequests.filter(hr => hr.status === "accepted" && hr.user_accounts && hr.user_accounts.tickets_done < hr.user_accounts.total_tickets && !hr.user_accounts.is_banned).map(hr => (
+                      <button
+                        key={`help-${hr.account_id}`}
+                        onClick={() => { setSelectedAccountId(hr.account_id.toString()); setViewMode("grind"); }}
+                        className="flex flex-col text-left p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60 hover:bg-amber-500/10 transition-all group relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 bg-amber-500 text-amber-500-foreground text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-bl-lg">
+                           Helping
+                        </div>
+                        <div className="flex items-center justify-between mb-2 w-full pr-12">
+                          <span className="font-bold text-amber-500 truncate">{hr.user_accounts?.name}</span>
+                          <span className="text-xs font-mono bg-amber-500/10 px-2 py-0.5 rounded text-amber-600 dark:text-amber-400 transition-colors shrink-0">
+                            {hr.user_accounts?.tickets_done}/{hr.user_accounts?.total_tickets}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-amber-600/80 dark:text-amber-400/80 mt-auto">
+                           <HandHeart className="size-3.5" /> Gina help mo lang
+                        </div>
+                      </button>
+                    ))}
+                    {userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).length === 0 && 
+                     helpRequests.filter(hr => hr.status === "accepted" && hr.user_accounts && hr.user_accounts.tickets_done < hr.user_accounts.total_tickets).length === 0 && (
+                      <div className="col-span-1 sm:col-span-2 text-center p-8 border border-dashed border-border/60 rounded-xl bg-foreground/[0.02]">
+                        <p className="text-sm text-muted-foreground">No active accounts to grind.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : (
                 /* ── Generator Form ── */
-                                <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
+                <div className="rounded-xl border border-border/60 bg-background/40 p-6 space-y-5">
                   {/* Target Account Selector */}
                   <div className="flex flex-col gap-2 mb-5">
                     <div className="flex items-center justify-between px-1">
@@ -774,34 +883,38 @@ export default function TempMailPage() {
                       )}
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <Combobox 
-                          options={userAccounts.filter(acc => acc.tickets_done < acc.total_tickets).map(acc => ({
-                            value: acc.id.toString(),
-                            label: acc.name + " (" + acc.tickets_done + "/" + acc.total_tickets + ")"
-                          }))}
-                          value={selectedAccountId}
-                          onValueChange={setSelectedAccountId}
-                          placeholder="Choose an account to farm..."
-                          searchPlaceholder="Search account name..."
-                          emptyText="No active accounts found."
-                        />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-primary/5 border border-primary/20 rounded-xl p-3 shadow-sm gap-3">
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                         <span className="text-[11px] font-medium text-muted-foreground">Itong account na gina grind mo now:</span>
+                         <span className="text-sm font-bold text-foreground truncate">
+                           {userAccounts.find(a => a.id.toString() === selectedAccountId)?.name || 
+                            helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.name}
+                         </span>
                       </div>
-                      
-                      {selectedAccountId && userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link && (
-                        <button 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            const link = userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link;
-                            if (link) window.open(link, '_blank');
-                          }}
-                          className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground px-4 rounded-md hover:bg-primary/90 transition-all font-semibold text-xs shadow-sm h-10"
+                      <div className="flex items-center gap-2 shrink-0">
+                        {(() => {
+                           const link = userAccounts.find(a => a.id.toString() === selectedAccountId)?.referral_link || 
+                                        helpRequests.find(h => h.account_id.toString() === selectedAccountId)?.user_accounts?.referral_link;
+                           if (link) {
+                             return (
+                               <button 
+                                 onClick={(e) => { e.preventDefault(); window.open(link, '_blank'); }}
+                                 className="shrink-0 flex items-center gap-1.5 bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md transition-all font-semibold text-xs shadow-sm"
+                               >
+                                 <ExternalLink className="size-3.5" />
+                                 Ref Link
+                               </button>
+                             )
+                           }
+                           return null;
+                        })()}
+                        <button
+                          onClick={(e) => { e.preventDefault(); setViewMode("onboarding"); setSelectedAccountId(""); }}
+                          className="shrink-0 flex items-center gap-1.5 bg-foreground/5 text-foreground hover:bg-foreground/10 px-3 py-1.5 rounded-md transition-all font-semibold text-xs border border-border/50"
                         >
-                          <ExternalLink className="size-3.5" />
-                          Go to Link
+                          Switch
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-2">
@@ -1239,6 +1352,41 @@ export default function TempMailPage() {
         </AnimatePresence>
         )}
       </div>
+
+      {/* ── Help Notifications Modal ── */}
+      <AnimatedModal isOpen={showHelpNotifications} onClose={() => setShowHelpNotifications(false)} title="Help Requests" icon={<Bell size={18} strokeWidth={1.5} />} maxWidth="md">
+        <div className="p-4 sm:p-6 space-y-4">
+          {helpRequests.filter(r => r.status === 'pending').length === 0 ? (
+            <div className="text-center py-8">
+              <div className="mx-auto w-12 h-12 rounded-full bg-foreground/5 flex items-center justify-center mb-3">
+                <CheckCircle2 className="size-6 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm text-muted-foreground">No pending help requests.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {helpRequests.filter(r => r.status === 'pending').map(req => (
+                <div key={req.id} className="p-4 rounded-xl border border-border/50 bg-background/50 flex flex-col gap-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-1">Incoming Request</div>
+                    <div className="text-sm">
+                      <span className="font-semibold text-foreground">Someone</span> wants you to grind for account: <span className="font-bold text-primary">{req.user_accounts?.name}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <button onClick={() => handleApproveHelp(req.id)} className="flex-1 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 py-2 rounded-lg font-bold text-xs transition-colors">
+                      Approve
+                    </button>
+                    <button onClick={() => handleRejectHelp(req.id)} className="flex-1 bg-destructive/10 text-destructive hover:bg-destructive/20 py-2 rounded-lg font-bold text-xs transition-colors">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </AnimatedModal>
 
       {/* ── Tiers Modal ── */}
       <AnimatedModal isOpen={isTiersModalOpen} onClose={() => setIsTiersModalOpen(false)} title="Donation Tiers & Limits" icon={<Crown size={18} strokeWidth={1.5} />} maxWidth="lg">

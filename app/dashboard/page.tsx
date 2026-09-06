@@ -1,6 +1,6 @@
 "use client";
 
-import { CopyIcon, LinkIcon, PencilIcon, TrashIcon, CheckIcon, CircleIcon, PlusIcon, ChevronDownIcon, WalletIcon, MailIcon, WrenchIcon, SearchIcon, ListFilterIcon, CalendarIcon } from "lucide-react";
+import { CopyIcon, LinkIcon, PencilIcon, TrashIcon, CheckIcon, CircleIcon, PlusIcon, ChevronDownIcon, WalletIcon, MailIcon, WrenchIcon, SearchIcon, ListFilterIcon, CalendarIcon, HandHeart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AnimatedModal } from "@/components/ui/animated-modal";
@@ -31,6 +31,7 @@ const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 // Types
 type Account = { id: number; name: string; ticketsDone: number; totalTickets: number; avatar: string; referralLink: string | null; email: string | null; isBanned: boolean; totalAccumulatedTickets: number; repairTicketsUsed: number; };
 type IncomeLog = { id: string; time: string; title: string; gmto: number; color: string; is_sold: boolean; fiat_received: number; fiat_currency: string };
+type HelpRequest = { id: number; requester_id: string; helper_id: string; account_id: number; status: string; };
 
 const CURRENCY_SYMBOLS: Record<string, string> = { usd: "$", php: "₱", eur: "€" };
 
@@ -163,6 +164,13 @@ export default function UserDashboardPage() {
   const [isCashingOut, setIsCashingOut] = useState(false);
   const [isUsingRepairTicket, setIsUsingRepairTicket] = useState(false);
   
+  // Help Request States
+  const [myHelpRequests, setMyHelpRequests] = useState<HelpRequest[]>([]);
+  const [isRequestHelpModalOpen, setIsRequestHelpModalOpen] = useState(false);
+  const [requestHelpAccountId, setRequestHelpAccountId] = useState<number | null>(null);
+  const [requestHelpSearchQuery, setRequestHelpSearchQuery] = useState("");
+  const [isRequestingHelp, setIsRequestingHelp] = useState(false);
+  
   const supabase = createClient();
 
   // Fetch initial dashboard data
@@ -182,6 +190,15 @@ export default function UserDashboardPage() {
         setGlobalWalletAddress(user.user_metadata.lbank_address);
       }
       
+      const { data: helpData } = await supabase
+        .from('help_requests')
+        .select('*')
+        .eq('requester_id', user.id);
+      
+      if (helpData) {
+        setMyHelpRequests(helpData as HelpRequest[]);
+      }
+
       const { data: accountsData } = await supabase
         .from('user_accounts')
         .select('*')
@@ -567,7 +584,6 @@ export default function UserDashboardPage() {
           is_banned: editAccountIsBanned
         })
         .eq('id', editAccountId);
-
       if (!error) {
         setAccounts(prev => prev.map(acc => acc.id === editAccountId ? {
           ...acc,
@@ -581,12 +597,68 @@ export default function UserDashboardPage() {
       } else {
         toast.error("Failed to update account.");
       }
-      
       setIsEditAccountModalOpen(false);
+      setEditAccountId(null);
     } finally {
       setIsUpdatingAccount(false);
     }
   };
+
+  const handleRequestHelp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestHelpAccountId || !requestHelpSearchQuery.trim()) return;
+
+    setIsRequestingHelp(true);
+    try {
+      // Find helper by email or nickname
+      const { data: profiles, error: searchError } = await supabase
+        .rpc("search_chat_profiles", { search_query: requestHelpSearchQuery.trim() });
+      
+      if (searchError || !profiles || profiles.length === 0) {
+        toast.error("User not found. Please check the email or nickname.");
+        return;
+      }
+      
+      // For simplicity, take the first match
+      const helperId = profiles[0].user_id;
+
+      if (helperId === userId) {
+        toast.error("You cannot request help from yourself.");
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from('help_requests')
+        .insert({
+          requester_id: userId,
+          helper_id: helperId,
+          account_id: requestHelpAccountId,
+          status: 'pending'
+        });
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          toast.error("A help request for this account to this user already exists.");
+        } else {
+          toast.error("Failed to send help request.");
+        }
+      } else {
+        toast.success("Help request sent!");
+        // Optimistically update
+        setMyHelpRequests(prev => [...prev, {
+          id: Date.now(), // Temp ID
+          requester_id: userId!,
+          helper_id: helperId,
+          account_id: requestHelpAccountId,
+          status: 'pending'
+        }]);
+        setIsRequestHelpModalOpen(false);
+        setRequestHelpSearchQuery("");
+      }
+    } finally {
+      setIsRequestingHelp(false);
+    }
+  };  
 
   const openDeleteLogModal = (id: string) => {
     setDeleteLogId(id);
@@ -1003,6 +1075,17 @@ export default function UserDashboardPage() {
                       >
                         {account.name}
                       </span>
+                      {(() => {
+                        const helpReqs = myHelpRequests.filter(hr => hr.account_id === account.id);
+                        const hasAccepted = helpReqs.some(hr => hr.status === 'accepted');
+                        const hasPending = helpReqs.some(hr => hr.status === 'pending');
+                        if (hasAccepted) {
+                          return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-500 flex items-center gap-1"><HandHeart className="size-3" /> Ongoing Help</span>;
+                        } else if (hasPending) {
+                          return <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-amber-500/10 text-amber-500">Pending Help</span>;
+                        }
+                        return null;
+                      })()}
                       {account.isBanned && (
                         <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest bg-red-500/10 text-red-500">
                           Banned
@@ -1028,6 +1111,9 @@ export default function UserDashboardPage() {
                         
                         {/* Action Buttons */}
                         <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex items-center transition-opacity shrink-0 ml-1">
+                          <button onClick={() => { setRequestHelpAccountId(account.id); setIsRequestHelpModalOpen(true); }} className="p-2 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 rounded-md transition-colors" title="Request Help">
+                            <HandHeart className="size-4" />
+                          </button>
                           <button onClick={() => openEditAccountModal(account)} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors" title="Edit Account">
                             <PencilIcon className="size-4" />
                           </button>
@@ -1712,6 +1798,32 @@ export default function UserDashboardPage() {
             </Button>
           </div>
         </div>
+      </AnimatedModal>
+
+      {/* ── Request Help Modal ── */}
+      <AnimatedModal isOpen={isRequestHelpModalOpen} onClose={() => setIsRequestHelpModalOpen(false)} title="Request Help" icon={<HandHeart size={18} strokeWidth={1.5} />} maxWidth="sm">
+        <form onSubmit={handleRequestHelp} className="p-4 sm:p-6 space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-foreground">Helper Email or Nickname</label>
+            <input 
+              type="text" 
+              placeholder="e.g. user@example.com or CoolUser123"
+              value={requestHelpSearchQuery}
+              onChange={(e) => setRequestHelpSearchQuery(e.target.value)}
+              required
+              className="mt-1 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Enter the exact email or nickname of the person you want to help grind this account. They will receive a notification in Temp Mail.
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end pt-2">
+            <Button type="button" variant="ghost" onClick={() => setIsRequestHelpModalOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={isRequestingHelp}>
+              {isRequestingHelp ? "Sending..." : "Send Request"}
+            </Button>
+          </div>
+        </form>
       </AnimatedModal>
     </PageContainer>
   );
