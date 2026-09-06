@@ -356,6 +356,7 @@ export default function SettingsPage() {
                 onClick={() => {
                   navigator.clipboard.writeText(donationWallet);
                   setCopied(true);
+                  toast.success("Donation wallet copied.");
                   setTimeout(() => setCopied(false), 2000);
                 }}
               >
