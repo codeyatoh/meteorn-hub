@@ -38,7 +38,6 @@ export default function SettingsPage() {
     Promise.all([
       supabase.auth.getUser(),
       supabase.from('platform_settings').select('donation_wallet_address').eq('id', 1).single(),
-      new Promise(resolve => setTimeout(resolve, 1000))
     ]).then(([{ data: { user } }, { data: settings }]) => {
       if (user) {
         setNickname(user.user_metadata?.nickname || "User");

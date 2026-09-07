@@ -321,6 +321,13 @@ export default function FaucetPage() {
   useEffect(() => {
     const timer = setTimeout(() => { fetchData(); }, 0);
 
+    // Debounced focus handler to avoid rapid re-fetch storms on tab switching
+    let focusTimeout: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFetchOnFocus = () => {
+      if (focusTimeout) clearTimeout(focusTimeout);
+      focusTimeout = setTimeout(fetchData, 5000);
+    };
+
     const channel = supabase.channel('faucet_realtime_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'faucet_claims' }, () => {
         fetchData();
@@ -330,10 +337,11 @@ export default function FaucetPage() {
       })
       .subscribe();
 
-    window.addEventListener("focus", fetchData);
+    window.addEventListener("focus", debouncedFetchOnFocus);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener("focus", fetchData);
+      if (focusTimeout) clearTimeout(focusTimeout);
+      window.removeEventListener("focus", debouncedFetchOnFocus);
       supabase.removeChannel(channel);
     };
   }, [fetchData, supabase]);

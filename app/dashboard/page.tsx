@@ -19,12 +19,12 @@ import { TierEffect } from "@/components/ui/tier-effect";
 
 // Admin provided avatar choices
 const AVATAR_MAP: Record<string, ReactNode> = {
-  Avatar1: <Image src="/Avatar1.png" alt="Avatar1" width={40} height={40} className="size-full object-cover" />,
-  Avatar2: <Image src="/Avatar2.png" alt="Avatar2" width={40} height={40} className="size-full object-cover" />,
-  Avatar3: <Image src="/Avatar3.png" alt="Avatar3" width={40} height={40} className="size-full object-cover" />,
-  Avatar4: <Image src="/Avatar4.png" alt="Avatar4" width={40} height={40} className="size-full object-cover" />,
-  Avatar5: <Image src="/Avatar5.png" alt="Avatar5" width={40} height={40} className="size-full object-cover" />,
-  Avatar6: <Image src="/Avatar6.png" alt="Avatar6" width={40} height={40} className="size-full object-cover" />,
+  Avatar1: <Image src="/Avatar1.webp" alt="Avatar1" width={40} height={40} className="size-full object-cover" />,
+  Avatar2: <Image src="/Avatar2.webp" alt="Avatar2" width={40} height={40} className="size-full object-cover" />,
+  Avatar3: <Image src="/Avatar3.webp" alt="Avatar3" width={40} height={40} className="size-full object-cover" />,
+  Avatar4: <Image src="/Avatar4.webp" alt="Avatar4" width={40} height={40} className="size-full object-cover" />,
+  Avatar5: <Image src="/Avatar5.webp" alt="Avatar5" width={40} height={40} className="size-full object-cover" />,
+  Avatar6: <Image src="/Avatar6.webp" alt="Avatar6" width={40} height={40} className="size-full object-cover" />,
 };
 const AVATAR_OPTIONS = Object.keys(AVATAR_MAP);
 
@@ -268,11 +268,18 @@ export default function UserDashboardPage() {
       setLoading(false);
     };
     
-    Promise.all([
-      fetchDashboardData(),
-      new Promise(resolve => setTimeout(resolve, 1000))
-    ]).finally(() => setLoading(false));
+    fetchDashboardData();
 
+    // Debounced focus handler to avoid rapid re-fetch storms on tab switching
+    let focusTimeout: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFetchOnFocus = () => {
+      if (focusTimeout) clearTimeout(focusTimeout);
+      focusTimeout = setTimeout(fetchDashboardData, 5000);
+    };
+
+    // Subscribe to Realtime changes — userId is captured after first fetch
+    // We use a ref-like pattern: the channel subscribes immediately but 
+    // fetchDashboardData already filters by user_id in every query
     const channel = supabase.channel('dashboard_realtime_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_accounts' }, () => {
         fetchDashboardData();
@@ -282,10 +289,11 @@ export default function UserDashboardPage() {
       })
       .subscribe();
 
-    // Re-fetch data when the window regains focus (e.g. switching back from another tab)
-    window.addEventListener("focus", fetchDashboardData);
+    // Re-fetch data when the window regains focus (debounced)
+    window.addEventListener("focus", debouncedFetchOnFocus);
     return () => {
-      window.removeEventListener("focus", fetchDashboardData);
+      window.removeEventListener("focus", debouncedFetchOnFocus);
+      if (focusTimeout) clearTimeout(focusTimeout);
       supabase.removeChannel(channel);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

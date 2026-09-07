@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
+// ISR: regenerate this route every 30 seconds
+export const revalidate = 30;
 
 /**
  * GET /api/gmto-price?currency=usd
  * Server-side proxy for CoinGecko simple price endpoint.
  * Avoids CORS by making the request from the server, not the browser.
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   // No longer extracting single currency from query as we fetch usd,php,eur simultaneously
 
   try {
@@ -17,7 +18,7 @@ export async function GET(_request: NextRequest) {
         headers: {
           'x-cg-demo-api-key': process.env.COINGECKO_API_KEY || '',
         },
-        next: { revalidate: 10 }, // cache for 10 seconds (near real-time)
+        next: { revalidate: 30 },
       }
     );
 
@@ -26,7 +27,11 @@ export async function GET(_request: NextRequest) {
     }
 
     const data = await res.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
+    });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

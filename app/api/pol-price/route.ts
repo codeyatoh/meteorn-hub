@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
+// ISR: regenerate this route every 60 seconds
+export const revalidate = 60;
 
 /**
  * GET /api/pol-price
@@ -31,6 +32,10 @@ export async function GET() {
       usd: prices?.usd ?? 0.45,
       php: prices?.php ?? 25,
       eur: prices?.eur ?? 0.41,
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
     });
   } catch {
     // Fallback to approximate values if CoinGecko is unavailable

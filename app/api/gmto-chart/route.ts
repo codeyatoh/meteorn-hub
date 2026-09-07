@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
+// ISR: regenerate this route every 30 seconds
+export const revalidate = 30;
 
 /**
  * GET /api/gmto-chart?currency=usd&days=1
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
         headers: {
           'x-cg-demo-api-key': process.env.COINGECKO_API_KEY || '',
         },
-        next: { revalidate: 10 }, // cache for 10 seconds (near real-time)
+        next: { revalidate: 30 },
       }
     );
 
@@ -28,7 +29,11 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await res.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
+    });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

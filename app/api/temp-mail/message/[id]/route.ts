@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import PostalMime from 'postal-mime';
-import { ImapFlow } from 'imapflow';
-import { decrypt } from '@/lib/utils/encryption';
 
 /**
  * GET /api/temp-mail/message/[id]
@@ -21,7 +19,7 @@ export async function GET(
     // Get session
     const { data: session } = await supabase
       .from('temp_mail_sessions')
-      .select('*, user_gmail_connections(gmail_address, app_password_encrypted, iv, auth_tag)')
+      .select('address, expires_at')
       .eq('user_id', user.id)
       .single();
 
@@ -30,80 +28,6 @@ export async function GET(
     }
 
     const parser = new PostalMime();
-
-    // BYOE Gmail mode
-    if (session.mailtm_account_id === 'byoe_gmail' && session.user_gmail_connections) {
-      const decoded = Buffer.from(id, 'base64url').toString('utf8');
-      const colonIdx = decoded.indexOf(':');
-      if (colonIdx === -1) {
-        return NextResponse.json({ error: 'Invalid message ID.' }, { status: 400 });
-      }
-      
-      const uid = decoded.slice(0, colonIdx);
-      const mailboxPath = decoded.slice(colonIdx + 1);
-
-      if (!uid || !mailboxPath) {
-        return NextResponse.json({ error: 'Invalid message ID.' }, { status: 400 });
-      }
-
-      const conn = session.user_gmail_connections;
-      let appPassword: string;
-      try {
-        appPassword = decrypt({
-          encrypted: conn.app_password_encrypted,
-          iv: conn.iv,
-          authTag: conn.auth_tag,
-        });
-      } catch (decryptErr: unknown) {
-        const errMsg = decryptErr instanceof Error ? decryptErr.message : String(decryptErr);
-        if (errMsg.includes('Unsupported state') || errMsg.includes('authenticate data')) {
-          // Encryption key mismatch! Auto-recover by deleting the corrupted connection
-          console.warn(`Encryption key mismatch for user ${user.id}. Deleting corrupted connection.`);
-          await supabase.from('user_gmail_connections').delete().eq('id', conn.id);
-          return NextResponse.json({ error: 'Connection encryption key changed. Please re-authenticate your Gmail.' }, { status: 401 });
-        }
-        throw decryptErr;
-      }
-
-      const client = new ImapFlow({
-        host: 'imap.gmail.com',
-        port: 993,
-        secure: true,
-        auth: { user: conn.gmail_address, pass: appPassword },
-        logger: false,
-        socketTimeout: 15000,
-        connectionTimeout: 15000,
-      });
-
-      try {
-        await client.connect();
-        await client.mailboxOpen(mailboxPath);
-        const msg = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
-        
-        if (!msg || !msg.source) {
-          await client.logout();
-          return NextResponse.json({ error: 'Message not found.' }, { status: 404 });
-        }
-
-        const parsedEmail = await parser.parse(msg.source);
-        await client.logout();
-
-        return NextResponse.json({
-          id,
-          subject: parsedEmail.subject || '(No subject)',
-          from: parsedEmail.from ? { address: parsedEmail.from.address, name: parsedEmail.from.name } : { address: '', name: '' },
-          to: parsedEmail.to && parsedEmail.to.length > 0 ? parsedEmail.to.map(t => ({ address: t.address })) : [{ address: session.address }],
-          createdAt: msg.envelope && msg.envelope.date ? msg.envelope.date.toISOString() : new Date().toISOString(),
-          text: parsedEmail.text || '',
-          html: parsedEmail.html ? [parsedEmail.html] : [],
-          seen: true,
-        });
-
-      } catch (err) {
-        console.error('BYOE IMAP detail fetch error:', err);
-        return NextResponse.json({ error: 'Failed to fetch message details.' }, { status: 500 });
-      }
-    }
 
     // Public Custom Domain mode (yatmail_messages)
     const { data: msg, error } = await supabase
