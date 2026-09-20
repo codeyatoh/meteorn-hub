@@ -20,10 +20,7 @@ export function LoginForm() {
       {/* Mobile Branding Header */}
       <div className="absolute top-8 left-8 flex items-center gap-2 font-mono text-[10px] tracking-[0.2em] uppercase text-zinc-500 dark:text-muted-foreground lg:hidden">
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-zinc-900 dark:bg-foreground" />
-        <span>Meteorn Hub - </span>
-        <a href="https://github.com/CodeYatoh" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-900 dark:hover:text-foreground transition-colors underline underline-offset-4">
-          CodeYatoh
-        </a>
+        <span>Meteorn Hub</span>
       </div>
 
       <div className="font-mono text-[10px] text-zinc-500 dark:text-muted-foreground uppercase tracking-[0.3em]">

@@ -11,10 +11,7 @@ export default function LoginPage() {
         {/* Top Left Branding */}
         <div className="absolute top-8 left-8 z-20 flex items-center gap-2 font-mono text-[11px] tracking-[0.2em] uppercase text-muted-foreground pointer-events-none">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-white" />
-          <span>Meteorn Hub - </span>
-          <a href="https://github.com/CodeYatoh" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors underline underline-offset-4 pointer-events-auto">
-            CodeYatoh
-          </a>
+          <span>Meteorn Hub</span>
         </div>
         
         {/* Particle Effect Container */}
