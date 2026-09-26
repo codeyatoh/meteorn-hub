@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { ethers } from "ethers";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 function getMaxDailyClaims(totalDonated: number) {
   if (totalDonated >= 10) return 60;
   if (totalDonated >= 5) return 30;
@@ -18,6 +13,10 @@ function getMaxDailyClaims(totalDonated: number) {
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
     const { addresses, userId } = await req.json();
 
     if (!addresses || !Array.isArray(addresses) || addresses.length === 0 || !userId) {
