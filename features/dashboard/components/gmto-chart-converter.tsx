@@ -25,6 +25,7 @@ export function GmtoChartConverter({ currency }: GmtoChartConverterProps) {
     setLoading(true);
     try {
       const res = await fetch(`/api/gmto-chart?currency=${currency}&days=1`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       
       if (json.prices && json.prices.length > 0) {

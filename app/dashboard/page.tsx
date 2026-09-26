@@ -318,7 +318,10 @@ export default function UserDashboardPage() {
     }
 
     fetch(`/api/gmto-price`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data["game-meteor-coin"]) {
           const prices = data["game-meteor-coin"];
@@ -327,9 +330,18 @@ export default function UserDashboardPage() {
           if (prices[currency]) {
             setGmtoPrice(prices[currency]);
           }
+          if (data._fallback) {
+            toast.warning("Using estimated GMTO price. Live data temporarily unavailable.");
+          }
         }
       })
-      .catch(err => console.warn("Failed to fetch GMTO price", err));
+      .catch(err => {
+        console.warn("Failed to fetch GMTO price", err);
+        // Only show toast if we don't have cached data
+        if (!cachedPrices) {
+          toast.error("Failed to load GMTO price. Showing estimated values.");
+        }
+      });
   }, [currency]);
 
   // Compute dynamic stats
