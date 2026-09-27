@@ -1,12 +1,16 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState, ReactNode, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BarChart2 } from "lucide-react";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 import { GuideModal } from "@/components/ui/guide-modal";
 import Image from "next/image";
-import { AnalyticsIncomeChart } from "@/features/dashboard/components/analytics-income-chart";
+const AnalyticsIncomeChart = dynamic(
+  () => import("@/features/dashboard/components/analytics-income-chart").then(m => m.AnalyticsIncomeChart),
+  { ssr: false, loading: () => <div className="h-[300px] animate-pulse bg-muted/20 rounded-xl" /> }
+);
 import { PageContainer } from "@/components/ui/page-container";
 import { NumberTicker } from "@/components/ui/number-ticker";
 

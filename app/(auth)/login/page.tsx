@@ -1,7 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { LoginForm } from "@/features/auth/components/auth-form";
-import InteractiveParticles from "@/features/auth/components/interactive-particles";
+
+const InteractiveParticles = dynamic(
+  () => import("@/features/auth/components/interactive-particles"),
+  { ssr: false }
+);
 
 export default function LoginPage() {
   return (

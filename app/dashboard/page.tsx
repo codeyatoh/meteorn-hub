@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { LinkIcon, PencilIcon, TrashIcon, CheckIcon, CircleIcon, PlusIcon, ChevronDownIcon, WalletIcon, MailIcon, WrenchIcon, SearchIcon, ListFilterIcon, CalendarIcon, HandHeart } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,10 @@ import { AnimatedModal } from "@/components/ui/animated-modal";
 import { GuideModal } from "@/components/ui/guide-modal";
 import { WanderingEyes } from "@/components/loading-ui/wandering-eyes";
 
-import { GmtoChartConverter } from "@/features/dashboard/components/gmto-chart-converter";
+const GmtoChartConverter = dynamic(
+  () => import("@/features/dashboard/components/gmto-chart-converter").then(m => m.GmtoChartConverter),
+  { ssr: false, loading: () => <div className="h-[300px] animate-pulse bg-muted/20 rounded-xl" /> }
+);
 import { Combobox } from "@/components/ui/combobox";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { ReactNode, useState, useEffect, useMemo, useCallback } from "react";

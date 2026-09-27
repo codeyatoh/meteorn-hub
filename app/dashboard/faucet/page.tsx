@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { ethers } from "ethers";
+
+// Lightweight address validator — replaces the ~500KB ethers import
+function isValidAddress(address: string): boolean {
+  return /^0x[0-9a-fA-F]{40}$/.test(address);
+}
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Droplets, CopyIcon, CheckIcon, Activity, ArrowRight, ShieldCheck, ChevronLeft, ChevronRight, ExternalLink, Crown, HelpCircle } from "lucide-react";
@@ -363,7 +367,7 @@ export default function FaucetPage() {
   useEffect(() => {
     const validateAddress = async () => {
       if (!addressInput) { setAddressValidation({ status: 'idle', message: '' }); return; }
-      if (!ethers.isAddress(addressInput)) { setAddressValidation({ status: 'invalid', message: 'Invalid Polygon address format.' }); return; }
+      if (!isValidAddress(addressInput)) { setAddressValidation({ status: 'invalid', message: 'Invalid Polygon address format.' }); return; }
       setAddressValidation({ status: 'checking', message: 'Checking address...' });
       try {
         const res = await fetch(`/api/faucet/check-address?address=${addressInput}&userId=${user?.id}`);
