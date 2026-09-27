@@ -11,11 +11,20 @@ function getMaxDailyClaims(totalDonated: number) {
   return 0;
 }
 
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+
 export async function POST(req: NextRequest) {
   try {
+    let cfEnv: any = {};
+    try {
+      cfEnv = getCloudflareContext().env || {};
+    } catch (e) {
+      // Ignore if not running on Cloudflare
+    }
+
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      cfEnv.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
     const { addresses, userId } = await req.json();
 
@@ -23,11 +32,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
     }
 
-    const rpcUrl = process.env.POLYGON_RPC_URL;
-    const privateKey = process.env.FAUCET_HOT_WALLET_PRIVATE_KEY;
+    const rpcUrl = cfEnv.POLYGON_RPC_URL || process.env.POLYGON_RPC_URL;
+    const privateKey = cfEnv.FAUCET_HOT_WALLET_PRIVATE_KEY || process.env.FAUCET_HOT_WALLET_PRIVATE_KEY;
 
-    if (!rpcUrl || !privateKey) {
-      return NextResponse.json({ error: "Faucet not configured." }, { status: 500 });
+    if (!rpcUrl) {
+      return NextResponse.json({ error: "Faucet not configured. Missing POLYGON_RPC_URL." }, { status: 500 });
+    }
+    if (!privateKey) {
+      return NextResponse.json({ error: "Faucet not configured. Missing FAUCET_HOT_WALLET_PRIVATE_KEY." }, { status: 500 });
     }
 
     // 0. Fetch Platform Settings for Faucet Claim Amount

@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { ethers } from "ethers";
 import { createClient } from "@supabase/supabase-js";
 
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+
 export async function POST(req: NextRequest) {
   try {
+    let cfEnv: any = {};
+    try {
+      cfEnv = getCloudflareContext().env || {};
+    } catch (e) {
+      // Ignore
+    }
+
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      cfEnv.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
     const data = await req.json();
     let txHash = data.txHash;
@@ -21,12 +30,18 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Setup Ethers Provider
-    const rpcUrl = process.env.POLYGON_RPC_URL;
-    const privateKey = process.env.FAUCET_HOT_WALLET_PRIVATE_KEY;
+    const rpcUrl = cfEnv.POLYGON_RPC_URL || process.env.POLYGON_RPC_URL;
+    const privateKey = cfEnv.FAUCET_HOT_WALLET_PRIVATE_KEY || process.env.FAUCET_HOT_WALLET_PRIVATE_KEY;
 
-    if (!rpcUrl || !privateKey) {
+    if (!rpcUrl) {
       return NextResponse.json(
-        { error: "Faucet is currently not configured." },
+        { error: "Faucet is currently not configured. Missing POLYGON_RPC_URL." },
+        { status: 500 },
+      );
+    }
+    if (!privateKey) {
+      return NextResponse.json(
+        { error: "Faucet is currently not configured. Missing FAUCET_HOT_WALLET_PRIVATE_KEY." },
         { status: 500 },
       );
     }
