@@ -6,10 +6,10 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function POST(req: NextRequest) {
   try {
-    let cfEnv: any = {};
+    let cfEnv: Record<string, string> = {};
     try {
-      cfEnv = getCloudflareContext().env || {};
-    } catch (e) {
+      cfEnv = getCloudflareContext().env as Record<string, string> || {};
+    } catch {
       // Ignore
     }
 
